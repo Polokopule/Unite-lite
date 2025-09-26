@@ -194,11 +194,14 @@ export function AppContextProvider({ children }: { children: React.ReactNode }) 
     
     const userRef = ref(db, `users/${user.uid}`);
     const adRef = ref(db, `ads/${adId}`);
+    const updatedPoints = user.points - payment;
 
     try {
-        const updatedPoints = user.points - payment;
-        await update(userRef, { points: updatedPoints });
-        await set(adRef, newAd);
+        // Perform both database writes in parallel for better performance
+        await Promise.all([
+          update(userRef, { points: updatedPoints }),
+          set(adRef, newAd)
+        ]);
         
         setUser({ ...user, points: updatedPoints }); // Update local state
         return true;
