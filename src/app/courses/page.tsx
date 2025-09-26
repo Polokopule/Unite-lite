@@ -5,16 +5,20 @@ import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle }
 import { useToast } from "@/hooks/use-toast";
 import { useAppContext } from "@/contexts/app-context";
 import Image from "next/image";
-import { CheckCircle, PlusCircle, ShoppingBag, Wallet } from "lucide-react";
+import { CheckCircle, PlusCircle, ShoppingBag, Wallet, Loader2 } from "lucide-react";
 import Link from "next/link";
 import { Badge } from "@/components/ui/badge";
+import { useState } from "react";
 
 export default function CoursesPage() {
   const { courses, user, purchaseCourse, purchasedCourses } = useAppContext();
   const { toast } = useToast();
+  const [purchasingId, setPurchasingId] = useState<string | null>(null);
 
-  const handlePurchase = (courseId: string, title: string) => {
-    const success = purchaseCourse(courseId);
+  const handlePurchase = async (courseId: string, title: string) => {
+    setPurchasingId(courseId);
+    const success = await purchaseCourse(courseId);
+    setPurchasingId(null);
     if (success) {
       toast({
         title: "Purchase Successful!",
@@ -47,6 +51,7 @@ export default function CoursesPage() {
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
           {courses.map((course) => {
             const isPurchased = purchasedCourses.some(pc => pc.id === course.id);
+            const isPurchasing = purchasingId === course.id;
             const excerpt = course.content.replace(/<[^>]+>/g, '').substring(0, 100) + '...';
 
             return (
@@ -78,8 +83,9 @@ export default function CoursesPage() {
                            <CheckCircle className="h-4 w-4 mr-2"/> Purchased
                         </Badge>
                      ) : (
-                        <Button onClick={() => handlePurchase(course.id, course.title)}>
-                            <ShoppingBag className="h-4 w-4 mr-2"/> Purchase
+                        <Button onClick={() => handlePurchase(course.id, course.title)} disabled={isPurchasing}>
+                            {isPurchasing ? <Loader2 className="h-4 w-4 mr-2 animate-spin"/> : <ShoppingBag className="h-4 w-4 mr-2"/>}
+                            {isPurchasing ? 'Purchasing...' : 'Purchase'}
                         </Button>
                      )
                   ) : (

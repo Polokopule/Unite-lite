@@ -8,7 +8,7 @@ import { useToast } from "@/hooks/use-toast";
 import { useAppContext } from "@/contexts/app-context";
 import { useRouter } from "next/navigation";
 import { useEffect, useState, useMemo } from "react";
-import { BookOpen, CreditCard, Image as ImageIcon, Upload } from "lucide-react";
+import { BookOpen, CreditCard, Image as ImageIcon, Upload, Loader2 } from "lucide-react";
 import 'react-quill/dist/quill.snow.css';
 import dynamic from 'next/dynamic';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
@@ -26,6 +26,7 @@ export default function CreateCoursePage() {
   const [price, setPrice] = useState(0);
   const [coverImage, setCoverImage] = useState<File | null>(null);
   const [coverImageUrl, setCoverImageUrl] = useState<string | null>(null);
+  const [isPublishing, setIsPublishing] = useState(false);
 
   useEffect(() => {
     if (!user || user.type !== 'user') {
@@ -41,7 +42,7 @@ export default function CreateCoursePage() {
     }
   };
 
-  const handlePublish = () => {
+  const handlePublish = async () => {
     if (!title || !content || price <= 0 || !coverImageUrl) {
         toast({
             variant: "destructive",
@@ -51,7 +52,10 @@ export default function CreateCoursePage() {
         return;
     }
     
-    const success = addCourse({ title, content, price, imageUrl: coverImageUrl });
+    setIsPublishing(true);
+    const success = await addCourse({ title, content, price, imageUrl: coverImageUrl });
+    setIsPublishing(false);
+
     if(success) {
         toast({
             title: "Course Created!",
@@ -158,9 +162,9 @@ export default function CreateCoursePage() {
           <CardFooter>
              <AlertDialog>
               <AlertDialogTrigger asChild>
-                <Button type="button" className="w-full sm:w-auto" disabled={!title || !content || !coverImage || price <= 0}>
-                  <CreditCard className="h-4 w-4 mr-2" />
-                  Publish Course
+                <Button type="button" className="w-full sm:w-auto" disabled={!title || !content || !coverImage || price <= 0 || isPublishing}>
+                  {isPublishing ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <CreditCard className="h-4 w-4 mr-2" />}
+                  {isPublishing ? 'Publishing...' : 'Publish Course'}
                 </Button>
               </AlertDialogTrigger>
               <AlertDialogContent>

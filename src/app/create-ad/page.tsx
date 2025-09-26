@@ -9,7 +9,7 @@ import { useToast } from "@/hooks/use-toast";
 import { useAppContext } from "@/contexts/app-context";
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
-import { Megaphone, CreditCard } from "lucide-react";
+import { Megaphone, CreditCard, Loader2 } from "lucide-react";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
 
 export default function CreateAdPage() {
@@ -19,6 +19,7 @@ export default function CreateAdPage() {
 
   const [campaignName, setCampaignName] = useState("");
   const [content, setContent] = useState("");
+  const [isPublishing, setIsPublishing] = useState(false);
 
   useEffect(() => {
     if (!user || user.type !== 'business') {
@@ -26,7 +27,7 @@ export default function CreateAdPage() {
     }
   }, [user, router]);
 
-  const handlePublish = () => {
+  const handlePublish = async () => {
     if (!campaignName || !content) {
       toast({
         variant: "destructive",
@@ -36,8 +37,10 @@ export default function CreateAdPage() {
       return;
     }
     
-    // This simulates the payment and ad creation
-    const success = createAd({ campaignName, content });
+    setIsPublishing(true);
+    const success = await createAd({ campaignName, content });
+    setIsPublishing(false);
+
     if(success) {
       toast({
         title: "Ad Campaign Created!",
@@ -105,9 +108,9 @@ export default function CreateAdPage() {
           <CardFooter>
             <AlertDialog>
               <AlertDialogTrigger asChild>
-                <Button type="button" className="w-full sm:w-auto" disabled={!campaignName || !content}>
-                  <CreditCard className="h-4 w-4 mr-2" />
-                  Proceed to Payment
+                <Button type="button" className="w-full sm:w-auto" disabled={!campaignName || !content || isPublishing}>
+                  {isPublishing ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <CreditCard className="h-4 w-4 mr-2" />}
+                  {isPublishing ? 'Publishing...' : 'Proceed to Payment'}
                 </Button>
               </AlertDialogTrigger>
               <AlertDialogContent>

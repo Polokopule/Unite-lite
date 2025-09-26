@@ -4,18 +4,8 @@ import { PlaceHolderImages } from "@/lib/placeholder-images";
 import type { Course, Ad, User, PurchasedCourse } from "@/lib/types";
 import { useRouter } from "next/navigation";
 import React, { createContext, useContext, useEffect, useState } from "react";
-
-// --- MOCK DATA ---
-const initialCourses: Course[] = [
-  { id: '1', title: 'Introduction to Web Development', content: '<h3>Welcome!</h3><p>Learn the basics of HTML, CSS, and JavaScript.</p>', creator: 'Jane Doe', price: 100, imageUrl: PlaceHolderImages.find(i=>i.id==='course-1')?.imageUrl ?? '', imageHint: PlaceHolderImages.find(i=>i.id==='course-1')?.imageHint ?? '' },
-  { id: '2', title: 'Advanced React Patterns', content: '<h3>Take the next step</h3><p>This course covers advanced React patterns like HOCs, render props, and hooks.</p>', creator: 'John Smith', price: 250, imageUrl: PlaceHolderImages.find(i=>i.id==='course-2')?.imageUrl ?? '', imageHint: PlaceHolderImages.find(i=>i.id==='course-2')?.imageHint ?? '' },
-  { id: '3', title: 'Digital Painting for Beginners', content: '<h3>Unleash your creativity!</h3><p>Learn the fundamentals of digital painting with this comprehensive course.</p>', creator: 'Emily White', price: 150, imageUrl: PlaceHolderImages.find(i=>i.id==='course-3')?.imageUrl ?? '', imageHint: PlaceHolderImages.find(i=>i.id==='course-3')?.imageHint ?? '' },
-];
-
-const initialAds: Ad[] = [
-  { id: 'ad1', campaignName: 'SuperNova Laptops', content: 'Experience the next generation of computing.', creator: 'business@example.com', views: 42 },
-  { id: 'ad2', campaignName: 'Cosmic Coffee', content: 'The best coffee in the galaxy.', creator: 'business@example.com', views: 108 },
-];
+import { db } from "@/lib/firebase";
+import { ref, onValue, set, get, child, update } from "firebase/database";
 
 // --- CONTEXT TYPE ---
 interface AppContextType {
@@ -25,10 +15,10 @@ interface AppContextType {
   purchasedCourses: PurchasedCourse[];
   login: (email: string, type: 'user' | 'business') => void;
   logout: () => void;
-  addCourse: (course: Omit<Course, 'id' | 'creator' | 'imageHint'>) => boolean;
-  purchaseCourse: (courseId: string) => boolean;
+  addCourse: (course: Omit<Course, 'id' | 'creator' | 'imageHint'>) => Promise<boolean>;
+  purchaseCourse: (courseId: string) => Promise<boolean>;
   watchAd: (adId: string) => void;
-  createAd: (ad: Omit<Ad, 'id' | 'creator' | 'views'>) => boolean;
+  createAd: (ad: Omit<Ad, 'id' | 'creator' | 'views'>) => Promise<boolean>;
 }
 
 const AppContext = createContext<AppContextType | undefined>(undefined);
@@ -36,109 +26,186 @@ const AppContext = createContext<AppContextType | undefined>(undefined);
 // --- PROVIDER COMPONENT ---
 export function AppContextProvider({ children }: { children: React.ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
-  const [courses, setCourses] = useState<Course[]>(initialCourses);
-  const [ads, setAds] = useState<Ad[]>(initialAds);
+  const [courses, setCourses] = useState<Course[]>([]);
+  const [ads, setAds] = useState<Ad[]>([]);
   const [purchasedCourses, setPurchasedCourses] = useState<PurchasedCourse[]>([]);
   const [isLoaded, setIsLoaded] = useState(false);
   const router = useRouter();
 
   useEffect(() => {
+    // Load data from localStorage on initial load
     try {
       const storedUser = localStorage.getItem("aded_user");
-      const storedPurchased = localStorage.getItem("aded_purchased_courses");
       if (storedUser) {
-        setUser(JSON.parse(storedUser));
-      }
-      if (storedPurchased) {
-        setPurchasedCourses(JSON.parse(storedPurchased));
+        const parsedUser = JSON.parse(storedUser);
+        setUser(parsedUser);
       }
     } catch (error) {
-      console.error("Failed to parse from localStorage", error);
+      console.error("Failed to parse user from localStorage", error);
       localStorage.removeItem("aded_user");
-      localStorage.removeItem("aded_purchased_courses");
+    } finally {
+      setIsLoaded(true);
     }
-    setIsLoaded(true);
+
+    // Set up listeners for Courses and Ads from Firebase
+    const coursesRef = ref(db, 'courses');
+    const adsRef = ref(db, 'ads');
+
+    const coursesListener = onValue(coursesRef, (snapshot) => {
+      const data = snapshot.val();
+      const courseList: Course[] = data ? Object.values(data) : [];
+      setCourses(courseList);
+    });
+
+    const adsListener = onValue(adsRef, (snapshot) => {
+      const data = snapshot.val();
+      const adList: Ad[] = data ? Object.values(data) : [];
+      setAds(adList);
+    });
+
+    return () => {
+      // Detach listeners on cleanup
+      coursesListener();
+      adsListener();
+    };
   }, []);
-  
-  const updateUserAndStorage = (updatedUser: User | null) => {
-    setUser(updatedUser);
-    if(updatedUser) {
-      localStorage.setItem("aded_user", JSON.stringify(updatedUser));
+
+  useEffect(() => {
+    if (user) {
+      localStorage.setItem("aded_user", JSON.stringify(user));
+      // Load purchased courses when user logs in
+      const purchasedRef = ref(db, `users/${user.uid}/purchasedCourses`);
+      get(purchasedRef).then((snapshot) => {
+        if(snapshot.exists()){
+          setPurchasedCourses(Object.values(snapshot.val()));
+        } else {
+          setPurchasedCourses([]);
+        }
+      });
     } else {
       localStorage.removeItem("aded_user");
-      localStorage.removeItem("aded_purchased_courses");
+      setPurchasedCourses([]);
     }
-  }
+  }, [user]);
 
   const login = (email: string, type: 'user' | 'business') => {
-    const newUser: User = { email, type, points: type === 'user' ? 100 : 500 };
-    updateUserAndStorage(newUser);
-    setPurchasedCourses([]);
-    router.push("/dashboard");
+    // In a real app, you would use Firebase Auth. Here we simulate user creation/login.
+    const uid = email.replace(/[^a-zA-Z0-9]/g, ''); // simple UID generation
+    const userRef = ref(db, 'users/' + uid);
+    
+    get(userRef).then((snapshot) => {
+      let newUser: User;
+      if (snapshot.exists()) {
+        newUser = snapshot.val();
+      } else {
+        newUser = { uid, email, type, points: type === 'user' ? 100 : 500 };
+        set(userRef, newUser);
+      }
+      setUser(newUser);
+      router.push("/dashboard");
+    });
   };
 
   const logout = () => {
-    updateUserAndStorage(null);
-    setPurchasedCourses([]);
+    setUser(null);
     router.push("/");
   };
 
-  const addCourse = (course: Omit<Course, 'id' | 'creator' | 'imageHint'>): boolean => {
+  const addCourse = async (courseData: Omit<Course, 'id' | 'creator' | 'imageHint'>): Promise<boolean> => {
     if (!user || user.type !== 'user') return false;
+    
+    const courseId = `course-${Date.now()}`;
     const newCourse: Course = { 
-        ...course, 
-        id: `course-${Date.now()}`, 
+        ...courseData, 
+        id: courseId,
         creator: user.email,
-        imageHint: "new course"
+        imageHint: "new course" // Placeholder hint
     };
-    setCourses(prev => [...prev, newCourse]);
-    return true;
+
+    try {
+        await set(ref(db, `courses/${courseId}`), newCourse);
+        return true;
+    } catch(e) {
+        console.error("Firebase write error:", e);
+        return false;
+    }
   };
 
-  const purchaseCourse = (courseId: string): boolean => {
+  const purchaseCourse = async (courseId: string): Promise<boolean> => {
     if (!user || user.type !== 'user') return false;
     const course = courses.find(c => c.id === courseId);
-    if (!course || user.points < course.price) return false;
-    if (purchasedCourses.some(p => p.id === courseId)) return false;
+    if (!course || user.points < course.price || purchasedCourses.some(p => p.id === courseId)) return false;
 
-    const updatedUser = { ...user, points: user.points - course.price };
-    updateUserAndStorage(updatedUser);
+    const updatedPoints = user.points - course.price;
+    const userRef = ref(db, `users/${user.uid}`);
+    const purchasedCourseRef = ref(db, `users/${user.uid}/purchasedCourses/${courseId}`);
 
-    const newPurchases = [...purchasedCourses, { id: course.id, title: course.title }];
-    setPurchasedCourses(newPurchases);
-    localStorage.setItem("aded_purchased_courses", JSON.stringify(newPurchases));
-    
-    return true;
+    try {
+        await update(userRef, { points: updatedPoints });
+        await set(purchasedCourseRef, { id: course.id, title: course.title });
+        
+        setUser({ ...user, points: updatedPoints }); // Update local state
+        setPurchasedCourses(prev => [...prev, { id: course.id, title: course.title }]);
+        return true;
+    } catch (e) {
+        console.error("Firebase purchase error:", e);
+        return false;
+    }
   };
   
-  const watchAd = (adId: string) => {
+  const watchAd = async (adId: string) => {
     if (!user || user.type !== 'user') return;
     const ad = ads.find(a => a.id === adId);
     if (!ad) return;
 
     const pointsEarned = 10;
-    const updatedUser = { ...user, points: user.points + pointsEarned };
-    updateUserAndStorage(updatedUser);
-    
-    setAds(prevAds => prevAds.map(a => a.id === adId ? { ...a, views: a.views + 1 } : a));
-    
-    // In a real app, you'd update the business owner's points in a database.
-    // Here we just log it.
-    console.log(`Ad ${adId} viewed. Business owner ${ad.creator} should get points.`);
+    const userRef = ref(db, `users/${user.uid}`);
+    const adRef = ref(db, `ads/${adId}`);
+
+    try {
+        // Update user points
+        const updatedUserPoints = user.points + pointsEarned;
+        await update(userRef, { points: updatedUserPoints });
+        setUser({ ...user, points: updatedUserPoints }); // Update local state
+
+        // Update ad views
+        await update(adRef, { views: ad.views + 1 });
+
+        // Update business owner points
+        const businessOwnerUid = ad.creator.replace(/[^a-zA-Z0-9]/g, '');
+        const businessUserRef = ref(db, `users/${businessOwnerUid}`);
+        const businessSnapshot = await get(businessUserRef);
+        if(businessSnapshot.exists()){
+            const businessUser = businessSnapshot.val();
+            await update(businessUserRef, {points: businessUser.points + 1});
+        }
+    } catch (e) {
+        console.error("Firebase ad watch error:", e);
+    }
   };
 
-  const createAd = (ad: Omit<Ad, 'id' | 'creator' | 'views'>): boolean => {
+  const createAd = async (adData: Omit<Ad, 'id' | 'creator' | 'views'>): Promise<boolean> => {
     if (!user || user.type !== 'business') return false;
-    // Simulate payment
     const payment = 50;
     if (user.points < payment) return false;
 
-    const updatedUser = { ...user, points: user.points - payment };
-    updateUserAndStorage(updatedUser);
+    const adId = `ad-${Date.now()}`;
+    const newAd: Ad = { ...adData, id: adId, creator: user.email, views: 0 };
+    
+    const userRef = ref(db, `users/${user.uid}`);
+    const adRef = ref(db, `ads/${adId}`);
 
-    const newAd: Ad = { ...ad, id: `ad-${Date.now()}`, creator: user.email, views: 0 };
-    setAds(prev => [...prev, newAd]);
-    return true;
+    try {
+        const updatedPoints = user.points - payment;
+        await update(userRef, { points: updatedPoints });
+        await set(adRef, newAd);
+        
+        setUser({ ...user, points: updatedPoints }); // Update local state
+        return true;
+    } catch(e) {
+        console.error("Firebase ad creation error:", e);
+        return false;
+    }
   };
 
   const value = {

@@ -17,6 +17,7 @@ export type Ad = {
 };
 
 export type User = {
+  uid: string;
   email: string;
   type: 'user' | 'business';
   points: number;
