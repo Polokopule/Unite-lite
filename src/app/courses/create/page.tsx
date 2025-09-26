@@ -8,14 +8,11 @@ import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
 import { useAppContext } from "@/contexts/app-context";
 import { useRouter } from "next/navigation";
-import { useEffect, useState, useMemo } from "react";
+import { useEffect, useState } from "react";
 import { BookOpen, CreditCard, Image as ImageIcon, Upload, Loader2 } from "lucide-react";
-import 'react-quill/dist/quill.snow.css';
-import dynamic from 'next/dynamic';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
 import Image from "next/image";
-
-const ReactQuill = dynamic(() => import('react-quill'), { ssr: false, loading: () => <p>Loading editor...</p> });
+import { Editor } from 'react-simple-wysiwyg';
 
 export default function CreateCoursePage() {
   const { user, addCourse, loading } = useAppContext();
@@ -81,16 +78,6 @@ export default function CreateCoursePage() {
     e.preventDefault();
     // Submission is handled by AlertDialog
   };
-
-  const quillModules = useMemo(() => ({
-    toolbar: [
-      [{ 'header': [1, 2, 3, false] }],
-      ['bold', 'italic', 'underline', 'strike', 'blockquote'],
-      [{'list': 'ordered'}, {'list': 'bullet'}, {'indent': '-1'}, {'indent': '+1'}],
-      ['link', 'image'],
-      ['clean']
-    ],
-  }), []);
   
   if (loading || !user || user.type !== 'user') {
       return <div className="container mx-auto py-8"><p>Redirecting...</p></div>
@@ -144,12 +131,10 @@ export default function CreateCoursePage() {
 
             <div className="space-y-2">
               <Label htmlFor="content">Course Content</Label>
-              <ReactQuill 
-                theme="snow" 
-                value={content} 
-                onChange={setContent}
-                modules={quillModules}
-                placeholder="Describe what students will learn, add lessons, links, and images..."
+              <Editor
+                value={content}
+                onChange={(e) => setContent(e.target.value)}
+                containerProps={{ style: { resize: 'vertical', minHeight: '200px', border: '1px solid hsl(var(--border))', borderRadius: 'var(--radius)' } }}
               />
             </div>
             <div className="space-y-2">
