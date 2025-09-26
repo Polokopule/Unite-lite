@@ -1,3 +1,4 @@
+
 "use client";
 
 import { PlaceHolderImages } from "@/lib/placeholder-images";
@@ -189,26 +190,31 @@ export function AppContextProvider({ children }: { children: React.ReactNode }) 
     const payment = 50;
     if (user.points < payment) return false;
 
+    // --- Optimistic Update ---
+    const updatedPoints = user.points - payment;
+    const originalUser = user;
+    setUser({ ...user, points: updatedPoints }); // 1. Update local state immediately
+
     const adId = `ad-${Date.now()}`;
     const newAd: Ad = { ...adData, id: adId, creator: user.email, views: 0 };
     
-    const userRef = ref(db, `users/${user.uid}`);
-    const adRef = ref(db, `ads/${adId}`);
-    const updatedPoints = user.points - payment;
-
+    // 2. Perform database operations in the background
     try {
-        // Perform both database writes in parallel for better performance
-        await Promise.all([
-          update(userRef, { points: updatedPoints }),
-          set(adRef, newAd)
-        ]);
-        
-        setUser({ ...user, points: updatedPoints }); // Update local state
-        return true;
+      const userRef = ref(db, `users/${user.uid}`);
+      const adRef = ref(db, `ads/${adId}`);
+      
+      await Promise.all([
+        update(userRef, { points: updatedPoints }),
+        set(adRef, newAd)
+      ]);
     } catch(e) {
         console.error("Firebase ad creation error:", e);
-        return false;
+        // 3. Rollback on failure
+        setUser(originalUser); 
+        return false; // Return false to indicate failure
     }
+    
+    return true; // Return true immediately on the optimistic path
   };
 
   const value = {
