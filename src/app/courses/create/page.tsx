@@ -131,11 +131,11 @@ export default function CreateCoursePage() {
 
             <div className="space-y-2">
               <Label htmlFor="content">Course Content</Label>
-                <Editor
-                  value={content}
-                  onChange={(e) => setContent(e.target.value)}
-                  containerProps={{ style: { resize: 'vertical', minHeight: '200px', border: '1px solid hsl(var(--border))', borderRadius: 'var(--radius)' } }}
-                />
+              <Editor
+                value={content}
+                onChange={setContent}
+                containerProps={{ style: { resize: 'vertical', minHeight: '200px', border: '1px solid hsl(var(--border))', borderRadius: 'var(--radius)' } }}
+              />
             </div>
             <div className="space-y-2">
               <Label htmlFor="price">Price (in points)</Label>
