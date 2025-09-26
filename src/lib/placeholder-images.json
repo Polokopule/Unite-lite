@@ -1,3 +1,46 @@
 {
-  "placeholderImages": []
+  "placeholderImages": [
+    {
+      "id": "hero",
+      "description": "A person studying online with a laptop.",
+      "imageUrl": "https://images.unsplash.com/photo-1597933471507-1ca5765185d8?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3NDE5ODJ8MHwxfHNlYXJjaHw0fHxvbmxpbmUlMjBsZWFybmluZ3xlbnwwfHx8fDE3NTg4OTg2OTZ8MA&ixlib=rb-4.1.0&q=80&w=1080",
+      "imageHint": "online learning"
+    },
+    {
+      "id": "feature-courses",
+      "description": "A collection of books on a shelf.",
+      "imageUrl": "https://images.unsplash.com/photo-1495446815901-a7297e633e8d?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3NDE5ODJ8MHwxfHNlYXJjaHwzfHxib29rcyUyMGxpYnJhcnl8ZW58MHx8fHwxNzU4ODg3NzExfDA&ixlib=rb-4.1.0&q=80&w=1080",
+      "imageHint": "books library"
+    },
+    {
+      "id": "feature-ads",
+      "description": "A neon sign that says 'Open'.",
+      "imageUrl": "https://images.unsplash.com/photo-1646154718521-4f197db8cfef?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3NDE5ODJ8MHwxfHNlYXJjaHw3fHxidXNpbmVzcyUyMHNpZ258ZW58MHx8fHwxNzU4OTIzNjUwfDA&ixlib=rb-4.1.0&q=80&w=1080",
+      "imageHint": "business sign"
+    },
+    {
+      "id": "feature-points",
+      "description": "A collection of gold coins.",
+      "imageUrl": "https://images.unsplash.com/photo-1624365168898-1f7189831f41?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3NDE5ODJ8MHwxfHNlYXJjaHw5fHxnb2xkJTIwY29pbnN8ZW58MHx8fHwxNzU4ODMzODA2fDA&ixlib=rb-4.1.0&q=80&w=1080",
+      "imageHint": "gold coins"
+    },
+    {
+      "id": "course-1",
+      "description": "Abstract digital art",
+      "imageUrl": "https://images.unsplash.com/photo-1593073862407-a3ce22748763?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3NDE5ODJ8MHwxfHNlYXJjaHwyfHxkaWdpdGFsJTIwYXJ0fGVufDB8fHx8MTc1ODkyMDY4M3ww&ixlib=rb-4.1.0&q=80&w=1080",
+      "imageHint": "digital art"
+    },
+    {
+      "id": "course-2",
+      "description": "Person coding on a laptop",
+      "imageUrl": "https://images.unsplash.com/photo-1525547719571-a2d4ac8945e2?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3NDE5ODJ8MHwxfHNlYXJjaHwxfHxjb2RpbmclMjBsYXB0b3B8ZW58MHx8fHwxNzU4ODE1MzY2fDA&ixlib=rb-4.1.0&q=80&w=1080",
+      "imageHint": "coding laptop"
+    },
+    {
+      "id": "course-3",
+      "description": "A person painting on a canvas",
+      "imageUrl": "https://images.unsplash.com/photo-1619107187488-ae0b914b1811?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3NDE5ODJ8MHwxfHNlYXJjaHw4fHxwYWludGluZyUyMGNhbnZhc3xlbnwwfHx8fDE3NTg4Njk4Mzl8MA&ixlib=rb-4.1.0&q=80&w=1080",
+      "imageHint": "painting canvas"
+    }
+  ]
 }
