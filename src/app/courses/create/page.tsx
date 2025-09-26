@@ -12,7 +12,20 @@ import { useEffect, useState } from "react";
 import { BookOpen, CreditCard, Image as ImageIcon, Upload, Loader2 } from "lucide-react";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
 import Image from "next/image";
-import { Editor } from 'react-simple-wysiwyg';
+import { Editor, EditorProvider, useEditorState } from 'react-simple-wysiwyg';
+
+function RichTextEditor({ value, onChange }: { value: string, onChange: (value: string) => void }) {
+  return (
+    <EditorProvider>
+        <Editor
+            value={value}
+            onChange={(e) => onChange(e.target.value)}
+            containerProps={{ style: { resize: 'vertical', minHeight: '200px', border: '1px solid hsl(var(--border))', borderRadius: 'var(--radius)' } }}
+        />
+    </EditorProvider>
+  );
+}
+
 
 export default function CreateCoursePage() {
   const { user, addCourse, loading } = useAppContext();
@@ -131,11 +144,7 @@ export default function CreateCoursePage() {
 
             <div className="space-y-2">
               <Label htmlFor="content">Course Content</Label>
-              <Editor
-                value={content}
-                onChange={setContent}
-                containerProps={{ style: { resize: 'vertical', minHeight: '200px', border: '1px solid hsl(var(--border))', borderRadius: 'var(--radius)' } }}
-              />
+              <RichTextEditor value={content} onChange={setContent} />
             </div>
             <div className="space-y-2">
               <Label htmlFor="price">Price (in points)</Label>
