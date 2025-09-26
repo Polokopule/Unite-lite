@@ -47,6 +47,8 @@ export default function CoursesPage() {
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
           {courses.map((course) => {
             const isPurchased = purchasedCourses.some(pc => pc.id === course.id);
+            const excerpt = course.content.replace(/<[^>]+>/g, '').substring(0, 100) + '...';
+
             return (
               <Card key={course.id} className="flex flex-col">
                 <div className="relative aspect-video">
@@ -60,7 +62,7 @@ export default function CoursesPage() {
                 </div>
                 <CardHeader>
                   <CardTitle>{course.title}</CardTitle>
-                  <CardDescription>{course.description}</CardDescription>
+                  <CardDescription>{excerpt}</CardDescription>
                 </CardHeader>
                 <CardContent className="flex-grow">
                   <p className="text-sm text-muted-foreground">Created by: {course.creator}</p>

@@ -66,3 +66,30 @@
     @apply bg-background text-foreground;
   }
 }
+
+/* React Quill styles */
+.ql-editor {
+    min-height: 200px;
+    font-size: 1rem;
+}
+.ql-snow .ql-stroke {
+    stroke: hsl(var(--foreground));
+}
+.ql-snow .ql-fill {
+    fill: hsl(var(--foreground));
+}
+.ql-snow .ql-picker-label {
+    color: hsl(var(--foreground));
+}
+.ql-snow .ql-picker-options {
+    background-color: hsl(var(--card));
+    border-color: hsl(var(--border));
+}
+.ql-toolbar.ql-snow {
+    border-color: hsl(var(--border));
+    border-radius: var(--radius) var(--radius) 0 0;
+}
+.ql-container.ql-snow {
+    border-color: hsl(var(--border));
+    border-radius: 0 0 var(--radius) var(--radius);
+}

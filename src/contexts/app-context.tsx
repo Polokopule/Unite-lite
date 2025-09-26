@@ -7,9 +7,9 @@ import React, { createContext, useContext, useEffect, useState } from "react";
 
 // --- MOCK DATA ---
 const initialCourses: Course[] = [
-  { id: '1', title: 'Introduction to Web Development', description: 'Learn the basics of HTML, CSS, and JavaScript.', creator: 'Jane Doe', price: 100, imageUrl: PlaceHolderImages.find(i=>i.id==='course-1')?.imageUrl ?? '', imageHint: PlaceHolderImages.find(i=>i.id==='course-1')?.imageHint ?? '' },
-  { id: '2', title: 'Advanced React Patterns', description: 'Take your React skills to the next level.', creator: 'John Smith', price: 250, imageUrl: PlaceHolderImages.find(i=>i.id==='course-2')?.imageUrl ?? '', imageHint: PlaceHolderImages.find(i=>i.id==='course-2')?.imageHint ?? '' },
-  { id: '3', title: 'Digital Painting for Beginners', description: 'Unleash your creativity with digital art.', creator: 'Emily White', price: 150, imageUrl: PlaceHolderImages.find(i=>i.id==='course-3')?.imageUrl ?? '', imageHint: PlaceHolderImages.find(i=>i.id==='course-3')?.imageHint ?? '' },
+  { id: '1', title: 'Introduction to Web Development', content: '<h3>Welcome!</h3><p>Learn the basics of HTML, CSS, and JavaScript.</p>', creator: 'Jane Doe', price: 100, imageUrl: PlaceHolderImages.find(i=>i.id==='course-1')?.imageUrl ?? '', imageHint: PlaceHolderImages.find(i=>i.id==='course-1')?.imageHint ?? '' },
+  { id: '2', title: 'Advanced React Patterns', content: '<h3>Take the next step</h3><p>This course covers advanced React patterns like HOCs, render props, and hooks.</p>', creator: 'John Smith', price: 250, imageUrl: PlaceHolderImages.find(i=>i.id==='course-2')?.imageUrl ?? '', imageHint: PlaceHolderImages.find(i=>i.id==='course-2')?.imageHint ?? '' },
+  { id: '3', title: 'Digital Painting for Beginners', content: '<h3>Unleash your creativity!</h3><p>Learn the fundamentals of digital painting with this comprehensive course.</p>', creator: 'Emily White', price: 150, imageUrl: PlaceHolderImages.find(i=>i.id==='course-3')?.imageUrl ?? '', imageHint: PlaceHolderImages.find(i=>i.id==='course-3')?.imageHint ?? '' },
 ];
 
 const initialAds: Ad[] = [
@@ -25,7 +25,7 @@ interface AppContextType {
   purchasedCourses: PurchasedCourse[];
   login: (email: string, type: 'user' | 'business') => void;
   logout: () => void;
-  addCourse: (course: Omit<Course, 'id' | 'creator' | 'imageUrl' | 'imageHint'>) => boolean;
+  addCourse: (course: Omit<Course, 'id' | 'creator' | 'imageHint'>) => boolean;
   purchaseCourse: (courseId: string) => boolean;
   watchAd: (adId: string) => void;
   createAd: (ad: Omit<Ad, 'id' | 'creator' | 'views'>) => boolean;
@@ -83,13 +83,12 @@ export function AppContextProvider({ children }: { children: React.ReactNode }) 
     router.push("/");
   };
 
-  const addCourse = (course: Omit<Course, 'id' | 'creator' | 'imageUrl' | 'imageHint'>): boolean => {
+  const addCourse = (course: Omit<Course, 'id' | 'creator' | 'imageHint'>): boolean => {
     if (!user || user.type !== 'user') return false;
     const newCourse: Course = { 
         ...course, 
         id: `course-${Date.now()}`, 
         creator: user.email,
-        imageUrl: `https://picsum.photos/seed/${Date.now()}/600/400`,
         imageHint: "new course"
     };
     setCourses(prev => [...prev, newCourse]);

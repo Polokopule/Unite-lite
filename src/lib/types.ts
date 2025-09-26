@@ -1,7 +1,7 @@
 export type Course = {
   id: string;
   title: string;
-  description: string;
+  content: string; // Changed from description to content to support rich text
   creator: string;
   price: number;
   imageUrl: string;

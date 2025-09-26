@@ -8,7 +8,7 @@ import { Ad, Course } from "@/lib/types";
 import { ArrowRight, BookCopy, Eye, PlusCircle, ShoppingBag } from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useEffect, useState } from "react";
+import { useEffect } from "react";
 
 export default function DashboardPage() {
   const { user, purchasedCourses, courses, ads } = useAppContext();
@@ -60,7 +60,9 @@ function UserDashboard({ courses, purchasedCourses }: { courses: Course[], purch
                                <BookCopy className="h-5 w-5 text-primary"/>
                                 <span className="font-medium">{course.title}</span>
                             </div>
-                            <Button variant="ghost" size="sm">View Course</Button>
+                             <Button asChild variant="ghost" size="sm">
+                                <Link href={`/courses/${course.id}`}>View Course</Link>
+                            </Button>
                         </li>
                     ))}
                 </ul>
