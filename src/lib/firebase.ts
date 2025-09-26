@@ -6,10 +6,10 @@ import { getAuth } from "firebase/auth";
 // Your web app's Firebase configuration
 const firebaseConfig = {
   apiKey: "API_KEY",
-  authDomain: "unite-XXXXX.firebaseapp.com",
-  databaseURL: "https://unite-XXXXX.firebaseio.com",
-  projectId: "unite-XXXXX",
-  storageBucket: "unite-XXXXX.appspot.com",
+  authDomain: "unite-3409c.firebaseapp.com",
+  databaseURL: "https://unite-3409c-default-rtdb.firebaseio.com/",
+  projectId: "unite-3409c",
+  storageBucket: "unite-3409c.appspot.com",
   messagingSenderId: "MSID",
   appId: "APP_ID"
 };
@@ -19,4 +19,4 @@ const app = initializeApp(firebaseConfig);
 const db = getDatabase(app);
 const auth = getAuth(app);
 
-export { db, auth };
+export { db, auth, app };

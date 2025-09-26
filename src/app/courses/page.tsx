@@ -1,3 +1,4 @@
+
 "use client";
 
 import { Button } from "@/components/ui/button";
@@ -70,7 +71,7 @@ export default function CoursesPage() {
                   <CardDescription>{excerpt}</CardDescription>
                 </CardHeader>
                 <CardContent className="flex-grow">
-                  <p className="text-sm text-muted-foreground">Created by: {course.creator}</p>
+                  <p className="text-sm text-muted-foreground">Created by: {course.creatorName}</p>
                 </CardContent>
                 <CardFooter className="flex justify-between items-center">
                     <div className="font-bold text-lg flex items-center gap-2">

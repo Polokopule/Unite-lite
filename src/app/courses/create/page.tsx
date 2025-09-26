@@ -1,3 +1,4 @@
+
 "use client";
 
 import { Button } from "@/components/ui/button";
@@ -17,7 +18,7 @@ import Image from "next/image";
 const ReactQuill = dynamic(() => import('react-quill'), { ssr: false, loading: () => <p>Loading editor...</p> });
 
 export default function CreateCoursePage() {
-  const { user, addCourse } = useAppContext();
+  const { user, addCourse, loading } = useAppContext();
   const router = useRouter();
   const { toast } = useToast();
 
@@ -29,14 +30,17 @@ export default function CreateCoursePage() {
   const [isPublishing, setIsPublishing] = useState(false);
 
   useEffect(() => {
-    if (!user || user.type !== 'user') {
+    if (!loading && (!user || user.type !== 'user')) {
+      toast({ variant: 'destructive', title: 'Unauthorized', description: 'You must be logged in as a user to create a course.'})
       router.push('/login-user');
     }
-  }, [user, router]);
+  }, [user, loading, router, toast]);
   
   const handleCoverImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (file) {
+      // In a real app, you'd upload this to Firebase Storage and get a URL.
+      // For now, we'll use a local blob URL.
       setCoverImage(file);
       setCoverImageUrl(URL.createObjectURL(file));
     }
@@ -53,6 +57,8 @@ export default function CreateCoursePage() {
     }
     
     setIsPublishing(true);
+    // In a real app, you would upload the image file to storage first.
+    // For now, we're just passing the blob URL which won't persist.
     const success = await addCourse({ title, content, price, imageUrl: coverImageUrl });
     setIsPublishing(false);
 
@@ -86,7 +92,7 @@ export default function CreateCoursePage() {
     ],
   }), []);
   
-  if (!user || user.type !== 'user') {
+  if (loading || !user || user.type !== 'user') {
       return <div className="container mx-auto py-8"><p>Redirecting...</p></div>
   }
 

@@ -1,3 +1,4 @@
+
 "use client";
 
 import { useAppContext } from "@/contexts/app-context";
@@ -12,14 +13,18 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "./ui/dropdown-menu";
-import { Avatar, AvatarFallback } from "./ui/avatar";
+import { Avatar, AvatarFallback, AvatarImage } from "./ui/avatar";
 import { Briefcase, ChevronDown, LogOut, User as UserIcon, Wallet } from "lucide-react";
 
 export function Header() {
-  const { user, logout } = useAppContext();
+  const { user, firebaseUser, logout } = useAppContext();
 
-  const getInitials = (email: string) => {
-    return email.substring(0, 2).toUpperCase();
+  const getInitials = (name: string) => {
+    const names = name.split(' ');
+    if (names.length > 1) {
+      return names[0][0] + names[names.length - 1][0];
+    }
+    return name.substring(0, 2).toUpperCase();
   };
 
   return (
@@ -34,8 +39,9 @@ export function Header() {
                 <Link href="/watch-ads" className="transition-colors hover:text-primary">Earn Points</Link>
               </>
             )}
-            {user?.type === 'business' && (
+             {user?.type === 'business' && (
                <>
+                <Link href="/dashboard" className="transition-colors hover:text-primary">Dashboard</Link>
                 <Link href="/create-ad" className="transition-colors hover:text-primary">Create Ad</Link>
               </>
             )}
@@ -51,8 +57,9 @@ export function Header() {
                   <DropdownMenuTrigger asChild>
                     <Button variant="ghost" className="relative h-8 w-8 rounded-full">
                       <Avatar className="h-8 w-8">
+                         {firebaseUser?.photoURL && <AvatarImage src={firebaseUser.photoURL} alt={user.name} />}
                         <AvatarFallback className="bg-primary text-primary-foreground font-bold">
-                          {getInitials(user.email)}
+                          {getInitials(user.name)}
                         </AvatarFallback>
                       </Avatar>
                     </Button>
@@ -60,7 +67,7 @@ export function Header() {
                   <DropdownMenuContent className="w-56" align="end" forceMount>
                     <DropdownMenuLabel className="font-normal">
                       <div className="flex flex-col space-y-1">
-                        <p className="text-sm font-medium leading-none">{user.type === 'user' ? 'User' : 'Business'}</p>
+                        <p className="text-sm font-medium leading-none">{user.name}</p>
                         <p className="text-xs leading-none text-muted-foreground">
                           {user.email}
                         </p>

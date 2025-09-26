@@ -1,3 +1,4 @@
+
 "use client";
 
 import { useAppContext } from "@/contexts/app-context";
@@ -13,7 +14,7 @@ import jsPDF from 'jspdf';
 import html2canvas from 'html2canvas';
 
 export default function CourseViewerPage() {
-    const { user, courses, purchasedCourses } = useAppContext();
+    const { user, courses, purchasedCourses, loading } = useAppContext();
     const router = useRouter();
     const params = useParams();
     const { toast } = useToast();
@@ -24,21 +25,42 @@ export default function CourseViewerPage() {
     const [isDownloading, setIsDownloading] = useState(false);
 
     useEffect(() => {
+        if (loading) return;
+
         const courseId = params.id as string;
         const foundCourse = courses.find(c => c.id === courseId);
 
         if (foundCourse) {
             setCourse(foundCourse);
-            const isPurchased = purchasedCourses.some(pc => pc.id === courseId);
-            if (user?.type === 'user' && isPurchased) {
-                setIsAuthorized(true);
-            } else {
+            if (user?.type === 'user') {
+                const isPurchased = purchasedCourses.some(pc => pc.id === courseId);
+                // Also allow the creator to view their own course
+                if (isPurchased || foundCourse.creator === user.uid) {
+                    setIsAuthorized(true);
+                } else {
+                     toast({
+                        variant: "destructive",
+                        title: "Unauthorized",
+                        description: "You have not purchased this course.",
+                    });
+                    router.push('/courses');
+                }
+            } else if (user?.type === 'business') {
+                // Businesses can't view courses
                  toast({
                     variant: "destructive",
-                    title: "Unauthorized",
-                    description: "You have not purchased this course.",
+                    title: "Access Denied",
+                    description: "Business accounts cannot view course content.",
                 });
-                router.push('/courses');
+                router.push('/');
+            } else {
+                 // Not logged in
+                toast({
+                    variant: "destructive",
+                    title: "Please Log In",
+                    description: "You must be logged in to view courses.",
+                });
+                router.push('/login-user');
             }
         } else {
              toast({
@@ -48,7 +70,7 @@ export default function CourseViewerPage() {
             });
             router.push('/courses');
         }
-    }, [params.id, courses, purchasedCourses, user, router, toast]);
+    }, [params.id, courses, purchasedCourses, user, router, toast, loading]);
 
     const handleDownloadPDF = async () => {
         if (!courseContentRef.current || !course) return;
@@ -60,9 +82,10 @@ export default function CourseViewerPage() {
 
         try {
             const canvas = await html2canvas(content, {
-                scale: 2, // Increase scale for better quality
+                scale: 2, 
                 useCORS: true, 
-                logging: false
+                logging: false,
+                backgroundColor: null, // Use background from the element
             });
 
             const imgData = canvas.toDataURL('image/png');
@@ -84,48 +107,51 @@ export default function CourseViewerPage() {
         }
     };
 
-    if (!isAuthorized || !course) {
+    if (loading || !isAuthorized || !course) {
         return <div className="container mx-auto py-8"><p>Loading course...</p></div>;
     }
 
     return (
         <div className="container mx-auto py-8 max-w-4xl">
             <Card>
-                <div className="relative aspect-video">
-                    <Image
-                        src={course.imageUrl}
-                        alt={course.title}
-                        fill
-                        className="object-cover rounded-t-lg"
-                        priority
-                    />
-                </div>
-                <CardHeader>
-                    <div className="flex justify-between items-start">
-                        <div>
-                            <CardTitle className="text-3xl font-headline">{course.title}</CardTitle>
-                            <CardDescription>By {course.creator}</CardDescription>
+                 <div ref={courseContentRef} className="bg-background text-foreground">
+                    <div className="relative aspect-video">
+                        <Image
+                            src={course.imageUrl}
+                            alt={course.title}
+                            fill
+                            className="object-cover rounded-t-lg"
+                            priority
+                        />
+                    </div>
+                    <CardHeader>
+                        <div className="flex justify-between items-start">
+                            <div>
+                                <CardTitle className="text-3xl font-headline">{course.title}</CardTitle>
+                                <CardDescription>By {course.creatorName}</CardDescription>
+                            </div>
                         </div>
-                        <Button onClick={handleDownloadPDF} disabled={isDownloading}>
-                            {isDownloading ? (
-                                <>
-                                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                                    Downloading...
-                                </>
-                            ) : (
-                                <>
-                                    <Download className="mr-2 h-4 w-4" />
-                                    Download as PDF
-                                </>
-                            )}
-                        </Button>
-                    </div>
-                </CardHeader>
-                <CardContent>
-                    <div ref={courseContentRef} className="prose dark:prose-invert max-w-none">
-                        <div className="p-8 bg-background" dangerouslySetInnerHTML={{ __html: course.content }} />
-                    </div>
-                </CardContent>
+                    </CardHeader>
+                    <CardContent>
+                        <div className="prose dark:prose-invert max-w-none" dangerouslySetInnerHTML={{ __html: course.content }} />
+                    </CardContent>
+                 </div>
+                 {/* Action buttons outside the PDF capture area */}
+                 <div className="p-6 pt-0">
+                    <Button onClick={handleDownloadPDF} disabled={isDownloading}>
+                        {isDownloading ? (
+                            <>
+                                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                                Downloading...
+                            </>
+                        ) : (
+                            <>
+                                <Download className="mr-2 h-4 w-4" />
+                                Download as PDF
+                            </>
+                        )}
+                    </Button>
+                 </div>
             </Card>
         </div>
     );

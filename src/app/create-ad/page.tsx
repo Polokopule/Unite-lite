@@ -1,3 +1,4 @@
+
 "use client";
 
 import { Button } from "@/components/ui/button";
@@ -13,7 +14,7 @@ import { Megaphone, CreditCard, Loader2 } from "lucide-react";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
 
 export default function CreateAdPage() {
-  const { user, createAd } = useAppContext();
+  const { user, createAd, loading } = useAppContext();
   const router = useRouter();
   const { toast } = useToast();
 
@@ -22,10 +23,11 @@ export default function CreateAdPage() {
   const [isPublishing, setIsPublishing] = useState(false);
 
   useEffect(() => {
-    if (!user || user.type !== 'business') {
+    if (!loading && (!user || user.type !== 'business')) {
+      toast({ variant: 'destructive', title: 'Unauthorized', description: 'You must be logged in as a business to create an ad.'});
       router.push('/login-business');
     }
-  }, [user, router]);
+  }, [user, loading, router, toast]);
 
   const handlePublish = async () => {
     if (!campaignName || !content) {
@@ -61,7 +63,7 @@ export default function CreateAdPage() {
     // The actual submission is handled by the AlertDialog action
   };
   
-  if (!user || user.type !== 'business') {
+  if (loading || !user || user.type !== 'business') {
     return <div className="container mx-auto py-8"><p>Redirecting...</p></div>;
   }
 

@@ -1,3 +1,4 @@
+
 "use client";
 
 import { Button } from "@/components/ui/button";
@@ -12,7 +13,7 @@ import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 
 export default function WatchAdsPage() {
-  const { user, ads, watchAd } = useAppContext();
+  const { user, ads, watchAd, loading } = useAppContext();
   const router = useRouter();
   const { toast } = useToast();
   
@@ -20,10 +21,11 @@ export default function WatchAdsPage() {
   const [progress, setProgress] = useState(0);
 
   useEffect(() => {
-    if (!user || user.type !== 'user') {
+    if (!loading && (!user || user.type !== 'user')) {
+      toast({ variant: 'destructive', title: 'Unauthorized', description: 'You must be logged in as a user to watch ads.'})
       router.push('/login-user');
     }
-  }, [user, router]);
+  }, [user, loading, router, toast]);
   
   useEffect(() => {
     let timer: NodeJS.Timeout;
@@ -59,7 +61,7 @@ export default function WatchAdsPage() {
     setProgress(0);
   };
   
-  if (!user || user.type !== 'user') {
+  if (loading || !user || user.type !== 'user') {
     return <div className="container mx-auto py-8"><p>Redirecting...</p></div>
   }
 

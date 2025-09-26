@@ -1,3 +1,4 @@
+
 "use client";
 
 import { Button } from "@/components/ui/button";
@@ -5,20 +6,39 @@ import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle }
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useAppContext } from "@/contexts/app-context";
-import { Briefcase } from "lucide-react";
+import { Briefcase, Loader2 } from "lucide-react";
 import Link from "next/link";
 import { useState } from "react";
+import { createUserWithEmailAndPassword, updateProfile } from "firebase/auth";
+import { auth } from "@/lib/firebase";
+import { useToast } from "@/hooks/use-toast";
 
 export default function SignUpBusinessPage() {
   const { login } = useAppContext();
+  const { toast } = useToast();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [companyName, setCompanyName] = useState("");
+  const [isLoading, setIsLoading] = useState(false);
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (email && password && companyName) {
-      login(email, 'business');
+    if (!email || !password || !companyName) return;
+
+    setIsLoading(true);
+    try {
+      const userCredential = await createUserWithEmailAndPassword(auth, email, password);
+      await updateProfile(userCredential.user, { displayName: companyName });
+      await login(email, 'business');
+    } catch (error: any) {
+      console.error("Business signup error:", error);
+      toast({
+        variant: "destructive",
+        title: "Sign Up Failed",
+        description: "This email might already be in use or the password is too weak.",
+      });
+    } finally {
+      setIsLoading(false);
     }
   };
 
@@ -43,6 +63,7 @@ export default function SignUpBusinessPage() {
                 required
                 value={companyName}
                 onChange={(e) => setCompanyName(e.target.value)}
+                disabled={isLoading}
               />
             </div>
             <div className="space-y-2">
@@ -54,6 +75,7 @@ export default function SignUpBusinessPage() {
                 required
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
+                disabled={isLoading}
               />
             </div>
             <div className="space-y-2">
@@ -61,15 +83,19 @@ export default function SignUpBusinessPage() {
               <Input
                 id="password"
                 type="password"
-                placeholder="••••••••"
+                placeholder="at least 6 characters"
                 required
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
+                disabled={isLoading}
               />
             </div>
           </CardContent>
           <CardFooter className="flex flex-col gap-4">
-            <Button type="submit" className="w-full">Create Account</Button>
+            <Button type="submit" className="w-full" disabled={isLoading}>
+              {isLoading && <Loader2 className="animate-spin" />}
+              {!isLoading && 'Create Account'}
+            </Button>
             <p className="text-xs text-muted-foreground">
               Already have an account? <Button variant="link" asChild className="p-0 h-auto"><Link href="/login-business">Log In</Link></Button>
             </p>

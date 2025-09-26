@@ -1,3 +1,4 @@
+
 "use client";
 
 import { Button } from "@/components/ui/button";
@@ -11,16 +12,16 @@ import { useRouter } from "next/navigation";
 import { useEffect } from "react";
 
 export default function DashboardPage() {
-  const { user, purchasedCourses, courses, ads } = useAppContext();
+  const { user, loading, purchasedCourses, courses, ads } = useAppContext();
   const router = useRouter();
 
   useEffect(() => {
-    if (!user) {
+    if (!loading && !user) {
       router.push('/');
     }
-  }, [user, router]);
+  }, [user, loading, router]);
 
-  if (!user) {
+  if (loading || !user) {
     return (
       <div className="container mx-auto py-8">
         <p>Loading dashboard...</p>
@@ -31,11 +32,11 @@ export default function DashboardPage() {
   return (
     <div className="container mx-auto py-8">
       <h1 className="text-3xl font-bold font-headline mb-2">
-        Welcome back, {user.email.split('@')[0]}!
+        Welcome back, {user.name}!
       </h1>
       <p className="text-muted-foreground mb-8">Here's a summary of your activity on AdEd.</p>
 
-      {user.type === 'user' ? <UserDashboard courses={courses} purchasedCourses={purchasedCourses} /> : <BusinessDashboard ads={ads.filter(ad => ad.creator === user.email)} />}
+      {user.type === 'user' ? <UserDashboard courses={courses} purchasedCourses={purchasedCourses} /> : <BusinessDashboard ads={ads.filter(ad => ad.creator === user.uid)} />}
     </div>
   );
 }
