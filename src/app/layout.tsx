@@ -5,7 +5,7 @@ import { Header } from '@/components/header';
 import { Toaster } from '@/components/ui/toaster';
 
 export const metadata: Metadata = {
-  title: 'AdEd - Learn and Earn',
+  title: 'Unite - Learn and Earn',
   description: 'Create and sell courses, or advertise your business.',
 };
 

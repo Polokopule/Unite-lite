@@ -76,7 +76,7 @@ export default function CreateAdPage() {
               <Megaphone className="h-8 w-8 text-primary" />
               <div>
                 <CardTitle className="text-2xl font-headline">Create an Ad Campaign</CardTitle>
-                <CardDescription>Promote your business to learners on AdEd.</CardDescription>
+                <CardDescription>Promote your business to learners on Unite.</CardDescription>
               </div>
             </div>
           </CardHeader>

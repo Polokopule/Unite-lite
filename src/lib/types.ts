@@ -24,6 +24,9 @@ export type User = {
   name: string;
   type: 'user' | 'business';
   points: number;
+  purchasedCourses?: { [courseId: string]: PurchasedCourse };
+  createdCourses?: string[];
+  createdAds?: string[];
 };
 
 export type PurchasedCourse = {

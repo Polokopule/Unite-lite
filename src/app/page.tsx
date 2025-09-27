@@ -47,7 +47,7 @@ export default function Home() {
         )}
         <div className="container mx-auto px-4 py-24 sm:py-32 lg:py-40 relative text-center">
           <h1 className="text-4xl sm:text-5xl lg:text-6xl font-headline font-bold tracking-tight text-foreground">
-            Learn, Earn, and Grow with <span className="text-primary">AdEd</span>
+            Learn, Earn, and Grow with <span className="text-primary">Unite</span>
           </h1>
           <p className="mt-6 text-lg sm:text-xl text-muted-foreground max-w-3xl mx-auto">
             A unique platform where knowledge meets opportunity. Create and buy courses using points earned from watching ads, or promote your business to a captive audience.
@@ -67,7 +67,7 @@ export default function Home() {
         <div className="container mx-auto px-4 text-center">
           <h2 className="text-3xl font-headline font-bold tracking-tight">How It Works</h2>
           <p className="mt-4 text-muted-foreground max-w-2xl mx-auto">
-            Whether you're a student, an instructor, or a business, AdEd has something for you.
+            Whether you're a student, an instructor, or a business, Unite has something for you.
           </p>
           <div className="mt-12 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-8">
             {features.map((feature, index) => (
@@ -89,7 +89,7 @@ export default function Home() {
       
       <footer className="w-full py-8 bg-muted/50">
         <div className="container mx-auto px-4 text-center text-muted-foreground">
-          <p>&copy; {new Date().getFullYear()} AdEd. All rights reserved.</p>
+          <p>&copy; {new Date().getFullYear()} Unite. All rights reserved.</p>
         </div>
       </footer>
     </div>

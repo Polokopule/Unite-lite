@@ -6,7 +6,7 @@ import type { Course, Ad, User, PurchasedCourse } from "@/lib/types";
 import { useRouter } from "next/navigation";
 import React, { createContext, useContext, useEffect, useState } from "react";
 import { db, auth } from "@/lib/firebase";
-import { ref, onValue, set, get, update } from "firebase/database";
+import { ref, onValue, set, get, update, remove } from "firebase/database";
 import { onAuthStateChanged, signOut, User as FirebaseUser } from "firebase/auth";
 
 // --- CONTEXT TYPE ---
@@ -18,10 +18,14 @@ interface AppContextType {
   purchasedCourses: PurchasedCourse[];
   login: (email: string, type: 'user' | 'business') => Promise<void>;
   logout: () => void;
-  addCourse: (course: Omit<Course, 'id' | 'creator' | 'imageHint'>) => Promise<boolean>;
+  addCourse: (course: Omit<Course, 'id' | 'creator' | 'creatorName' | 'imageHint'>) => Promise<boolean>;
+  updateCourse: (courseId: string, courseData: Partial<Omit<Course, 'id' | 'creator' | 'creatorName'>>) => Promise<boolean>;
+  deleteCourse: (courseId: string) => Promise<boolean>;
   purchaseCourse: (courseId: string) => Promise<boolean>;
   watchAd: (adId: string) => void;
   createAd: (ad: Omit<Ad, 'id' | 'creator' | 'views'>) => Promise<boolean>;
+  updateAd: (adId: string, adData: Partial<Omit<Ad, 'id' | 'creator'>>) => Promise<boolean>;
+  deleteAd: (adId: string) => Promise<boolean>;
   loading: boolean;
 }
 
@@ -151,6 +155,41 @@ export function AppContextProvider({ children }: { children: React.ReactNode }) 
     }
   };
 
+  const updateCourse = async (courseId: string, courseData: Partial<Omit<Course, 'id' | 'creator' | 'creatorName'>>): Promise<boolean> => {
+    if (!user || user.type !== 'user') return false;
+    const courseRef = ref(db, `courses/${courseId}`);
+    const courseSnapshot = await get(courseRef);
+
+    if (courseSnapshot.exists() && courseSnapshot.val().creator === user.uid) {
+        try {
+            await update(courseRef, courseData);
+            return true;
+        } catch (e) {
+            console.error("Firebase update course error:", e);
+            return false;
+        }
+    }
+    return false;
+  };
+
+  const deleteCourse = async (courseId: string): Promise<boolean> => {
+      if (!user || user.type !== 'user') return false;
+      const courseRef = ref(db, `courses/${courseId}`);
+      const courseSnapshot = await get(courseRef);
+
+      if (courseSnapshot.exists() && courseSnapshot.val().creator === user.uid) {
+          try {
+              await remove(courseRef);
+              // Also remove from any user's purchased list? - for now, no.
+              return true;
+          } catch(e) {
+              console.error("Firebase delete course error:", e);
+              return false;
+          }
+      }
+      return false;
+  }
+
   const purchaseCourse = async (courseId: string): Promise<boolean> => {
     if (!user || user.type !== 'user') return false;
     const course = courses.find(c => c.id === courseId);
@@ -232,6 +271,40 @@ export function AppContextProvider({ children }: { children: React.ReactNode }) 
     return true;
   };
 
+  const updateAd = async (adId: string, adData: Partial<Omit<Ad, 'id' | 'creator'>>): Promise<boolean> => {
+      if (!user || user.type !== 'business') return false;
+      const adRef = ref(db, `ads/${adId}`);
+      const adSnapshot = await get(adRef);
+
+      if (adSnapshot.exists() && adSnapshot.val().creator === user.uid) {
+          try {
+              await update(adRef, adData);
+              return true;
+          } catch(e) {
+              console.error("Firebase update ad error: ", e);
+              return false;
+          }
+      }
+      return false;
+  }
+
+  const deleteAd = async (adId: string): Promise<boolean> => {
+      if (!user || user.type !== 'business') return false;
+      const adRef = ref(db, `ads/${adId}`);
+      const adSnapshot = await get(adRef);
+
+      if (adSnapshot.exists() && adSnapshot.val().creator === user.uid) {
+          try {
+              await remove(adRef);
+              return true;
+          } catch(e) {
+              console.error("Firebase delete ad error:", e);
+              return false;
+          }
+      }
+      return false;
+  }
+
   const value = {
     user,
     firebaseUser,
@@ -241,9 +314,13 @@ export function AppContextProvider({ children }: { children: React.ReactNode }) 
     login,
     logout,
     addCourse,
+    updateCourse,
+    deleteCourse,
     purchaseCourse,
     watchAd,
     createAd,
+    updateAd,
+    deleteAd,
     loading,
   };
 

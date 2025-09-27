@@ -12,7 +12,7 @@ import { useEffect, useState } from "react";
 import { BookOpen, CreditCard, Image as ImageIcon, Upload, Loader2 } from "lucide-react";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
 import Image from "next/image";
-import { Editor, EditorProvider, useEditorState } from 'react-simple-wysiwyg';
+import { Editor, EditorProvider } from 'react-simple-wysiwyg';
 
 function RichTextEditor({ value, onChange }: { value: string, onChange: (value: string) => void }) {
   return (
@@ -77,7 +77,7 @@ export default function CreateCoursePage() {
             title: "Course Created!",
             description: `Your course "${title}" is now live in the marketplace.`
         });
-        router.push('/courses');
+        router.push('/dashboard');
     } else {
         toast({
             variant: "destructive",
@@ -105,7 +105,7 @@ export default function CreateCoursePage() {
                 <BookOpen className="h-8 w-8 text-primary" />
                 <div>
                     <CardTitle className="text-2xl font-headline">Create a New Course</CardTitle>
-                    <CardDescription>Share your knowledge with the AdEd community.</CardDescription>
+                    <CardDescription>Share your knowledge with the Unite community.</CardDescription>
                 </div>
             </div>
           </CardHeader>
