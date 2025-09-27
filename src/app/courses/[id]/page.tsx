@@ -1,158 +1,68 @@
 
-"use client";
 
-import { useAppContext } from "@/contexts/app-context";
-import { useRouter, useParams } from "next/navigation";
-import { useEffect, useState, useRef } from "react";
-import { Course } from "@/lib/types";
-import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Download, Loader2 } from "lucide-react";
-import Image from "next/image";
-import { useToast } from "@/hooks/use-toast";
-import jsPDF from 'jspdf';
-import html2canvas from 'html2canvas';
+import { get, ref } from "firebase/database";
+import { db } from "@/lib/firebase";
+import type { Course } from "@/lib/types";
+import type { Metadata } from "next";
+import CourseViewer from "./course-viewer";
 
-export default function CourseViewerPage() {
-    const { user, courses, purchasedCourses, loading } = useAppContext();
-    const router = useRouter();
-    const params = useParams();
-    const { toast } = useToast();
-    const courseContentRef = useRef<HTMLDivElement>(null);
+type Props = {
+  params: { id: string }
+}
 
-    const [course, setCourse] = useState<Course | null>(null);
-    const [isAuthorized, setIsAuthorized] = useState(false);
-    const [isDownloading, setIsDownloading] = useState(false);
-
-    useEffect(() => {
-        if (loading) return;
-
-        const courseId = params.id as string;
-        const foundCourse = courses.find(c => c.id === courseId);
-
-        if (foundCourse) {
-            setCourse(foundCourse);
-            if (user?.type === 'user') {
-                const isPurchased = purchasedCourses.some(pc => pc.id === courseId);
-                // Also allow the creator to view their own course
-                if (isPurchased || foundCourse.creator === user.uid) {
-                    setIsAuthorized(true);
-                } else {
-                     toast({
-                        variant: "destructive",
-                        title: "Unauthorized",
-                        description: "You have not purchased this course.",
-                    });
-                    router.push('/courses');
-                }
-            } else if (user?.type === 'business') {
-                // Businesses can't view courses
-                 toast({
-                    variant: "destructive",
-                    title: "Access Denied",
-                    description: "Business accounts cannot view course content.",
-                });
-                router.push('/');
-            } else {
-                 // Not logged in
-                toast({
-                    variant: "destructive",
-                    title: "Please Log In",
-                    description: "You must be logged in to view courses.",
-                });
-                router.push('/login-user');
-            }
-        } else {
-             toast({
-                variant: "destructive",
-                title: "Course not found",
-                description: "The course you are looking for does not exist.",
-            });
-            router.push('/courses');
-        }
-    }, [params.id, courses, purchasedCourses, user, router, toast, loading]);
-
-    const handleDownloadPDF = async () => {
-        if (!courseContentRef.current || !course) return;
-
-        setIsDownloading(true);
-        toast({ title: "Preparing PDF...", description: "Please wait while we generate your download." });
-
-        const content = courseContentRef.current;
-
-        try {
-            const canvas = await html2canvas(content, {
-                scale: 2, 
-                useCORS: true, 
-                logging: false,
-                backgroundColor: null, // Use background from the element
-            });
-
-            const imgData = canvas.toDataURL('image/png');
-            const pdf = new jsPDF({
-                orientation: 'p',
-                unit: 'px',
-                format: [canvas.width, canvas.height]
-            });
-
-            pdf.addImage(imgData, 'PNG', 0, 0, canvas.width, canvas.height);
-            pdf.save(`${course.title.replace(/\s+/g, '_').toLowerCase()}.pdf`);
-
-            toast({ title: "Download Started!", description: "Your course PDF is being downloaded." });
-        } catch (error) {
-            console.error("Error generating PDF:", error);
-            toast({ variant: 'destructive', title: "PDF Generation Failed", description: "Could not generate PDF. Please try again." });
-        } finally {
-            setIsDownloading(false);
-        }
-    };
-
-    if (loading || !isAuthorized || !course) {
-        return <div className="container mx-auto py-8"><p>Loading course...</p></div>;
+// Function to fetch a single course from Firebase
+async function getCourse(courseId: string): Promise<Course | null> {
+  try {
+    const courseRef = ref(db, `courses/${courseId}`);
+    const snapshot = await get(courseRef);
+    if (snapshot.exists()) {
+      return snapshot.val() as Course;
     }
+    return null;
+  } catch (error) {
+    console.error("Error fetching course from Firebase:", error);
+    return null;
+  }
+}
 
-    return (
-        <div className="container mx-auto py-8 max-w-4xl">
-            <Card>
-                 <div ref={courseContentRef} className="bg-background text-foreground">
-                    <div className="relative aspect-video">
-                        <Image
-                            src={course.imageUrl}
-                            alt={course.title}
-                            fill
-                            className="object-cover rounded-t-lg"
-                            priority
-                        />
-                    </div>
-                    <CardHeader>
-                        <div className="flex justify-between items-start">
-                            <div>
-                                <CardTitle className="text-3xl font-headline">{course.title}</CardTitle>
-                                <CardDescription>By {course.creatorName}</CardDescription>
-                            </div>
-                        </div>
-                    </CardHeader>
-                    <CardContent>
-                        <div className="prose dark:prose-invert max-w-none" dangerouslySetInnerHTML={{ __html: course.content }} />
-                    </CardContent>
-                 </div>
-                 {/* Action buttons outside the PDF capture area */}
-                 <div className="p-6 pt-0">
-                    <Button onClick={handleDownloadPDF} disabled={isDownloading}>
-                        {isDownloading ? (
-                            <>
-                                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                                Downloading...
-                            </>
-                        ) : (
-                            <>
-                                <Download className="mr-2 h-4 w-4" />
-                                Download as PDF
-                            </>
-                        )}
-                    </Button>
-                 </div>
-            </Card>
-        </div>
-    );
+export async function generateMetadata({ params }: Props): Promise<Metadata> {
+  const course = await getCourse(params.id);
+
+  if (!course) {
+    return {
+      title: "Course Not Found",
+    }
+  }
+
+  const excerpt = course.content.replace(/<[^>]+>/g, '').substring(0, 150) + '...';
+
+  return {
+    title: `${course.title} | Unite`,
+    description: excerpt,
+    openGraph: {
+      title: course.title,
+      description: excerpt,
+      images: [
+        {
+          url: course.imageUrl,
+          width: 1200,
+          height: 630,
+          alt: course.title,
+        },
+      ],
+      type: 'article',
+    },
+    twitter: {
+      card: 'summary_large_image',
+      title: course.title,
+      description: excerpt,
+      images: [course.imageUrl],
+    },
+  }
+}
+
+export default function CourseViewerPage({ params }: Props) {
+    // This is now a Server Component that wraps the client component
+    // It passes the courseId to the client component which will handle its own data fetching and logic
+    return <CourseViewer courseId={params.id} />;
 }
