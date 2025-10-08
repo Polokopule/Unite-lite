@@ -5,7 +5,7 @@ import { useParams } from "next/navigation";
 import { useAppContext } from "@/contexts/app-context";
 import { Group, Message, User as UserType } from "@/lib/types";
 import { useEffect, useState, useRef } from "react";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
