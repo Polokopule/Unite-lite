@@ -1,10 +1,11 @@
 
+
 "use client";
 
 import { useAppContext } from "@/contexts/app-context";
-import { Ad, Post as PostType, FeedItem, Comment as CommentType, Course, Group, User as UserType } from "@/lib/types";
+import { Ad, Post as PostType, FeedItem, Comment as CommentType, Course, Group, User as UserType, Notification } from "@/lib/types";
 import { Button } from "@/components/ui/button";
-import { Loader2, MessageCircle, Heart, Send, ShoppingBag, Wallet, CheckCircle, PlusCircle, Home as HomeIcon, Bell, Users, Lock, User as UserIconLucide } from "lucide-react";
+import { Loader2, MessageCircle, Heart, Send, ShoppingBag, Wallet, CheckCircle, PlusCircle, Home as HomeIcon, Bell, Users, Lock, User as UserIconLucide, Reply } from "lucide-react";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { formatDistanceToNow } from "date-fns";
 import { Input } from "@/components/ui/input";
@@ -20,7 +21,7 @@ import { getAuth } from "firebase/auth";
 
 
 // --- Comment Form ---
-function CommentForm({ postId }: { postId: string }) {
+function CommentForm({ postId, parentId = null, onCommentPosted }: { postId: string; parentId?: string | null, onCommentPosted?: () => void }) {
     const { user, addComment } = useAppContext();
     const [comment, setComment] = useState("");
     const [isCommenting, setIsCommenting] = useState(false);
@@ -30,55 +31,102 @@ function CommentForm({ postId }: { postId: string }) {
         e.preventDefault();
         if (!comment.trim() || !user) return;
         setIsCommenting(true);
-        const success = await addComment(postId, comment);
+        const success = await addComment(postId, comment, parentId);
         setIsCommenting(false);
         if (success) {
             setComment("");
+            if (onCommentPosted) onCommentPosted();
         } else {
             toast({ variant: "destructive", title: "Failed to add comment." });
         }
     };
 
     return (
-        <form onSubmit={handleSubmit} className="flex items-center gap-2 pt-4">
+        <form onSubmit={handleSubmit} className="flex items-center gap-2 pt-2">
              <Avatar className="h-8 w-8">
                 <AvatarImage src={user?.photoURL} alt={user?.name} />
                 <AvatarFallback>{user?.name?.substring(0, 2)}</AvatarFallback>
             </Avatar>
             <Input
-                placeholder="Write a comment..."
+                placeholder="Write a reply..."
                 value={comment}
                 onChange={(e) => setComment(e.target.value)}
                 disabled={isCommenting}
-                className="flex-1"
+                className="flex-1 h-9"
             />
-            <Button type="submit" size="icon" disabled={isCommenting || !comment.trim()}>
+            <Button type="submit" size="icon" variant="ghost" disabled={isCommenting || !comment.trim()}>
                 {isCommenting ? <Loader2 className="h-4 w-4 animate-spin" /> : <Send className="h-4 w-4" />}
             </Button>
         </form>
     );
 }
 
+// --- Comment ---
+function CommentItem({ comment, postId }: { comment: CommentType; postId: string }) {
+    const { user, likeComment } = useAppContext();
+    const [showReplyForm, setShowReplyForm] = useState(false);
+    
+    const isLiked = user ? comment.likes.includes(user.uid) : false;
+
+    const handleLike = () => {
+        if (!user) return;
+        likeComment(postId, comment.id);
+    }
+    
+    return (
+        <div className="flex items-start gap-3">
+            <Avatar className="h-8 w-8">
+                <AvatarImage src={comment.creatorPhotoURL} alt={comment.creatorName} />
+                <AvatarFallback>{comment.creatorName.substring(0, 2)}</AvatarFallback>
+            </Avatar>
+            <div className="w-full">
+                 <div className="bg-muted rounded-lg p-2 px-3 text-sm w-full">
+                    <Link href={`/profile/${comment.creatorUid}`} className="font-semibold hover:underline">{comment.creatorName}</Link>
+                    <p className="whitespace-pre-wrap">{comment.content}</p>
+                </div>
+                <div className="flex items-center gap-2 text-xs text-muted-foreground px-2 pt-1">
+                    <span>{formatDistanceToNow(new Date(comment.timestamp), { addSuffix: true })}</span>
+                    <button onClick={handleLike} disabled={!user} className={`font-semibold hover:underline ${isLiked ? 'text-primary' : ''}`}>Like</button>
+                    <button onClick={() => setShowReplyForm(!showReplyForm)} className="font-semibold hover:underline">Reply</button>
+                     {comment.likes.length > 0 && (
+                        <span className="flex items-center gap-1">
+                            <Heart className="h-3 w-3 text-red-500 fill-red-500" />
+                            {comment.likes.length}
+                        </span>
+                    )}
+                </div>
+                 {showReplyForm && user && (
+                    <div className="pl-0 pt-1">
+                       <CommentForm postId={postId} parentId={comment.id} onCommentPosted={() => setShowReplyForm(false)} />
+                    </div>
+                 )}
+            </div>
+        </div>
+    )
+}
+
 // --- Comment List ---
-function CommentList({ comments }: { comments: CommentType[] }) {
+function CommentList({ comments, postId }: { comments: CommentType[]; postId: string }) {
+    const topLevelComments = useMemo(() => comments.filter(c => !c.parentId), [comments]);
+    const replies = useMemo(() => comments.filter(c => c.parentId), [comments]);
+
+    const getReplies = (commentId: string) => {
+        return replies.filter(reply => reply.parentId === commentId);
+    }
+
     if (!comments || comments.length === 0) {
         return null;
     }
 
     return (
-        <div className="space-y-3 pt-4 border-t mt-2">
-            {comments.map((comment) => (
-                <div key={comment.id} className="flex items-start gap-3">
-                    <Avatar className="h-8 w-8">
-                        <AvatarImage src={comment.creatorPhotoURL} alt={comment.creatorName} />
-                        <AvatarFallback>{comment.creatorName.substring(0, 2)}</AvatarFallback>
-                    </Avatar>
-                    <div className="bg-muted rounded-lg p-2 px-3 text-sm w-full">
-                         <Link href={`/profile/${comment.creatorUid}`} className="font-semibold hover:underline">{comment.creatorName}</Link>
-                        <p className="text-xs text-muted-foreground pb-1">
-                            {formatDistanceToNow(new Date(comment.timestamp), { addSuffix: true })}
-                        </p>
-                        <p className="whitespace-pre-wrap">{comment.content}</p>
+        <div className="space-y-4 pt-4 border-t mt-4">
+            {topLevelComments.map((comment) => (
+                <div key={comment.id}>
+                    <CommentItem comment={comment} postId={postId} />
+                    <div className="pl-11 mt-2 space-y-3 border-l-2 ml-4">
+                        {getReplies(comment.id).map(reply => (
+                            <CommentItem key={reply.id} comment={reply} postId={postId} />
+                        ))}
                     </div>
                 </div>
             ))}
@@ -137,8 +185,8 @@ function PostCard({ post }: { post: PostType }) {
                     </div>
                     {showComments && (
                         <div className="w-full pt-2">
-                        <CommentList comments={post.comments || []} />
-                        {user && <CommentForm postId={post.id} />}
+                            <CommentList comments={post.comments || []} postId={post.id} />
+                            {user && <CommentForm postId={post.id} />}
                         </div>
                     )}
                 </div>
@@ -431,16 +479,64 @@ function CommunityContent() {
 
 
 function NotificationsContent() {
+    const { notifications, loading } = useAppContext();
+
+    const getNotificationMessage = (n: Notification) => {
+        switch (n.type) {
+            case 'new_follower':
+                return <>started following you.</>;
+            case 'post_like':
+                return <>liked your post.</>;
+            case 'comment_like':
+                return <>liked your comment.</>;
+            case 'new_comment':
+                return <>commented on your post.</>;
+            case 'new_reply':
+                return <>replied to your comment.</>;
+            case 'new_group_message':
+                return <span className="text-muted-foreground">{n.message}</span>
+            default:
+                return null;
+        }
+    }
+
     return (
         <div className="container mx-auto py-8">
             <h2 className="text-3xl font-bold font-headline mb-4">Notifications</h2>
              <Card>
                 <CardContent className="pt-6">
-                    <div className="text-center text-muted-foreground py-12">
-                        <Bell className="mx-auto h-12 w-12 mb-4" />
-                        <h3 className="text-xl font-semibold">No new notifications</h3>
-                        <p>Check back later to see updates.</p>
-                    </div>
+                    {loading && <p>Loading notifications...</p>}
+                    {!loading && notifications.length === 0 ? (
+                        <div className="text-center text-muted-foreground py-12">
+                            <Bell className="mx-auto h-12 w-12 mb-4" />
+                            <h3 className="text-xl font-semibold">No new notifications</h3>
+                            <p>Check back later to see updates.</p>
+                        </div>
+                    ) : (
+                        <ul className="space-y-2">
+                           {notifications.map(n => (
+                               <li key={n.id} className={`p-4 rounded-lg flex items-center gap-4 transition-colors ${!n.isRead ? 'bg-primary/10' : 'bg-transparent'}`}>
+                                   <Link href={`/profile/${n.actorUid}`}>
+                                        <Avatar className="h-10 w-10">
+                                            <AvatarImage src={n.actorPhotoURL} alt={n.actorName} />
+                                            <AvatarFallback>{n.actorName?.substring(0, 2)}</AvatarFallback>
+                                        </Avatar>
+                                   </Link>
+                                   <div className="flex-1">
+                                       <p className="text-sm">
+                                           <Link href={`/profile/${n.actorUid}`} className="font-bold hover:underline">{n.actorName}</Link>
+                                           {' '}
+                                           {getNotificationMessage(n)}
+                                       </p>
+                                       <p className="text-xs text-muted-foreground">{formatDistanceToNow(new Date(n.timestamp), { addSuffix: true })}</p>
+                                   </div>
+                                    <Button asChild variant="ghost" size="sm">
+                                        <Link href={n.targetUrl}>View</Link>
+                                    </Button>
+                               </li>
+                           ))}
+                        </ul>
+                    )}
                 </CardContent>
             </Card>
         </div>
@@ -448,7 +544,7 @@ function NotificationsContent() {
 }
 
 export default function HomePage() {
-    const { user } = useAppContext();
+    const { user, notifications, markNotificationsAsRead } = useAppContext();
     const [activeTab, setActiveTab] = useState("home");
     
     useEffect(() => {
@@ -460,6 +556,17 @@ export default function HomePage() {
         }
     }, []);
 
+    const hasUnreadNotifications = notifications.some(n => !n.isRead);
+
+    useEffect(() => {
+        if (activeTab === 'notifications' && hasUnreadNotifications) {
+            // Add a small delay to allow user to see the change
+            setTimeout(() => {
+                markNotificationsAsRead();
+            }, 1000);
+        }
+    }, [activeTab, hasUnreadNotifications, markNotificationsAsRead]);
+
     return (
         <div className="w-full">
             <Tabs defaultValue="home" value={activeTab} onValueChange={setActiveTab} className="w-full">
@@ -470,11 +577,14 @@ export default function HomePage() {
                             <TabsTrigger value="courses"><ShoppingBag className="h-5 w-5" /></TabsTrigger>
                             <TabsTrigger value="groups"><Users className="h-5 w-5" /></TabsTrigger>
                             <TabsTrigger value="community"><UserIconLucide className="h-5 w-5" /></TabsTrigger>
-                            <TabsTrigger value="notifications"><Bell className="h-5 w-5" /></TabsTrigger>
+                             <TabsTrigger value="notifications" className="relative">
+                                <Bell className="h-5 w-5" />
+                                {hasUnreadNotifications && <span className="absolute top-1 right-1 h-2 w-2 rounded-full bg-red-500" />}
+                            </TabsTrigger>
                         </TabsList>
                     </div>
                 </div>
-                <TabsContent value="home" className="mt-0">
+                 <TabsContent value="home" className="mt-0">
                     {user && <CreatePostForm />}
                     <FeedContent />
                 </TabsContent>

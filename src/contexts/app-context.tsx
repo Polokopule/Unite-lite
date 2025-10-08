@@ -1,8 +1,9 @@
 
+
 "use client";
 
 import { PlaceHolderImages } from "@/lib/placeholder-images";
-import type { Course, Ad, User, PurchasedCourse, Post, Group, Comment, Message } from "@/lib/types";
+import type { Course, Ad, User, PurchasedCourse, Post, Group, Comment, Message, Notification } from "@/lib/types";
 import { useRouter } from "next/navigation";
 import React, { createContext, useContext, useEffect, useState } from "react";
 import { db, auth, storage } from "@/lib/firebase";
@@ -20,6 +21,7 @@ interface AppContextType {
   posts: Post[];
   groups: Group[];
   purchasedCourses: PurchasedCourse[];
+  notifications: Notification[];
   login: (email: string, type: 'user' | 'business') => Promise<void>;
   logout: () => void;
   addCourse: (course: Omit<Course, 'id' | 'creator' | 'creatorName' | 'imageHint'>) => Promise<boolean>;
@@ -34,10 +36,12 @@ interface AppContextType {
   unfollowUser: (targetUserId: string) => Promise<void>;
   addPost: (content: string) => Promise<boolean>;
   likePost: (postId: string) => Promise<void>;
-  addComment: (postId: string, content: string) => Promise<boolean>;
+  addComment: (postId: string, content: string, parentId?: string | null) => Promise<boolean>;
+  likeComment: (postId: string, commentId: string) => Promise<void>;
   createGroup: (groupData: { name: string; description: string; pin?: string }) => Promise<boolean>;
   joinGroup: (groupId: string, pin?: string) => Promise<boolean>;
   sendMessage: (groupId: string, messageData: { content: string; type: 'text' } | { file: File; type: 'image' | 'file' }) => Promise<boolean>;
+  markNotificationsAsRead: () => Promise<void>;
   loading: boolean;
 }
 
@@ -53,6 +57,7 @@ export function AppContextProvider({ children }: { children: React.ReactNode }) 
   const [posts, setPosts] = useState<Post[]>([]);
   const [groups, setGroups] = useState<Group[]>([]);
   const [purchasedCourses, setPurchasedCourses] = useState<PurchasedCourse[]>([]);
+  const [notifications, setNotifications] = useState<Notification[]>([]);
   const [loading, setLoading] = useState(true);
   const router = useRouter();
 
@@ -120,7 +125,7 @@ export function AppContextProvider({ children }: { children: React.ReactNode }) 
             id: key,
             ...data[key],
             likes: data[key].likes ? Object.keys(data[key].likes) : [],
-            comments: data[key].comments ? Object.values(data[key].comments) : []
+            comments: data[key].comments ? Object.values(data[key].comments).map((c: any) => ({ ...c, likes: c.likes ? Object.keys(c.likes) : []})) : []
         })).sort((a, b) => b.timestamp - a.timestamp);
         setPosts(postList);
     });
@@ -149,21 +154,49 @@ export function AppContextProvider({ children }: { children: React.ReactNode }) 
   }, []);
 
   useEffect(() => {
+    let purchasedListener: () => void;
+    let notificationsListener: () => void;
+    
     if (user) {
       // Load purchased courses when user logs in
       const purchasedRef = ref(db, `users/${user.uid}/purchasedCourses`);
-      const listener = onValue(purchasedRef, (snapshot) => {
+      purchasedListener = onValue(purchasedRef, (snapshot) => {
         if (snapshot.exists()) {
           setPurchasedCourses(Object.values(snapshot.val()));
         } else {
           setPurchasedCourses([]);
         }
       });
-      return () => listener();
+      
+      const notificationsRef = ref(db, `notifications/${user.uid}`);
+      notificationsListener = onValue(notificationsRef, (snapshot) => {
+          const data = snapshot.val() || {};
+          const notificationList: Notification[] = Object.values(data);
+          setNotifications(notificationList.sort((a,b) => b.timestamp - a.timestamp));
+      });
+
     } else {
       setPurchasedCourses([]);
+      setNotifications([]);
+    }
+    
+    return () => {
+        if (purchasedListener) purchasedListener();
+        if (notificationsListener) notificationsListener();
     }
   }, [user]);
+
+  const createNotification = async (notification: Omit<Notification, 'id' | 'timestamp' | 'isRead'>) => {
+      const notificationRef = ref(db, `notifications/${notification.recipientUid}`);
+      const newNotificationRef = push(notificationRef);
+      const newNotification: Omit<Notification, 'id'> = {
+          ...notification,
+          id: newNotificationRef.key!,
+          isRead: false,
+          timestamp: serverTimestamp() as any
+      }
+      await set(newNotificationRef, newNotification);
+  }
 
   const login = async (email: string, type: 'user' | 'business') => {
     if (!auth.currentUser) throw new Error("Firebase user not authenticated.");
@@ -364,6 +397,17 @@ export function AppContextProvider({ children }: { children: React.ReactNode }) 
         const targetUser = targetSnapshot.val();
         const targetUserFollowers = targetUser.followers ? [...targetUser.followers, user.uid] : [user.uid];
         await update(targetUserRef, { followers: targetUserFollowers });
+        
+        // Create notification
+        await createNotification({
+            recipientUid: targetUserId,
+            actorUid: user.uid,
+            actorName: user.name,
+            actorPhotoURL: user.photoURL,
+            type: 'new_follower',
+            targetUrl: `/profile/${user.uid}`,
+            targetId: user.uid,
+        });
     }
   };
 
@@ -416,27 +460,95 @@ export function AppContextProvider({ children }: { children: React.ReactNode }) 
             await remove(postLikeRef);
         } else {
             await set(postLikeRef, true);
+             if (post.creatorUid !== user.uid) {
+                await createNotification({
+                    recipientUid: post.creatorUid,
+                    actorUid: user.uid,
+                    actorName: user.name,
+                    actorPhotoURL: user.photoURL,
+                    type: 'post_like',
+                    targetUrl: `/profile/${post.creatorUid}`,
+                    targetId: postId,
+                });
+            }
         }
       }
   };
 
-    const addComment = async (postId: string, content: string): Promise<boolean> => {
+    const addComment = async (postId: string, content: string, parentId: string | null = null): Promise<boolean> => {
         if (!user || !content.trim()) return false;
         try {
             const commentsRef = ref(db, `posts/${postId}/comments`);
             const newCommentRef = push(commentsRef);
-            const newComment: Omit<Comment, 'id'> = {
+            const newComment: Omit<Comment, 'id' | 'likes'> = {
                 id: newCommentRef.key!,
                 creatorUid: user.uid,
                 creatorName: user.name,
                 creatorPhotoURL: user.photoURL || '',
                 content: content,
                 timestamp: serverTimestamp() as any,
+                parentId: parentId,
+                postId: postId
             };
             await set(newCommentRef, newComment);
+
+            const post = posts.find(p => p.id === postId);
+            if (post && post.creatorUid !== user.uid) {
+                 await createNotification({
+                    recipientUid: post.creatorUid,
+                    actorUid: user.uid,
+                    actorName: user.name,
+                    actorPhotoURL: user.photoURL,
+                    type: parentId ? 'new_reply' : 'new_comment',
+                    targetUrl: `/profile/${post.creatorUid}`,
+                    targetId: postId,
+                });
+            }
+            // Also notify parent comment author if it's a reply and not their own comment
+            if (parentId) {
+                const parentComment = post?.comments?.find(c => c.id === parentId);
+                if (parentComment && parentComment.creatorUid !== user.uid && parentComment.creatorUid !== post?.creatorUid) {
+                     await createNotification({
+                        recipientUid: parentComment.creatorUid,
+                        actorUid: user.uid,
+                        actorName: user.name,
+                        actorPhotoURL: user.photoURL,
+                        type: 'new_reply',
+                        targetUrl: `/profile/${post.creatorUid}`,
+                        targetId: postId,
+                    });
+                }
+            }
             return true;
         } catch (e) {
             return false;
+        }
+    };
+
+    const likeComment = async (postId: string, commentId: string) => {
+        if (!user) return;
+        const commentLikeRef = ref(db, `posts/${postId}/comments/${commentId}/likes/${user.uid}`);
+        const post = posts.find(p => p.id === postId);
+        const comment = post?.comments?.find(c => c.id === commentId);
+
+        if (comment) {
+            const isLiked = comment.likes.includes(user.uid);
+            if (isLiked) {
+                await remove(commentLikeRef);
+            } else {
+                await set(commentLikeRef, true);
+                if (comment.creatorUid !== user.uid) {
+                    await createNotification({
+                        recipientUid: comment.creatorUid,
+                        actorUid: user.uid,
+                        actorName: user.name,
+                        actorPhotoURL: user.photoURL,
+                        type: 'comment_like',
+                        targetUrl: `/profile/${post.creatorUid}`,
+                        targetId: postId,
+                    });
+                }
+            }
         }
     };
 
@@ -488,6 +600,9 @@ export function AppContextProvider({ children }: { children: React.ReactNode }) 
 
   const sendMessage = async (groupId: string, messageData: { content: string; type: 'text' } | { file: File; type: 'image' | 'file' }): Promise<boolean> => {
     if (!user) return false;
+    
+    const group = groups.find(g => g.id === groupId);
+    if (!group) return false;
 
     try {
         const messagesRef = ref(db, `groups/${groupId}/messages`);
@@ -524,12 +639,45 @@ export function AppContextProvider({ children }: { children: React.ReactNode }) 
         }
 
         await set(newMessageRef, messagePayload);
+
+        // Create notifications for all other group members
+        const notificationPromises = group.members
+            .filter(memberId => memberId !== user.uid)
+            .map(memberId => createNotification({
+                recipientUid: memberId,
+                actorUid: user.uid,
+                actorName: user.name,
+                actorPhotoURL: user.photoURL,
+                type: 'new_group_message',
+                targetUrl: `/groups/${groupId}`,
+                targetId: groupId,
+                message: `sent a message in "${group.name}"`,
+            }));
+        await Promise.all(notificationPromises);
+        
         return true;
     } catch (e) {
         console.error("Error sending message:", e);
         return false;
     }
   };
+
+  const markNotificationsAsRead = async () => {
+      if (!user || notifications.length === 0) return;
+      const unreadNotifs = notifications.filter(n => !n.isRead);
+      if (unreadNotifs.length === 0) return;
+
+      const updates: { [key: string]: any } = {};
+      unreadNotifs.forEach(notif => {
+          updates[`/notifications/${user.uid}/${notif.id}/isRead`] = true;
+      });
+
+      try {
+        await update(ref(db), updates);
+      } catch (error) {
+        console.error("Failed to mark notifications as read:", error);
+      }
+  }
 
   const value = {
     user,
@@ -540,6 +688,7 @@ export function AppContextProvider({ children }: { children: React.ReactNode }) 
     posts,
     groups,
     purchasedCourses,
+    notifications,
     login,
     logout,
     addCourse,
@@ -555,9 +704,11 @@ export function AppContextProvider({ children }: { children: React.ReactNode }) 
     addPost,
     likePost,
     addComment,
+    likeComment,
     createGroup,
     joinGroup,
     sendMessage,
+    markNotificationsAsRead,
     loading,
   };
 
