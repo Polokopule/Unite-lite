@@ -31,7 +31,6 @@ export default function SignUpBusinessPage() {
       await updateProfile(userCredential.user, { displayName: companyName });
       await login(email, 'business');
     } catch (error: any) {
-      console.error("Business signup error:", error);
       toast({
         variant: "destructive",
         title: "Sign Up Failed",

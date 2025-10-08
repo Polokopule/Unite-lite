@@ -29,7 +29,6 @@ export default function LoginBusinessPage() {
       await signInWithEmailAndPassword(auth, email, password);
       await login(email, 'business');
     } catch (error: any) {
-      console.error("Business login error:", error);
       toast({
         variant: "destructive",
         title: "Login Failed",

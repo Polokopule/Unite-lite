@@ -33,7 +33,6 @@ export default function LoginUserPage() {
         await login(firebaseUser.email, 'user');
       }
     } catch (error: any) {
-      console.error("Social login error:", error);
       toast({
         variant: "destructive",
         title: "Login Failed",
@@ -53,7 +52,6 @@ export default function LoginUserPage() {
       await signInWithEmailAndPassword(auth, email, password);
       await login(email, 'user');
     } catch (error: any) {
-      console.error("Email/password login error:", error);
       toast({
         variant: "destructive",
         title: "Login Failed",

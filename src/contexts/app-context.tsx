@@ -134,7 +134,7 @@ export function AppContextProvider({ children }: { children: React.ReactNode }) 
     router.push("/");
   };
 
-  const addCourse = async (courseData: Omit<Course, 'id' | 'creator' | 'imageHint' | 'creatorName'>): Promise<boolean> => {
+  const addCourse = async (courseData: Omit<Course, 'id' | 'creator' | 'creatorName' | 'imageHint'>): Promise<boolean> => {
     if (!user || user.type !== 'user') return false;
     
     const courseId = `course-${Date.now()}`;
@@ -150,7 +150,6 @@ export function AppContextProvider({ children }: { children: React.ReactNode }) 
         await set(ref(db, `courses/${courseId}`), newCourse);
         return true;
     } catch(e) {
-        console.error("Firebase write error:", e);
         return false;
     }
   };
@@ -165,7 +164,6 @@ export function AppContextProvider({ children }: { children: React.ReactNode }) 
             await update(courseRef, courseData);
             return true;
         } catch (e) {
-            console.error("Firebase update course error:", e);
             return false;
         }
     }
@@ -183,7 +181,6 @@ export function AppContextProvider({ children }: { children: React.ReactNode }) 
               // Also remove from any user's purchased list? - for now, no.
               return true;
           } catch(e) {
-              console.error("Firebase delete course error:", e);
               return false;
           }
       }
@@ -206,7 +203,6 @@ export function AppContextProvider({ children }: { children: React.ReactNode }) 
         setUser({ ...user, points: updatedPoints }); // Update local state
         return true;
     } catch (e) {
-        console.error("Firebase purchase error:", e);
         return false;
     }
   };
@@ -238,7 +234,7 @@ export function AppContextProvider({ children }: { children: React.ReactNode }) 
             await update(businessUserRef, {points: businessUser.points + 1});
         }
     } catch (e) {
-        console.error("Firebase ad watch error:", e);
+        // silently fail
     }
   };
 
@@ -263,7 +259,6 @@ export function AppContextProvider({ children }: { children: React.ReactNode }) 
         set(adRef, newAd)
       ]);
     } catch(e) {
-        console.error("Firebase ad creation error:", e);
         setUser(originalUser); 
         return false;
     }
@@ -281,7 +276,6 @@ export function AppContextProvider({ children }: { children: React.ReactNode }) 
               await update(adRef, adData);
               return true;
           } catch(e) {
-              console.error("Firebase update ad error: ", e);
               return false;
           }
       }
@@ -298,7 +292,6 @@ export function AppContextProvider({ children }: { children: React.ReactNode }) 
               await remove(adRef);
               return true;
           } catch(e) {
-              console.error("Firebase delete ad error:", e);
               return false;
           }
       }

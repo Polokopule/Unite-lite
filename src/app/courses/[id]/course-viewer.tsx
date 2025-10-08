@@ -95,7 +95,6 @@ export default function CourseViewer({ courseId }: { courseId: string }) {
 
             toast({ title: "Download Started!", description: "Your course PDF is being downloaded." });
         } catch (error) {
-            console.error("Error generating PDF:", error);
             toast({ variant: 'destructive', title: "PDF Generation Failed", description: "Could not generate PDF. Please try again." });
         } finally {
             setIsDownloading(false);

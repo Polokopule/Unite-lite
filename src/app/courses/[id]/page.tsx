@@ -20,7 +20,6 @@ async function getCourse(courseId: string): Promise<Course | null> {
     }
     return null;
   } catch (error) {
-    console.error("Error fetching course from Firebase:", error);
     return null;
   }
 }
