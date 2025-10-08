@@ -469,7 +469,7 @@ export default function HomePage() {
                             <TabsTrigger value="home"><HomeIcon className="h-5 w-5" /></TabsTrigger>
                             <TabsTrigger value="courses"><ShoppingBag className="h-5 w-5" /></TabsTrigger>
                             <TabsTrigger value="groups"><Users className="h-5 w-5" /></TabsTrigger>
-                            <TabsTrigger value="community"><Users className="h-5 w-5" /></TabsTrigger>
+                            <TabsTrigger value="community"><UserIconLucide className="h-5 w-5" /></TabsTrigger>
                             <TabsTrigger value="notifications"><Bell className="h-5 w-5" /></TabsTrigger>
                         </TabsList>
                     </div>
