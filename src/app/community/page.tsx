@@ -5,7 +5,7 @@ import { useAppContext } from "@/contexts/app-context";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { User } from "lucide-react";
+import { User, Users } from "lucide-react";
 import Link from "next/link";
 import { getAuth } from "firebase/auth";
 
@@ -29,8 +29,15 @@ export default function CommunityPage() {
 
     return (
         <div className="container mx-auto py-8">
-            <h1 className="text-3xl font-bold font-headline mb-2">Community</h1>
-            <p className="text-muted-foreground mb-8">Browse and connect with other users on Unite.</p>
+            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between mb-8">
+                <div>
+                    <h1 className="text-3xl font-bold font-headline mb-2">Community</h1>
+                    <p className="text-muted-foreground mb-8">Browse and connect with other users on Unite.</p>
+                </div>
+                <Button asChild>
+                    <Link href="/groups"><Users className="mr-2 h-4 w-4"/>Browse Groups</Link>
+                </Button>
+            </div>
             <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
                 {allUsers.filter(u => u.uid !== currentUser?.uid).map(user => (
                     <Card key={user.uid} className="text-center">

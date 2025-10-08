@@ -1,0 +1,60 @@
+
+"use client";
+
+import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { useAppContext } from "@/contexts/app-context";
+import Link from "next/link";
+import { Users, Lock, PlusCircle } from "lucide-react";
+
+export default function GroupsPage() {
+    const { groups, user } = useAppContext();
+
+    return (
+        <div className="container mx-auto py-8">
+            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between mb-8">
+                <div>
+                    <h1 className="text-3xl font-bold font-headline">Groups</h1>
+                    <p className="text-muted-foreground">Find and join groups to collaborate and chat.</p>
+                </div>
+                {user && (
+                    <Button asChild className="mt-4 sm:mt-0">
+                        <Link href="/groups/create"><PlusCircle className="h-4 w-4 mr-2"/>Create Group</Link>
+                    </Button>
+                )}
+            </div>
+
+            {groups.length > 0 ? (
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                    {groups.map((group) => (
+                        <Card key={group.id} className="flex flex-col hover:shadow-lg transition-shadow">
+                            <CardHeader>
+                                <CardTitle className="flex items-center justify-between">
+                                    <span className="truncate">{group.name}</span>
+                                    {group.hasPin && <Lock className="h-4 w-4 text-muted-foreground flex-shrink-0" />}
+                                </CardTitle>
+                                <CardDescription>{group.description.substring(0, 100)}{group.description.length > 100 && '...'}</CardDescription>
+                            </CardHeader>
+                            <CardContent className="flex-grow">
+                                <div className="flex items-center text-sm text-muted-foreground gap-2">
+                                    <Users className="h-4 w-4" />
+                                    <span>{group.members?.length || 0} members</span>
+                                </div>
+                            </CardContent>
+                            <CardContent>
+                                 <Button asChild className="w-full">
+                                    <Link href={`/groups/${group.id}`}>View Group</Link>
+                                </Button>
+                            </CardContent>
+                        </Card>
+                    ))}
+                </div>
+            ) : (
+                 <div className="text-center py-20 border-2 border-dashed rounded-lg">
+                    <h2 className="text-xl font-semibold">No Groups Yet</h2>
+                    <p className="text-muted-foreground mt-2">Be the first to create one and start a community!</p>
+                </div>
+            )}
+        </div>
+    );
+}

@@ -20,9 +20,10 @@ export function Header() {
   const { user, firebaseUser, logout } = useAppContext();
 
   const getInitials = (name: string) => {
+    if (!name) return '??';
     const names = name.split(' ');
     if (names.length > 1) {
-      return names[0][0] + names[names.length - 1][0];
+      return (names[0][0] || '') + (names[names.length - 1][0] || '');
     }
     return name.substring(0, 2).toUpperCase();
   };
@@ -33,19 +34,14 @@ export function Header() {
         <Logo />
         <div className="flex flex-1 items-center justify-end space-x-4">
           <nav className="hidden md:flex items-center space-x-6 text-sm font-medium">
+            <Link href="/courses" className="transition-colors hover:text-primary">Courses</Link>
+            <Link href="/groups" className="transition-colors hover:text-primary">Groups</Link>
+            <Link href="/community" className="transition-colors hover:text-primary">Community</Link>
             {user?.type === 'user' && (
-              <>
-                <Link href="/courses" className="transition-colors hover:text-primary">Courses</Link>
-                <Link href="/watch-ads" className="transition-colors hover:text-primary">Earn Points</Link>
-                <Link href="/community" className="transition-colors hover:text-primary">Community</Link>
-              </>
+              <Link href="/watch-ads" className="transition-colors hover:text-primary">Earn Points</Link>
             )}
              {user?.type === 'business' && (
-               <>
-                <Link href="/dashboard" className="transition-colors hover:text-primary">Dashboard</Link>
                 <Link href="/create-ad" className="transition-colors hover:text-primary">Create Ad</Link>
-                <Link href="/community" className="transition-colors hover:text-primary">Community</Link>
-              </>
             )}
           </nav>
           <div className="flex items-center gap-4">

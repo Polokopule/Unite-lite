@@ -48,5 +48,17 @@ export type Post = {
     likes: string[]; // Array of user UIDs
 };
 
+// Represents a user-created group
+export type Group = {
+    id: string;
+    name: string;
+    description: string;
+    creatorUid: string;
+    creatorName: string;
+    members: string[]; // Array of user UIDs
+    hasPin: boolean;
+    pin: string | null;
+}
+
 // Represents either a Post or an Ad in a feed
 export type FeedItem = (Post & { itemType: 'post' }) | (Ad & { itemType: 'ad' });

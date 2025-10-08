@@ -2,7 +2,7 @@
 "use client";
 
 import { PlaceHolderImages } from "@/lib/placeholder-images";
-import type { Course, Ad, User, PurchasedCourse, Post } from "@/lib/types";
+import type { Course, Ad, User, PurchasedCourse, Post, Group } from "@/lib/types";
 import { useRouter } from "next/navigation";
 import React, { createContext, useContext, useEffect, useState } from "react";
 import { db, auth } from "@/lib/firebase";
@@ -17,6 +17,7 @@ interface AppContextType {
   courses: Course[];
   ads: Ad[];
   posts: Post[];
+  groups: Group[];
   purchasedCourses: PurchasedCourse[];
   login: (email: string, type: 'user' | 'business') => Promise<void>;
   logout: () => void;
@@ -32,6 +33,8 @@ interface AppContextType {
   unfollowUser: (targetUserId: string) => Promise<void>;
   addPost: (content: string) => Promise<boolean>;
   likePost: (postId: string) => Promise<void>;
+  createGroup: (groupData: { name: string; description: string; pin?: string }) => Promise<boolean>;
+  joinGroup: (groupId: string, pin?: string) => Promise<boolean>;
   loading: boolean;
 }
 
@@ -45,6 +48,7 @@ export function AppContextProvider({ children }: { children: React.ReactNode }) 
   const [courses, setCourses] = useState<Course[]>([]);
   const [ads, setAds] = useState<Ad[]>([]);
   const [posts, setPosts] = useState<Post[]>([]);
+  const [groups, setGroups] = useState<Group[]>([]);
   const [purchasedCourses, setPurchasedCourses] = useState<PurchasedCourse[]>([]);
   const [loading, setLoading] = useState(true);
   const router = useRouter();
@@ -87,6 +91,7 @@ export function AppContextProvider({ children }: { children: React.ReactNode }) 
     const adsRef = ref(db, 'ads');
     const usersRef = ref(db, 'users');
     const postsRef = ref(db, 'posts');
+    const groupsRef = ref(db, 'groups');
 
     const coursesListener = onValue(coursesRef, (snapshot) => {
       const data = snapshot.val();
@@ -116,6 +121,16 @@ export function AppContextProvider({ children }: { children: React.ReactNode }) 
         setPosts(postList);
     });
 
+    const groupsListener = onValue(groupsRef, (snapshot) => {
+        const data = snapshot.val() || {};
+        const groupList: Group[] = Object.keys(data).map(key => ({
+            id: key,
+            ...data[key],
+            members: data[key].members ? Object.keys(data[key].members) : []
+        }));
+        setGroups(groupList);
+    });
+
 
     return () => {
       // Detach listeners on cleanup
@@ -124,6 +139,7 @@ export function AppContextProvider({ children }: { children: React.ReactNode }) 
       adsListener();
       usersListener();
       postsListener();
+      groupsListener();
     };
   }, []);
 
@@ -399,6 +415,51 @@ export function AppContextProvider({ children }: { children: React.ReactNode }) 
       }
   };
 
+  const createGroup = async (groupData: { name: string; description: string; pin?: string }): Promise<boolean> => {
+    if (!user) return false;
+    
+    try {
+        const groupsRef = ref(db, 'groups');
+        const newGroupRef = push(groupsRef);
+        const newGroup: Omit<Group, 'id' | 'members'> = {
+            name: groupData.name,
+            description: groupData.description,
+            creatorUid: user.uid,
+            creatorName: user.name,
+            hasPin: !!groupData.pin,
+            pin: groupData.pin || null,
+        };
+        await set(newGroupRef, newGroup);
+        // Automatically add creator as a member
+        await set(ref(db, `groups/${newGroupRef.key}/members/${user.uid}`), true);
+        return true;
+    } catch(e) {
+        return false;
+    }
+  };
+
+  const joinGroup = async (groupId: string, pin?: string): Promise<boolean> => {
+      if (!user) return false;
+      const group = groups.find(g => g.id === groupId);
+      if (!group) return false;
+
+      // Check if user is already a member
+      if (group.members?.includes(user.uid)) return true;
+
+      // Check PIN if the group is private
+      if (group.hasPin && group.pin !== pin) {
+          return false;
+      }
+
+      try {
+          const memberRef = ref(db, `groups/${groupId}/members/${user.uid}`);
+          await set(memberRef, true);
+          return true;
+      } catch(e) {
+          return false;
+      }
+  };
+
   const value = {
     user,
     allUsers,
@@ -406,6 +467,7 @@ export function AppContextProvider({ children }: { children: React.ReactNode }) 
     courses,
     ads,
     posts,
+    groups,
     purchasedCourses,
     login,
     logout,
@@ -421,6 +483,8 @@ export function AppContextProvider({ children }: { children: React.ReactNode }) 
     unfollowUser,
     addPost,
     likePost,
+    createGroup,
+    joinGroup,
     loading,
   };
 
