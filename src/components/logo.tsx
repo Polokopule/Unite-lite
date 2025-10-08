@@ -5,7 +5,7 @@ export function Logo() {
   return (
     <Link href="/" className="flex items-center gap-2">
        <Image
-          src="https://storage.googleapis.com/stey-public/unite-logo.png"
+          src="https://storage.googleapis.com/stey-public/unite-logo-2.png"
           alt="Unite Logo"
           width={28}
           height={28}
