@@ -2,12 +2,13 @@
 "use client";
 
 import { PlaceHolderImages } from "@/lib/placeholder-images";
-import type { Course, Ad, User, PurchasedCourse, Post, Group, Comment } from "@/lib/types";
+import type { Course, Ad, User, PurchasedCourse, Post, Group, Comment, Message } from "@/lib/types";
 import { useRouter } from "next/navigation";
 import React, { createContext, useContext, useEffect, useState } from "react";
-import { db, auth } from "@/lib/firebase";
+import { db, auth, storage } from "@/lib/firebase";
 import { ref, onValue, set, get, update, remove, push, serverTimestamp } from "firebase/database";
 import { onAuthStateChanged, signOut, User as FirebaseUser } from "firebase/auth";
+import { ref as storageRef, uploadBytes, getDownloadURL } from "firebase/storage";
 
 // --- CONTEXT TYPE ---
 interface AppContextType {
@@ -36,6 +37,7 @@ interface AppContextType {
   addComment: (postId: string, content: string) => Promise<boolean>;
   createGroup: (groupData: { name: string; description: string; pin?: string }) => Promise<boolean>;
   joinGroup: (groupId: string, pin?: string) => Promise<boolean>;
+  sendMessage: (groupId: string, messageData: { content: string; type: 'text' } | { file: File; type: 'image' | 'file' }) => Promise<boolean>;
   loading: boolean;
 }
 
@@ -128,7 +130,8 @@ export function AppContextProvider({ children }: { children: React.ReactNode }) 
         const groupList: Group[] = Object.keys(data).map(key => ({
             id: key,
             ...data[key],
-            members: data[key].members ? Object.keys(data[key].members) : []
+            members: data[key].members ? Object.keys(data[key].members) : [],
+            messages: data[key].messages ? Object.values(data[key].messages) : []
         }));
         setGroups(groupList);
     });
@@ -483,6 +486,51 @@ export function AppContextProvider({ children }: { children: React.ReactNode }) 
       }
   };
 
+  const sendMessage = async (groupId: string, messageData: { content: string; type: 'text' } | { file: File; type: 'image' | 'file' }): Promise<boolean> => {
+    if (!user) return false;
+
+    try {
+        const messagesRef = ref(db, `groups/${groupId}/messages`);
+        const newMessageRef = push(messagesRef);
+
+        let messagePayload: Partial<Message> = {
+            id: newMessageRef.key!,
+            creatorUid: user.uid,
+            creatorName: user.name,
+            creatorPhotoURL: user.photoURL || '',
+            timestamp: serverTimestamp() as any,
+        };
+
+        if (messageData.type === 'text') {
+            messagePayload = {
+                ...messagePayload,
+                content: messageData.content,
+                type: 'text',
+            };
+        } else {
+            // Upload file to Firebase Storage
+            const file = messageData.file;
+            const fileRef = storageRef(storage, `group-files/${groupId}/${Date.now()}_${file.name}`);
+            const snapshot = await uploadBytes(fileRef, file);
+            const downloadURL = await getDownloadURL(snapshot.ref);
+
+            messagePayload = {
+                ...messagePayload,
+                content: '',
+                type: messageData.type,
+                fileUrl: downloadURL,
+                fileName: file.name,
+            };
+        }
+
+        await set(newMessageRef, messagePayload);
+        return true;
+    } catch (e) {
+        console.error("Error sending message:", e);
+        return false;
+    }
+  };
+
   const value = {
     user,
     allUsers,
@@ -509,6 +557,7 @@ export function AppContextProvider({ children }: { children: React.ReactNode }) 
     addComment,
     createGroup,
     joinGroup,
+    sendMessage,
     loading,
   };
 

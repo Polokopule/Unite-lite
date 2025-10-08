@@ -60,6 +60,19 @@ export type Post = {
     itemType?: 'post';
 };
 
+// Represents a message within a group chat
+export type Message = {
+    id: string;
+    content: string;
+    creatorUid: string;
+    creatorName: string;
+    creatorPhotoURL: string;
+    timestamp: number;
+    type: 'text' | 'image' | 'file';
+    fileUrl?: string;
+    fileName?: string;
+}
+
 // Represents a user-created group
 export type Group = {
     id: string;
@@ -68,6 +81,7 @@ export type Group = {
     creatorUid: string;
     creatorName: string;
     members: string[]; // Array of user UIDs
+    messages?: Message[];
     hasPin: boolean;
     pin: string | null;
 }
