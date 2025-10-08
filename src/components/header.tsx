@@ -14,7 +14,7 @@ import {
   DropdownMenuTrigger,
 } from "./ui/dropdown-menu";
 import { Avatar, AvatarFallback, AvatarImage } from "./ui/avatar";
-import { Briefcase, ChevronDown, LogOut, User as UserIcon, Wallet, Users, Bell, Rss } from "lucide-react";
+import { Briefcase, ChevronDown, LogOut, User as UserIcon, Wallet, Users, Rss } from "lucide-react";
 import { usePathname } from "next/navigation";
 
 export function Header() {
@@ -30,16 +30,18 @@ export function Header() {
     return name.substring(0, 2).toUpperCase();
   };
 
+  const isHomeActive = pathname === '/';
+
   return (
     <header className="sticky top-0 z-50 w-full border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
       <div className="container flex h-16 items-center">
         <Logo />
         <div className="flex flex-1 items-center justify-end space-x-4">
           <nav className="hidden md:flex items-center space-x-6 text-sm font-medium">
-            <Link href="/" className={`transition-colors hover:text-primary ${pathname === '/' ? 'text-primary' : ''}`}>Home</Link>
-            <Link href="/" className="transition-colors hover:text-primary">Courses</Link>
-            <Link href="/groups" className={`transition-colors hover:text-primary ${pathname === '/groups' ? 'text-primary' : ''}`}>Groups</Link>
-            <Link href="/community" className={`transition-colors hover:text-primary ${pathname === '/community' ? 'text-primary' : ''}`}>Community</Link>
+            <Link href="/#home" className={`transition-colors hover:text-primary ${isHomeActive ? 'text-primary' : ''}`}>Home</Link>
+            <Link href="/#courses" className="transition-colors hover:text-primary">Courses</Link>
+            <Link href="/#groups" className="transition-colors hover:text-primary">Groups</Link>
+            <Link href="/#community" className="transition-colors hover:text-primary">Community</Link>
             {user?.type === 'user' && (
               <Link href="/watch-ads" className="transition-colors hover:text-primary">Earn Points</Link>
             )}

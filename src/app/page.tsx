@@ -2,9 +2,9 @@
 "use client";
 
 import { useAppContext } from "@/contexts/app-context";
-import { Ad, Post as PostType, FeedItem, Comment as CommentType, Course } from "@/lib/types";
+import { Ad, Post as PostType, FeedItem, Comment as CommentType, Course, Group, User as UserType } from "@/lib/types";
 import { Button } from "@/components/ui/button";
-import { Loader2, MessageCircle, Heart, Send, ShoppingBag, Wallet, CheckCircle, PlusCircle, Home as HomeIcon, Bell } from "lucide-react";
+import { Loader2, MessageCircle, Heart, Send, ShoppingBag, Wallet, CheckCircle, PlusCircle, Home as HomeIcon, Bell, Users, Lock, User as UserIconLucide } from "lucide-react";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { formatDistanceToNow } from "date-fns";
 import { Input } from "@/components/ui/input";
@@ -15,7 +15,8 @@ import Image from "next/image";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { CreatePostForm } from "@/components/create-post-form";
-import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
+import { Card, CardHeader, CardTitle, CardContent, CardDescription, CardFooter } from "@/components/ui/card";
+import { getAuth } from "firebase/auth";
 
 
 // --- Comment Form ---
@@ -322,6 +323,112 @@ function CoursesContent() {
   );
 }
 
+function GroupsContent() {
+    const { groups, user } = useAppContext();
+
+    return (
+        <div className="container mx-auto py-8">
+            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between mb-8">
+                <div>
+                    <h1 className="text-3xl font-bold font-headline">Groups</h1>
+                    <p className="text-muted-foreground">Find and join groups to collaborate and chat.</p>
+                </div>
+                {user && (
+                    <Button asChild className="mt-4 sm:mt-0">
+                        <Link href="/groups/create"><PlusCircle className="h-4 w-4 mr-2"/>Create Group</Link>
+                    </Button>
+                )}
+            </div>
+
+            {groups.length > 0 ? (
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                    {groups.map((group) => (
+                        <Card key={group.id} className="flex flex-col hover:shadow-lg transition-shadow">
+                            <CardHeader>
+                                <CardTitle className="flex items-center justify-between">
+                                    <span className="truncate">{group.name}</span>
+                                    {group.hasPin && <Lock className="h-4 w-4 text-muted-foreground flex-shrink-0" />}
+                                </CardTitle>
+                                <CardDescription>{group.description.substring(0, 100)}{group.description.length > 100 && '...'}</CardDescription>
+                            </CardHeader>
+                            <CardContent className="flex-grow">
+                                <div className="flex items-center text-sm text-muted-foreground gap-2">
+                                    <Users className="h-4 w-4" />
+                                    <span>{group.members?.length || 0} members</span>
+                                </div>
+                            </CardContent>
+                            <CardFooter>
+                                 <Button asChild className="w-full">
+                                    <Link href={`/groups/${group.id}`}>View Group</Link>
+                                </Button>
+                            </CardFooter>
+                        </Card>
+                    ))}
+                </div>
+            ) : (
+                 <div className="text-center py-20 border-2 border-dashed rounded-lg">
+                    <h2 className="text-xl font-semibold">No Groups Yet</h2>
+                    <p className="text-muted-foreground mt-2">Be the first to create one and start a community!</p>
+                </div>
+            )}
+        </div>
+    );
+}
+
+function CommunityContent() {
+    const { allUsers, loading } = useAppContext();
+    const auth = getAuth();
+    const currentUser = auth.currentUser;
+
+    const getInitials = (name: string) => {
+        if (!name) return '??';
+        const names = name.split(' ');
+        if (names.length > 1) {
+            return (names[0][0] || '') + (names[names.length - 1][0] || '');
+        }
+        return name.substring(0, 2).toUpperCase();
+    };
+    
+    if (loading) {
+        return <div className="container mx-auto py-8"><p>Loading community...</p></div>
+    }
+
+    return (
+        <div className="container mx-auto py-8">
+            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between mb-8">
+                <div>
+                    <h1 className="text-3xl font-bold font-headline mb-2">Community</h1>
+                    <p className="text-muted-foreground mb-8">Browse and connect with other users on Unite.</p>
+                </div>
+            </div>
+            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
+                {allUsers.filter(u => u.uid !== currentUser?.uid).map(user => (
+                    <Card key={user.uid} className="text-center">
+                        <CardHeader>
+                            <Avatar className="h-20 w-20 mx-auto border-2 border-primary">
+                                {user.photoURL && <AvatarImage src={user.photoURL} alt={user.name} />}
+                                <AvatarFallback className="bg-muted text-muted-foreground text-2xl font-bold">
+                                    {getInitials(user.name)}
+                                </AvatarFallback>
+                            </Avatar>
+                        </CardHeader>
+                        <CardContent>
+                            <CardTitle className="text-lg">{user.name}</CardTitle>
+                            <p className="text-sm text-muted-foreground capitalize">{user.type}</p>
+                            <Button asChild variant="outline" className="mt-4 w-full">
+                                <Link href={`/profile/${user.uid}`}>
+                                    <UserIconLucide className="mr-2 h-4 w-4" />
+                                    View Profile
+                                </Link>
+                            </Button>
+                        </CardContent>
+                    </Card>
+                ))}
+            </div>
+        </div>
+    );
+}
+
 
 function NotificationsContent() {
     return (
@@ -342,14 +449,27 @@ function NotificationsContent() {
 
 export default function HomePage() {
     const { user } = useAppContext();
+    const [activeTab, setActiveTab] = useState("home");
+    
+    useEffect(() => {
+        if (window.location.hash) {
+            const tab = window.location.hash.substring(1);
+            if (['home', 'courses', 'groups', 'community', 'notifications'].includes(tab)) {
+                setActiveTab(tab);
+            }
+        }
+    }, []);
+
     return (
         <div className="w-full">
-            <Tabs defaultValue="home" className="w-full">
+            <Tabs defaultValue="home" value={activeTab} onValueChange={setActiveTab} className="w-full">
                 <div className="sticky top-16 z-40 bg-background border-b">
                     <div className="container mx-auto">
-                        <TabsList className="grid w-full grid-cols-3 max-w-lg mx-auto">
+                        <TabsList className="grid w-full grid-cols-5 max-w-lg mx-auto">
                             <TabsTrigger value="home"><HomeIcon className="h-5 w-5" /></TabsTrigger>
                             <TabsTrigger value="courses"><ShoppingBag className="h-5 w-5" /></TabsTrigger>
+                            <TabsTrigger value="groups"><Users className="h-5 w-5" /></TabsTrigger>
+                            <TabsTrigger value="community"><Users className="h-5 w-5" /></TabsTrigger>
                             <TabsTrigger value="notifications"><Bell className="h-5 w-5" /></TabsTrigger>
                         </TabsList>
                     </div>
@@ -360,6 +480,12 @@ export default function HomePage() {
                 </TabsContent>
                 <TabsContent value="courses" className="mt-0">
                     <CoursesContent />
+                </TabsContent>
+                <TabsContent value="groups" className="mt-0">
+                    <GroupsContent />
+                </TabsContent>
+                <TabsContent value="community" className="mt-0">
+                    <CommunityContent />
                 </TabsContent>
                 <TabsContent value="notifications" className="mt-0">
                     <NotificationsContent />
