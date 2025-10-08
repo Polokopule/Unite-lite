@@ -34,10 +34,8 @@ export function Header() {
         <Logo />
         <div className="flex flex-1 items-center justify-end space-x-4">
           <nav className="hidden md:flex items-center space-x-6 text-sm font-medium">
+            <Link href="/" className="transition-colors hover:text-primary">Feed</Link>
             <Link href="/courses" className="transition-colors hover:text-primary">Courses</Link>
-            {user?.type === 'user' && (
-                <Link href="/dashboard" className="transition-colors hover:text-primary">Feed</Link>
-            )}
             <Link href="/groups" className="transition-colors hover:text-primary">Groups</Link>
             <Link href="/community" className="transition-colors hover:text-primary">Community</Link>
             {user?.type === 'user' && (
@@ -132,4 +130,3 @@ export function Header() {
     </header>
   );
 }
-
