@@ -326,16 +326,16 @@ function CoursesContent() {
 export default function HomePage() {
     return (
         <div className="container mx-auto py-8">
-            <Tabs defaultValue="courses" className="w-full">
+            <Tabs defaultValue="home" className="w-full">
                 <TabsList className="grid w-full grid-cols-2 mb-8 max-w-lg mx-auto">
+                    <TabsTrigger value="home">Home</TabsTrigger>
                     <TabsTrigger value="courses">Courses</TabsTrigger>
-                    <TabsTrigger value="feed">Community Feed</TabsTrigger>
                 </TabsList>
+                <TabsContent value="home">
+                    <FeedContent />
+                </TabsContent>
                 <TabsContent value="courses">
                     <CoursesContent />
-                </TabsContent>
-                <TabsContent value="feed">
-                    <FeedContent />
                 </TabsContent>
             </Tabs>
         </div>
