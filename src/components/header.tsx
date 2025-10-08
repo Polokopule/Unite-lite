@@ -14,7 +14,7 @@ import {
   DropdownMenuTrigger,
 } from "./ui/dropdown-menu";
 import { Avatar, AvatarFallback, AvatarImage } from "./ui/avatar";
-import { Briefcase, ChevronDown, LogOut, User as UserIcon, Wallet } from "lucide-react";
+import { Briefcase, ChevronDown, LogOut, User as UserIcon, Wallet, Users } from "lucide-react";
 
 export function Header() {
   const { user, firebaseUser, logout } = useAppContext();
@@ -37,12 +37,14 @@ export function Header() {
               <>
                 <Link href="/courses" className="transition-colors hover:text-primary">Courses</Link>
                 <Link href="/watch-ads" className="transition-colors hover:text-primary">Earn Points</Link>
+                <Link href="/community" className="transition-colors hover:text-primary">Community</Link>
               </>
             )}
              {user?.type === 'business' && (
                <>
                 <Link href="/dashboard" className="transition-colors hover:text-primary">Dashboard</Link>
                 <Link href="/create-ad" className="transition-colors hover:text-primary">Create Ad</Link>
+                <Link href="/community" className="transition-colors hover:text-primary">Community</Link>
               </>
             )}
           </nav>
@@ -76,6 +78,9 @@ export function Header() {
                     <DropdownMenuSeparator />
                     <DropdownMenuItem asChild>
                       <Link href="/dashboard"><UserIcon className="mr-2 h-4 w-4" />Dashboard</Link>
+                    </DropdownMenuItem>
+                    <DropdownMenuItem asChild>
+                       <Link href={`/profile/${user.uid}`}><UserIcon className="mr-2 h-4 w-4" />My Profile</Link>
                     </DropdownMenuItem>
                     <DropdownMenuSeparator />
                     <DropdownMenuItem onClick={logout}>

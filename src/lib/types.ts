@@ -27,6 +27,8 @@ export type User = {
   purchasedCourses?: { [courseId: string]: PurchasedCourse };
   createdCourses?: string[];
   createdAds?: string[];
+  following?: string[];
+  followers?: string[];
 };
 
 export type PurchasedCourse = {

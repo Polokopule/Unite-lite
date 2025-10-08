@@ -12,6 +12,7 @@ import { onAuthStateChanged, signOut, User as FirebaseUser } from "firebase/auth
 // --- CONTEXT TYPE ---
 interface AppContextType {
   user: User | null;
+  allUsers: User[];
   firebaseUser: FirebaseUser | null;
   courses: Course[];
   ads: Ad[];
@@ -26,6 +27,8 @@ interface AppContextType {
   createAd: (ad: Omit<Ad, 'id' | 'creator' | 'views'>) => Promise<boolean>;
   updateAd: (adId: string, adData: Partial<Omit<Ad, 'id' | 'creator'>>) => Promise<boolean>;
   deleteAd: (adId: string) => Promise<boolean>;
+  followUser: (targetUserId: string) => Promise<void>;
+  unfollowUser: (targetUserId: string) => Promise<void>;
   loading: boolean;
 }
 
@@ -34,6 +37,7 @@ const AppContext = createContext<AppContextType | undefined>(undefined);
 // --- PROVIDER COMPONENT ---
 export function AppContextProvider({ children }: { children: React.ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
+  const [allUsers, setAllUsers] = useState<User[]>([]);
   const [firebaseUser, setFirebaseUser] = useState<FirebaseUser | null>(null);
   const [courses, setCourses] = useState<Course[]>([]);
   const [ads, setAds] = useState<Ad[]>([]);
@@ -48,11 +52,11 @@ export function AppContextProvider({ children }: { children: React.ReactNode }) 
       if (currentFirebaseUser) {
         // User is signed in, get their app-specific data from RTDB
         const userRef = ref(db, 'users/' + currentFirebaseUser.uid);
-        const snapshot = await get(userRef);
-        if (snapshot.exists()) {
-          setUser(snapshot.val());
-        }
-        // If user data doesn't exist, it will be created on login/signup
+        onValue(userRef, (snapshot) => {
+            if(snapshot.exists()) {
+                setUser(snapshot.val());
+            }
+        });
       } else {
         // User is signed out
         setUser(null);
@@ -60,9 +64,10 @@ export function AppContextProvider({ children }: { children: React.ReactNode }) 
       setLoading(false);
     });
 
-    // Set up listeners for Courses and Ads from Firebase
+    // Set up listeners for Courses, Ads, and all Users from Firebase
     const coursesRef = ref(db, 'courses');
     const adsRef = ref(db, 'ads');
+    const usersRef = ref(db, 'users');
 
     const coursesListener = onValue(coursesRef, (snapshot) => {
       const data = snapshot.val();
@@ -76,11 +81,19 @@ export function AppContextProvider({ children }: { children: React.ReactNode }) 
       setAds(adList);
     });
 
+    const usersListener = onValue(usersRef, (snapshot) => {
+        const data = snapshot.val();
+        const userList: User[] = data ? Object.values(data) : [];
+        setAllUsers(userList);
+    });
+
+
     return () => {
       // Detach listeners on cleanup
       unsubscribe();
       coursesListener();
       adsListener();
+      usersListener();
     };
   }, []);
 
@@ -102,28 +115,24 @@ export function AppContextProvider({ children }: { children: React.ReactNode }) 
   }, [user]);
 
   const login = async (email: string, type: 'user' | 'business') => {
-    // This is a simplified login/signup flow. It finds or creates a user record in RTDB.
-    // This function is now more of a "post-authentication" handler.
     if (!auth.currentUser) throw new Error("Firebase user not authenticated.");
 
     const { uid } = auth.currentUser;
     const userRef = ref(db, 'users/' + uid);
     
     const snapshot = await get(userRef);
-    let appUser: User;
-    if (snapshot.exists()) {
-      appUser = snapshot.val();
-    } else {
-      appUser = { 
+    if (!snapshot.exists()) {
+      const newUser: User = { 
         uid, 
         email, 
         type, 
         points: type === 'user' ? 100 : 500,
         name: auth.currentUser.displayName || email.split('@')[0],
+        followers: [],
+        following: [],
       };
-      await set(userRef, appUser);
+      await set(userRef, newUser);
     }
-    setUser(appUser);
     router.push("/dashboard");
   };
 
@@ -178,7 +187,6 @@ export function AppContextProvider({ children }: { children: React.ReactNode }) 
       if (courseSnapshot.exists() && courseSnapshot.val().creator === user.uid) {
           try {
               await remove(courseRef);
-              // Also remove from any user's purchased list? - for now, no.
               return true;
           } catch(e) {
               return false;
@@ -200,7 +208,6 @@ export function AppContextProvider({ children }: { children: React.ReactNode }) 
         await update(userRef, { points: updatedPoints });
         await set(purchasedCourseRef, { id: course.id, title: course.title });
         
-        setUser({ ...user, points: updatedPoints }); // Update local state
         return true;
     } catch (e) {
         return false;
@@ -217,15 +224,11 @@ export function AppContextProvider({ children }: { children: React.ReactNode }) 
     const adRef = ref(db, `ads/${adId}`);
 
     try {
-        // Update user points
         const updatedUserPoints = user.points + pointsEarned;
         await update(userRef, { points: updatedUserPoints });
-        setUser({ ...user, points: updatedUserPoints }); // Update local state
 
-        // Update ad views
         await update(adRef, { views: ad.views + 1 });
 
-        // Update business owner points
         const businessOwnerUid = ad.creator;
         const businessUserRef = ref(db, `users/${businessOwnerUid}`);
         const businessSnapshot = await get(businessUserRef);
@@ -244,9 +247,6 @@ export function AppContextProvider({ children }: { children: React.ReactNode }) 
     if (user.points < payment) return false;
 
     const updatedPoints = user.points - payment;
-    const originalUser = user;
-    setUser({ ...user, points: updatedPoints });
-
     const adId = `ad-${Date.now()}`;
     const newAd: Ad = { ...adData, id: adId, creator: user.uid, views: 0 };
     
@@ -259,7 +259,6 @@ export function AppContextProvider({ children }: { children: React.ReactNode }) 
         set(adRef, newAd)
       ]);
     } catch(e) {
-        setUser(originalUser); 
         return false;
     }
     
@@ -298,8 +297,45 @@ export function AppContextProvider({ children }: { children: React.ReactNode }) 
       return false;
   }
 
+  const followUser = async (targetUserId: string) => {
+    if (!user || user.uid === targetUserId) return;
+
+    // Update current user's following list
+    const currentUserRef = ref(db, `users/${user.uid}`);
+    const currentUserFollowing = user.following ? [...user.following, targetUserId] : [targetUserId];
+    await update(currentUserRef, { following: currentUserFollowing });
+
+    // Update target user's followers list
+    const targetUserRef = ref(db, `users/${targetUserId}`);
+    const targetSnapshot = await get(targetUserRef);
+    if(targetSnapshot.exists()) {
+        const targetUser = targetSnapshot.val();
+        const targetUserFollowers = targetUser.followers ? [...targetUser.followers, user.uid] : [user.uid];
+        await update(targetUserRef, { followers: targetUserFollowers });
+    }
+  };
+
+  const unfollowUser = async (targetUserId: string) => {
+    if (!user) return;
+
+    // Update current user's following list
+    const currentUserRef = ref(db, `users/${user.uid}`);
+    const currentUserFollowing = user.following?.filter(id => id !== targetUserId) || [];
+    await update(currentUserRef, { following: currentUserFollowing });
+    
+    // Update target user's followers list
+    const targetUserRef = ref(db, `users/${targetUserId}`);
+    const targetSnapshot = await get(targetUserRef);
+     if(targetSnapshot.exists()) {
+        const targetUser = targetSnapshot.val();
+        const targetUserFollowers = targetUser.followers?.filter((id: string) => id !== user.uid) || [];
+        await update(targetUserRef, { followers: targetUserFollowers });
+    }
+  };
+
   const value = {
     user,
+    allUsers,
     firebaseUser,
     courses,
     ads,
@@ -314,12 +350,14 @@ export function AppContextProvider({ children }: { children: React.ReactNode }) 
     createAd,
     updateAd,
     deleteAd,
+    followUser,
+    unfollowUser,
     loading,
   };
 
   return (
     <AppContext.Provider value={value}>
-      {loading ? <div className="w-full h-screen flex items-center justify-center"><p>Loading...</p></div> : children}
+      {children}
     </AppContext.Provider>
   );
 }
