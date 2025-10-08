@@ -50,10 +50,6 @@ export function Header() {
           <div className="flex items-center gap-4">
             {user ? (
               <>
-                <Button variant="ghost" size="icon">
-                    <Bell className="h-5 w-5"/>
-                    <span className="sr-only">Notifications</span>
-                </Button>
                 <div className="flex items-center gap-2 font-semibold">
                   <Wallet className="h-4 w-4 text-muted-foreground"/>
                   <span>{user.points}</span>
