@@ -162,7 +162,7 @@ function AdCard({ ad }: { ad: Ad }) {
 }
 
 function FeedContent() {
-    const { user, loading, posts, ads } = useAppContext();
+    const { loading, posts, ads } = useAppContext();
 
     const feedItems = useMemo(() => {
         const allPosts: FeedItem[] = posts.map(p => ({ ...p, itemType: 'post' as const }));
@@ -353,9 +353,9 @@ export default function HomePage() {
                             <TabsTrigger value="notifications"><Bell className="h-5 w-5" /></TabsTrigger>
                         </TabsList>
                     </div>
-                    {user && <CreatePostForm />}
                 </div>
                 <TabsContent value="home" className="mt-0">
+                    {user && <CreatePostForm />}
                     <FeedContent />
                 </TabsContent>
                 <TabsContent value="courses" className="mt-0">
