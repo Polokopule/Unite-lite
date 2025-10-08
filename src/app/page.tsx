@@ -14,7 +14,7 @@ import { useMemo, useState, useEffect } from "react";
 import { useToast } from "@/hooks/use-toast";
 import Image from "next/image";
 import { Badge } from "@/components/ui/badge";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Separator } from "@/components/ui/separator";
 
 
 // --- Comment Form ---
@@ -202,7 +202,7 @@ function FeedContent() {
     }
     
      return (
-         <div className="space-y-6">
+         <div className="space-y-6 max-w-2xl mx-auto">
             {feedItems.length > 0 ? (
                 feedItems.map((item) => 
                     item.itemType === 'post' 
@@ -246,14 +246,19 @@ function CoursesContent() {
   };
 
   return (
-    <div className="space-y-8">
-      {user?.type === 'user' && (
-          <div className="flex justify-end">
-            <Button asChild>
-                <Link href="/courses/create"><PlusCircle className="h-4 w-4 mr-2"/>Create Course</Link>
-            </Button>
-          </div>
-      )}
+    <div className="space-y-8" id="courses">
+       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between">
+            <div>
+                <h2 className="text-3xl font-bold font-headline">Courses</h2>
+                <p className="text-muted-foreground">Browse our marketplace of user-created courses.</p>
+            </div>
+             {user?.type === 'user' && (
+                <Button asChild className="mt-4 sm:mt-0">
+                    <Link href="/courses/create"><PlusCircle className="h-4 w-4 mr-2"/>Create Course</Link>
+                </Button>
+            )}
+        </div>
+
 
       {courses.length > 0 ? (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
@@ -321,21 +326,14 @@ function CoursesContent() {
 export default function HomePage() {
     return (
         <div className="container mx-auto py-8">
-            <h1 className="text-3xl font-bold font-headline mb-8 text-center">Welcome to Unite</h1>
-            <Tabs defaultValue="feed" className="w-full">
-                <TabsList className="grid w-full grid-cols-2 max-w-lg mx-auto mb-8">
-                    <TabsTrigger value="feed">Feed</TabsTrigger>
-                    <TabsTrigger value="courses">Courses</TabsTrigger>
-                </TabsList>
-                <TabsContent value="feed">
-                    <div className="max-w-2xl mx-auto">
-                        <FeedContent />
-                    </div>
-                </TabsContent>
-                <TabsContent value="courses">
-                    <CoursesContent />
-                </TabsContent>
-            </Tabs>
+            <div className="space-y-12">
+                <CoursesContent />
+                <Separator />
+                 <div>
+                    <h2 className="text-3xl font-bold font-headline text-center mb-8">Community Feed</h2>
+                    <FeedContent />
+                </div>
+            </div>
         </div>
     );
 }
