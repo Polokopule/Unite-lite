@@ -3,13 +3,13 @@
 
 import { useState } from "react";
 import { useAppContext } from "@/contexts/app-context";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent } from "@/components/ui/card";
 import { Textarea } from "@/components/ui/textarea";
 import { Button } from "@/components/ui/button";
 import { Loader2 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { Avatar, AvatarFallback, AvatarImage } from "./ui/avatar";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogFooter, DialogClose } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogFooter } from "@/components/ui/dialog";
 
 export function CreatePostForm() {
     const { user, addPost } = useAppContext();
@@ -62,20 +62,13 @@ export function CreatePostForm() {
                 </DialogHeader>
                 <form onSubmit={handleSubmit}>
                     <div className="grid gap-4 py-4">
-                        <div className="flex items-start gap-4">
-                            <Avatar className="h-10 w-10">
-                                <AvatarImage src={user?.photoURL} alt={user?.name} />
-                                <AvatarFallback>{user?.name?.substring(0, 2)}</AvatarFallback>
-                            </Avatar>
-                            <Textarea
-                                placeholder={`What's on your mind, ${user.name}?`}
-                                value={content}
-                                onChange={(e) => setContent(e.target.value)}
-                                rows={5}
-                                className="flex-1"
-                                autoFocus
-                            />
-                        </div>
+                        <Textarea
+                            placeholder={`What's on your mind, ${user.name}?`}
+                            value={content}
+                            onChange={(e) => setContent(e.target.value)}
+                            rows={5}
+                            autoFocus
+                        />
                     </div>
                      <DialogFooter>
                         <Button type="submit" disabled={isPosting || !content.trim()} className="w-full">
