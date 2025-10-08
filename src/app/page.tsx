@@ -106,62 +106,66 @@ function PostCard({ post }: { post: PostType }) {
     };
 
     return (
-        <Card className="w-full max-w-2xl mx-auto">
-            <CardHeader>
-                <div className="flex items-center gap-4">
-                     <Link href={`/profile/${post.creatorUid}`}>
-                        <Avatar className="h-10 w-10">
-                            {post.creatorPhotoURL && <AvatarImage src={post.creatorPhotoURL} alt={post.creatorName} />}
-                            <AvatarFallback>{post.creatorName.substring(0, 2)}</AvatarFallback>
-                        </Avatar>
-                    </Link>
-                    <div>
-                         <Link href={`/profile/${post.creatorUid}`} className="font-semibold hover:underline">{post.creatorName}</Link>
-                        <p className="text-xs text-muted-foreground">
-                            {formatDistanceToNow(new Date(post.timestamp), { addSuffix: true })}
-                        </p>
+        <div className="w-full bg-card border-b py-4">
+            <div className="container mx-auto">
+                <CardHeader>
+                    <div className="flex items-center gap-4">
+                        <Link href={`/profile/${post.creatorUid}`}>
+                            <Avatar className="h-10 w-10">
+                                {post.creatorPhotoURL && <AvatarImage src={post.creatorPhotoURL} alt={post.creatorName} />}
+                                <AvatarFallback>{post.creatorName.substring(0, 2)}</AvatarFallback>
+                            </Avatar>
+                        </Link>
+                        <div>
+                            <Link href={`/profile/${post.creatorUid}`} className="font-semibold hover:underline">{post.creatorName}</Link>
+                            <p className="text-xs text-muted-foreground">
+                                {formatDistanceToNow(new Date(post.timestamp), { addSuffix: true })}
+                            </p>
+                        </div>
                     </div>
-                </div>
-            </CardHeader>
-            <CardContent>
-                <p className="whitespace-pre-wrap">{post.content}</p>
-            </CardContent>
-            <CardFooter className="pb-3 pt-3 flex-col items-start">
-                 <div className="flex items-center gap-4 text-muted-foreground">
-                     <Button variant="ghost" size="sm" onClick={handleLike} disabled={!user} className="flex items-center gap-2">
-                        <Heart className={`h-4 w-4 ${isLiked ? 'fill-red-500 text-red-500' : ''}`} />
-                        <span>{post.likes?.length || 0}</span>
-                    </Button>
-                     <Button variant="ghost" size="sm" className="flex items-center gap-2" onClick={() => setShowComments(!showComments)}>
-                        <MessageCircle className="h-4 w-4" />
-                        <span>{post.comments?.length || 0}</span>
-                    </Button>
-                </div>
-                {showComments && (
-                    <div className="w-full pt-2">
-                       <CommentList comments={post.comments || []} />
-                       {user && <CommentForm postId={post.id} />}
+                </CardHeader>
+                <CardContent>
+                    <p className="whitespace-pre-wrap">{post.content}</p>
+                </CardContent>
+                <CardFooter className="pb-3 pt-3 flex-col items-start">
+                    <div className="flex items-center gap-4 text-muted-foreground">
+                        <Button variant="ghost" size="sm" onClick={handleLike} disabled={!user} className="flex items-center gap-2">
+                            <Heart className={`h-4 w-4 ${isLiked ? 'fill-red-500 text-red-500' : ''}`} />
+                            <span>{post.likes?.length || 0}</span>
+                        </Button>
+                        <Button variant="ghost" size="sm" className="flex items-center gap-2" onClick={() => setShowComments(!showComments)}>
+                            <MessageCircle className="h-4 w-4" />
+                            <span>{post.comments?.length || 0}</span>
+                        </Button>
                     </div>
-                )}
-            </CardFooter>
-        </Card>
+                    {showComments && (
+                        <div className="w-full pt-2">
+                        <CommentList comments={post.comments || []} />
+                        {user && <CommentForm postId={post.id} />}
+                        </div>
+                    )}
+                </CardFooter>
+            </div>
+        </div>
     );
 }
 
 // --- Ad Card in Feed ---
 function AdCard({ ad }: { ad: Ad }) {
     return (
-        <Card className="w-full max-w-2xl mx-auto bg-primary/5 border-primary/20">
-             <CardHeader>
-                <div className="flex justify-between items-center">
-                    <CardTitle className="text-lg">{ad.campaignName}</CardTitle>
-                    <span className="text-xs font-bold uppercase text-primary">AD</span>
-                </div>
-            </CardHeader>
-            <CardContent>
-                <p>{ad.content}</p>
-            </CardContent>
-        </Card>
+        <div className="w-full bg-primary/5 border-b py-4">
+             <div className="container mx-auto">
+                <CardHeader>
+                    <div className="flex justify-between items-center">
+                        <CardTitle className="text-lg">{ad.campaignName}</CardTitle>
+                        <span className="text-xs font-bold uppercase text-primary">AD</span>
+                    </div>
+                </CardHeader>
+                <CardContent>
+                    <p>{ad.content}</p>
+                </CardContent>
+             </div>
+        </div>
     );
 }
 
@@ -192,7 +196,7 @@ function FeedContent() {
     
     if (loading) {
         return (
-            <div className="w-full max-w-2xl mx-auto space-y-6">
+            <div className="w-full space-y-6">
                 <Card className="w-full">
                     <CardHeader><div className="h-12 w-12 bg-muted rounded-full animate-pulse"></div></CardHeader>
                     <CardContent><div className="h-20 bg-muted rounded-md animate-pulse"></div></CardContent>
@@ -203,7 +207,7 @@ function FeedContent() {
     }
     
      return (
-         <div className="space-y-6 max-w-2xl mx-auto">
+         <div className="bg-card">
             {user && <CreatePostForm />}
             {feedItems.length > 0 ? (
                 feedItems.map((item) => 
@@ -212,12 +216,14 @@ function FeedContent() {
                         : <AdCard key={`ad-${item.id}`} ad={item} />
                 )
             ) : (
-                <div className="text-center text-muted-foreground py-12 border-2 border-dashed rounded-lg">
-                    <h2 className="text-xl font-semibold">The feed is empty!</h2>
-                    <p className="mt-4">No posts have been made yet. Sign up and be the first to share something.</p>
-                     <Button asChild variant="default" className="mt-4">
-                       <Link href="/signup-user">Create an Account</Link>
-                    </Button>
+                <div className="container mx-auto">
+                    <div className="text-center text-muted-foreground py-12 border-2 border-dashed rounded-lg my-4">
+                        <h2 className="text-xl font-semibold">The feed is empty!</h2>
+                        <p className="mt-4">No posts have been made yet. Sign up and be the first to share something.</p>
+                        <Button asChild variant="default" className="mt-4">
+                        <Link href="/signup-user">Create an Account</Link>
+                        </Button>
+                    </div>
                 </div>
             )}
         </div>
@@ -248,7 +254,7 @@ function CoursesContent() {
   };
 
   return (
-    <div className="space-y-8">
+    <div className="container mx-auto py-8">
        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between">
             <div>
                 <h2 className="text-3xl font-bold font-headline">Courses</h2>
@@ -263,7 +269,7 @@ function CoursesContent() {
 
 
       {courses.length > 0 ? (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mt-8">
           {courses.map((course) => {
             const isPurchased = purchasedCourses.some(pc => pc.id === course.id);
             const isPurchasing = purchasingId === course.id;
@@ -327,16 +333,18 @@ function CoursesContent() {
 
 export default function HomePage() {
     return (
-        <div className="container mx-auto py-8">
+        <div className="w-full">
             <Tabs defaultValue="home" className="w-full">
-                <TabsList className="grid w-full grid-cols-2 mb-8 max-w-lg mx-auto">
-                    <TabsTrigger value="home">Home</TabsTrigger>
-                    <TabsTrigger value="courses">Courses</TabsTrigger>
-                </TabsList>
-                <TabsContent value="home">
+                <div className="container mx-auto">
+                    <TabsList className="grid w-full grid-cols-2 mb-8 max-w-lg mx-auto">
+                        <TabsTrigger value="home">Home</TabsTrigger>
+                        <TabsTrigger value="courses">Courses</TabsTrigger>
+                    </TabsList>
+                </div>
+                <TabsContent value="home" className="mt-0">
                     <FeedContent />
                 </TabsContent>
-                <TabsContent value="courses">
+                <TabsContent value="courses" className="mt-0">
                     <CoursesContent />
                 </TabsContent>
             </Tabs>
