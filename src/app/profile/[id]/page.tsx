@@ -5,7 +5,7 @@ import { useParams } from "next/navigation";
 import { useAppContext } from "@/contexts/app-context";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { useEffect, useState, useMemo } from "react";
 import { User as UserType, Post as PostType, FeedItem } from "@/lib/types";
 import { Loader2, UserPlus, UserMinus, Users, BookOpen, Heart, MessageCircle } from "lucide-react";
