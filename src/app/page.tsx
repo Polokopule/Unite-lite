@@ -2,16 +2,19 @@
 "use client";
 
 import { useAppContext } from "@/contexts/app-context";
-import { Ad, Post as PostType, FeedItem, Comment as CommentType, User } from "@/lib/types";
-import { Card, CardContent, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
+import { Ad, Post as PostType, FeedItem, Comment as CommentType, Course } from "@/lib/types";
+import { Card, CardContent, CardFooter, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Loader2, MessageCircle, Heart, Send } from "lucide-react";
+import { Loader2, MessageCircle, Heart, Send, ShoppingBag, Wallet, CheckCircle, PlusCircle } from "lucide-react";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { formatDistanceToNow } from "date-fns";
 import { Input } from "@/components/ui/input";
 import Link from "next/link";
 import { useMemo, useState, useEffect } from "react";
 import { useToast } from "@/hooks/use-toast";
+import Image from "next/image";
+import { Badge } from "@/components/ui/badge";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 
 
 // --- Comment Form ---
@@ -161,7 +164,7 @@ function AdCard({ ad }: { ad: Ad }) {
     );
 }
 
-export default function HomePage() {
+function FeedContent() {
     const { loading, posts, ads } = useAppContext();
 
     const feedItems = useMemo(() => {
@@ -185,43 +188,154 @@ export default function HomePage() {
         return feed;
 
     }, [posts, ads]);
-
+    
     if (loading) {
         return (
-             <div className="container mx-auto py-8">
-                <div className="w-full max-w-2xl mx-auto space-y-6">
-                    <Card className="w-full">
-                        <CardHeader><div className="h-12 w-12 bg-muted rounded-full animate-pulse"></div></CardHeader>
-                        <CardContent><div className="h-20 bg-muted rounded-md animate-pulse"></div></CardContent>
-                        <CardFooter><div className="h-8 w-24 bg-muted rounded-md animate-pulse"></div></CardFooter>
-                    </Card>
-                </div>
+            <div className="w-full max-w-2xl mx-auto space-y-6">
+                <Card className="w-full">
+                    <CardHeader><div className="h-12 w-12 bg-muted rounded-full animate-pulse"></div></CardHeader>
+                    <CardContent><div className="h-20 bg-muted rounded-md animate-pulse"></div></CardContent>
+                    <CardFooter><div className="h-8 w-24 bg-muted rounded-md animate-pulse"></div></CardFooter>
+                </Card>
             </div>
         );
     }
+    
+     return (
+         <div className="space-y-6">
+            {feedItems.length > 0 ? (
+                feedItems.map((item) => 
+                    item.itemType === 'post' 
+                        ? <PostCard key={`post-${item.id}`} post={item} />
+                        : <AdCard key={`ad-${item.id}`} ad={item} />
+                )
+            ) : (
+                <div className="text-center text-muted-foreground py-12 border-2 border-dashed rounded-lg">
+                    <h2 className="text-xl font-semibold">The feed is empty!</h2>
+                    <p className="mt-4">No posts have been made yet. Sign up and be the first to share something.</p>
+                     <Button asChild variant="default" className="mt-4">
+                       <Link href="/signup-user">Create an Account</Link>
+                    </Button>
+                </div>
+            )}
+        </div>
+     )
+}
 
+function CoursesContent() {
+  const { courses, user, purchaseCourse, purchasedCourses } = useAppContext();
+  const { toast } = useToast();
+  const [purchasingId, setPurchasingId] = useState<string | null>(null);
+
+  const handlePurchase = async (courseId: string, title: string) => {
+    setPurchasingId(courseId);
+    const success = await purchaseCourse(courseId);
+    setPurchasingId(null);
+    if (success) {
+      toast({
+        title: "Purchase Successful!",
+        description: `You have successfully purchased "${title}".`,
+      });
+    } else {
+      toast({
+        variant: "destructive",
+        title: "Purchase Failed",
+        description: "You may not have enough points or already own this course.",
+      });
+    }
+  };
+
+  return (
+    <div className="space-y-8">
+      {user?.type === 'user' && (
+          <div className="flex justify-end">
+            <Button asChild>
+                <Link href="/courses/create"><PlusCircle className="h-4 w-4 mr-2"/>Create Course</Link>
+            </Button>
+          </div>
+      )}
+
+      {courses.length > 0 ? (
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+          {courses.map((course) => {
+            const isPurchased = purchasedCourses.some(pc => pc.id === course.id);
+            const isPurchasing = purchasingId === course.id;
+            const excerpt = course.content.replace(/<[^>]+>/g, '').substring(0, 100) + '...';
+
+            return (
+              <Card key={course.id} className="flex flex-col">
+                 <Link href={`/courses/${course.id}`} className="block">
+                    <div className="relative aspect-video">
+                    <Image
+                        src={course.imageUrl}
+                        alt={course.title}
+                        data-ai-hint={course.imageHint}
+                        fill
+                        className="object-cover rounded-t-lg"
+                    />
+                    </div>
+                </Link>
+                <CardHeader>
+                  <CardTitle>{course.title}</CardTitle>
+                  <CardDescription>{excerpt}</CardDescription>
+                </CardHeader>
+                <CardContent className="flex-grow">
+                  <p className="text-sm text-muted-foreground">Created by: {course.creatorName}</p>
+                </CardContent>
+                <CardFooter className="flex justify-between items-center">
+                    <div className="font-bold text-lg flex items-center gap-2">
+                        <Wallet className="h-5 w-5 text-accent"/>
+                        <span>{course.price}</span>
+                    </div>
+                  {user?.type === 'user' ? (
+                     isPurchased ? (
+                         <Link href={`/courses/${course.id}`}>
+                            <Badge variant="secondary" className="border-green-500 text-green-600 hover:bg-green-50">
+                               <CheckCircle className="h-4 w-4 mr-2"/> View Course
+                            </Badge>
+                         </Link>
+                     ) : (
+                        <Button onClick={() => handlePurchase(course.id, course.title)} disabled={isPurchasing}>
+                            {isPurchasing ? <Loader2 className="h-4 w-4 mr-2 animate-spin"/> : <ShoppingBag className="h-4 w-4 mr-2"/>}
+                            {isPurchasing ? 'Purchasing...' : 'Purchase'}
+                        </Button>
+                     )
+                  ) : (
+                    <Button disabled={!user} onClick={() => user && handlePurchase(course.id, course.title)}><ShoppingBag className="h-4 w-4 mr-2"/> Purchase</Button>
+                  )}
+                </CardFooter>
+              </Card>
+            );
+          })}
+        </div>
+      ) : (
+        <div className="text-center py-20 border-2 border-dashed rounded-lg">
+            <h2 className="text-xl font-semibold">No Courses Available</h2>
+            <p className="text-muted-foreground mt-2">Check back later or be the first to create one!</p>
+        </div>
+      )}
+    </div>
+  );
+}
+
+export default function HomePage() {
     return (
         <div className="container mx-auto py-8">
-            <div className="max-w-2xl mx-auto">
-                <h1 className="text-3xl font-bold font-headline mb-8">Home Feed</h1>
-                 <div className="space-y-6">
-                    {feedItems.length > 0 ? (
-                        feedItems.map((item) => 
-                            item.itemType === 'post' 
-                                ? <PostCard key={`post-${item.id}`} post={item} />
-                                : <AdCard key={`ad-${item.id}`} ad={item} />
-                        )
-                    ) : (
-                        <div className="text-center text-muted-foreground py-12 border-2 border-dashed rounded-lg">
-                            <h2 className="text-xl font-semibold">The feed is empty!</h2>
-                            <p className="mt-4">No posts have been made yet. Sign up and be the first to share something.</p>
-                             <Button asChild variant="default" className="mt-4">
-                               <Link href="/signup-user">Create an Account</Link>
-                            </Button>
-                        </div>
-                    )}
-                </div>
-            </div>
+            <h1 className="text-3xl font-bold font-headline mb-8 text-center">Welcome to Unite</h1>
+            <Tabs defaultValue="feed" className="w-full">
+                <TabsList className="grid w-full grid-cols-2 max-w-lg mx-auto mb-8">
+                    <TabsTrigger value="feed">Feed</TabsTrigger>
+                    <TabsTrigger value="courses">Courses</TabsTrigger>
+                </TabsList>
+                <TabsContent value="feed">
+                    <div className="max-w-2xl mx-auto">
+                        <FeedContent />
+                    </div>
+                </TabsContent>
+                <TabsContent value="courses">
+                    <CoursesContent />
+                </TabsContent>
+            </Tabs>
         </div>
     );
 }

@@ -15,9 +15,11 @@ import {
 } from "./ui/dropdown-menu";
 import { Avatar, AvatarFallback, AvatarImage } from "./ui/avatar";
 import { Briefcase, ChevronDown, LogOut, User as UserIcon, Wallet, Users, Bell, Rss } from "lucide-react";
+import { usePathname } from "next/navigation";
 
 export function Header() {
   const { user, firebaseUser, logout } = useAppContext();
+  const pathname = usePathname();
 
   const getInitials = (name: string) => {
     if (!name) return '??';
@@ -34,10 +36,10 @@ export function Header() {
         <Logo />
         <div className="flex flex-1 items-center justify-end space-x-4">
           <nav className="hidden md:flex items-center space-x-6 text-sm font-medium">
-            <Link href="/" className="transition-colors hover:text-primary">Feed</Link>
-            <Link href="/courses" className="transition-colors hover:text-primary">Courses</Link>
-            <Link href="/groups" className="transition-colors hover:text-primary">Groups</Link>
-            <Link href="/community" className="transition-colors hover:text-primary">Community</Link>
+            <Link href="/" className={`transition-colors hover:text-primary ${pathname === '/' ? 'text-primary' : ''}`}>Feed</Link>
+            <Link href="/?tab=courses" className={`transition-colors hover:text-primary ${pathname === '/courses' ? 'text-primary' : ''}`}>Courses</Link>
+            <Link href="/groups" className={`transition-colors hover:text-primary ${pathname === '/groups' ? 'text-primary' : ''}`}>Groups</Link>
+            <Link href="/community" className={`transition-colors hover:text-primary ${pathname === '/community' ? 'text-primary' : ''}`}>Community</Link>
             {user?.type === 'user' && (
               <Link href="/watch-ads" className="transition-colors hover:text-primary">Earn Points</Link>
             )}
