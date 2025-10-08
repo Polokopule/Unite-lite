@@ -14,7 +14,7 @@ import {
   DropdownMenuTrigger,
 } from "./ui/dropdown-menu";
 import { Avatar, AvatarFallback, AvatarImage } from "./ui/avatar";
-import { Briefcase, ChevronDown, LogOut, User as UserIcon, Wallet, Users, Rss } from "lucide-react";
+import { Briefcase, ChevronDown, LogOut, User as UserIcon, Wallet, Users, Home } from "lucide-react";
 import { usePathname } from "next/navigation";
 
 export function Header() {
@@ -82,6 +82,9 @@ export function Header() {
                     </DropdownMenuItem>
                     <DropdownMenuItem asChild>
                        <Link href={`/profile/${user.uid}`}><UserIcon className="mr-2 h-4 w-4" />My Profile</Link>
+                    </DropdownMenuItem>
+                    <DropdownMenuItem asChild>
+                       <Link href="/"><Home className="mr-2 h-4 w-4" />Home</Link>
                     </DropdownMenuItem>
                     <DropdownMenuSeparator />
                     <DropdownMenuItem onClick={logout}>
