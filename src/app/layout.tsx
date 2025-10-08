@@ -28,10 +28,10 @@ export default function RootLayout({
           rel="stylesheet"
         />
       </head>
-      <body className="font-body antialiased min-h-screen flex flex-col">
+      <body className="font-body antialiased">
         <AppContextProvider>
           <Header />
-          <main className="flex-grow">{children}</main>
+          <main>{children}</main>
           <Toaster />
         </AppContextProvider>
       </body>

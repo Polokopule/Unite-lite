@@ -5,7 +5,7 @@ import { useAppContext } from "@/contexts/app-context";
 import { Ad, Post as PostType, FeedItem, Comment as CommentType, Course } from "@/lib/types";
 import { Card, CardContent, CardFooter, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Loader2, MessageCircle, Heart, Send, ShoppingBag, Wallet, CheckCircle, PlusCircle } from "lucide-react";
+import { Loader2, MessageCircle, Heart, Send, ShoppingBag, Wallet, CheckCircle, PlusCircle, Home as HomeIcon } from "lucide-react";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { formatDistanceToNow } from "date-fns";
 import { Input } from "@/components/ui/input";
@@ -335,11 +335,13 @@ export default function HomePage() {
     return (
         <div className="w-full">
             <Tabs defaultValue="home" className="w-full">
-                <div className="container mx-auto">
-                    <TabsList className="grid w-full grid-cols-2 mb-8 max-w-lg mx-auto">
-                        <TabsTrigger value="home">Home</TabsTrigger>
-                        <TabsTrigger value="courses">Courses</TabsTrigger>
-                    </TabsList>
+                <div className="sticky top-16 z-40 bg-background border-b">
+                    <div className="container mx-auto">
+                        <TabsList className="grid w-full grid-cols-2 max-w-lg mx-auto">
+                            <TabsTrigger value="home"><HomeIcon className="h-5 w-5" /></TabsTrigger>
+                            <TabsTrigger value="courses"><ShoppingBag className="h-5 w-5" /></TabsTrigger>
+                        </TabsList>
+                    </div>
                 </div>
                 <TabsContent value="home" className="mt-0">
                     <FeedContent />
