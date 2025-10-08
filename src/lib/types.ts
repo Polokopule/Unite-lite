@@ -1,4 +1,5 @@
 
+
 export type Course = {
   id: string;
   title: string;
@@ -29,9 +30,23 @@ export type User = {
   createdAds?: string[];
   following?: string[];
   followers?: string[];
+  photoURL?: string;
 };
 
 export type PurchasedCourse = {
   id: string;
   title: string;
 }
+
+export type Post = {
+    id: string;
+    creatorUid: string;
+    creatorName: string;
+    creatorPhotoURL: string;
+    content: string;
+    timestamp: number;
+    likes: string[]; // Array of user UIDs
+};
+
+// Represents either a Post or an Ad in a feed
+export type FeedItem = (Post & { itemType: 'post' }) | (Ad & { itemType: 'ad' });

@@ -14,7 +14,7 @@ import {
   DropdownMenuTrigger,
 } from "./ui/dropdown-menu";
 import { Avatar, AvatarFallback, AvatarImage } from "./ui/avatar";
-import { Briefcase, ChevronDown, LogOut, User as UserIcon, Wallet, Users } from "lucide-react";
+import { Briefcase, ChevronDown, LogOut, User as UserIcon, Wallet, Users, Bell } from "lucide-react";
 
 export function Header() {
   const { user, firebaseUser, logout } = useAppContext();
@@ -51,6 +51,10 @@ export function Header() {
           <div className="flex items-center gap-4">
             {user ? (
               <>
+                <Button variant="ghost" size="icon">
+                    <Bell className="h-5 w-5"/>
+                    <span className="sr-only">Notifications</span>
+                </Button>
                 <div className="flex items-center gap-2 font-semibold">
                   <Wallet className="h-4 w-4 text-muted-foreground"/>
                   <span>{user.points}</span>
@@ -59,7 +63,7 @@ export function Header() {
                   <DropdownMenuTrigger asChild>
                     <Button variant="ghost" className="relative h-8 w-8 rounded-full">
                       <Avatar className="h-8 w-8">
-                         {firebaseUser?.photoURL && <AvatarImage src={firebaseUser.photoURL} alt={user.name} />}
+                         {user.photoURL && <AvatarImage src={user.photoURL} alt={user.name} />}
                         <AvatarFallback className="bg-primary text-primary-foreground font-bold">
                           {getInitials(user.name)}
                         </AvatarFallback>

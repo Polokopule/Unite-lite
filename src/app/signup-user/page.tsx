@@ -9,7 +9,7 @@ import { useAppContext } from "@/contexts/app-context";
 import { User as UserIcon, Loader2 } from "lucide-react";
 import Link from "next/link";
 import { useState } from "react";
-import { createUserWithEmailAndPassword, signInWithPopup, GoogleAuthProvider } from "firebase/auth";
+import { createUserWithEmailAndPassword, signInWithPopup, GoogleAuthProvider, updateProfile } from "firebase/auth";
 import { auth } from "@/lib/firebase";
 import { useToast } from "@/hooks/use-toast";
 
@@ -18,6 +18,7 @@ const GoogleIcon = () => <svg className="h-5 w-5" viewBox="0 0 48 48"><path fill
 export default function SignUpUserPage() {
   const { login } = useAppContext();
   const { toast } = useToast();
+  const [name, setName] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [isLoading, setIsLoading] = useState(false);
@@ -41,11 +42,12 @@ export default function SignUpUserPage() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!email || !password) return;
+    if (!email || !password || !name) return;
 
     setIsLoading(true);
     try {
-      await createUserWithEmailAndPassword(auth, email, password);
+      const userCredential = await createUserWithEmailAndPassword(auth, email, password);
+      await updateProfile(userCredential.user, { displayName: name });
       await login(email, 'user');
     } catch (error: any) {
       toast({
@@ -70,6 +72,18 @@ export default function SignUpUserPage() {
             <CardDescription>Start learning and earning points today.</CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
+             <div className="space-y-2">
+              <Label htmlFor="name">Full Name</Label>
+              <Input
+                id="name"
+                type="text"
+                placeholder="John Doe"
+                required
+                value={name}
+                onChange={(e) => setName(e.target.value)}
+                disabled={isLoading || !!isSocialLoading}
+              />
+            </div>
             <div className="space-y-2">
               <Label htmlFor="email">Email</Label>
               <Input

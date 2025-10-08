@@ -15,9 +15,10 @@ export default function CommunityPage() {
     const currentUser = auth.currentUser;
 
     const getInitials = (name: string) => {
+        if (!name) return '??';
         const names = name.split(' ');
         if (names.length > 1) {
-        return names[0][0] + names[names.length - 1][0];
+            return (names[0][0] || '') + (names[names.length - 1][0] || '');
         }
         return name.substring(0, 2).toUpperCase();
     };
@@ -35,7 +36,7 @@ export default function CommunityPage() {
                     <Card key={user.uid} className="text-center">
                         <CardHeader>
                             <Avatar className="h-20 w-20 mx-auto border-2 border-primary">
-                                {/* In a real app, you'd fetch the user's actual photoURL */}
+                                {user.photoURL && <AvatarImage src={user.photoURL} alt={user.name} />}
                                 <AvatarFallback className="bg-muted text-muted-foreground text-2xl font-bold">
                                     {getInitials(user.name)}
                                 </AvatarFallback>

@@ -2,11 +2,11 @@
 "use client";
 
 import { PlaceHolderImages } from "@/lib/placeholder-images";
-import type { Course, Ad, User, PurchasedCourse } from "@/lib/types";
+import type { Course, Ad, User, PurchasedCourse, Post } from "@/lib/types";
 import { useRouter } from "next/navigation";
 import React, { createContext, useContext, useEffect, useState } from "react";
 import { db, auth } from "@/lib/firebase";
-import { ref, onValue, set, get, update, remove } from "firebase/database";
+import { ref, onValue, set, get, update, remove, push, serverTimestamp } from "firebase/database";
 import { onAuthStateChanged, signOut, User as FirebaseUser } from "firebase/auth";
 
 // --- CONTEXT TYPE ---
@@ -16,6 +16,7 @@ interface AppContextType {
   firebaseUser: FirebaseUser | null;
   courses: Course[];
   ads: Ad[];
+  posts: Post[];
   purchasedCourses: PurchasedCourse[];
   login: (email: string, type: 'user' | 'business') => Promise<void>;
   logout: () => void;
@@ -29,6 +30,8 @@ interface AppContextType {
   deleteAd: (adId: string) => Promise<boolean>;
   followUser: (targetUserId: string) => Promise<void>;
   unfollowUser: (targetUserId: string) => Promise<void>;
+  addPost: (content: string) => Promise<boolean>;
+  likePost: (postId: string) => Promise<void>;
   loading: boolean;
 }
 
@@ -41,6 +44,7 @@ export function AppContextProvider({ children }: { children: React.ReactNode }) 
   const [firebaseUser, setFirebaseUser] = useState<FirebaseUser | null>(null);
   const [courses, setCourses] = useState<Course[]>([]);
   const [ads, setAds] = useState<Ad[]>([]);
+  const [posts, setPosts] = useState<Post[]>([]);
   const [purchasedCourses, setPurchasedCourses] = useState<PurchasedCourse[]>([]);
   const [loading, setLoading] = useState(true);
   const router = useRouter();
@@ -54,7 +58,21 @@ export function AppContextProvider({ children }: { children: React.ReactNode }) 
         const userRef = ref(db, 'users/' + currentFirebaseUser.uid);
         onValue(userRef, (snapshot) => {
             if(snapshot.exists()) {
-                setUser(snapshot.val());
+                const userData = snapshot.val();
+                 // Ensure photoURL is part of the user object
+                const fullUserData: User = {
+                    ...userData,
+                    photoURL: currentFirebaseUser.photoURL || userData.photoURL || ''
+                };
+                setUser(fullUserData);
+
+                 // If displayName or photoURL changed, update DB
+                if (currentFirebaseUser.displayName && currentFirebaseUser.displayName !== userData.name) {
+                    update(userRef, { name: currentFirebaseUser.displayName });
+                }
+                if (currentFirebaseUser.photoURL && currentFirebaseUser.photoURL !== userData.photoURL) {
+                    update(userRef, { photoURL: currentFirebaseUser.photoURL });
+                }
             }
         });
       } else {
@@ -68,6 +86,7 @@ export function AppContextProvider({ children }: { children: React.ReactNode }) 
     const coursesRef = ref(db, 'courses');
     const adsRef = ref(db, 'ads');
     const usersRef = ref(db, 'users');
+    const postsRef = ref(db, 'posts');
 
     const coursesListener = onValue(coursesRef, (snapshot) => {
       const data = snapshot.val();
@@ -86,6 +105,16 @@ export function AppContextProvider({ children }: { children: React.ReactNode }) 
         const userList: User[] = data ? Object.values(data) : [];
         setAllUsers(userList);
     });
+    
+    const postsListener = onValue(postsRef, (snapshot) => {
+        const data = snapshot.val() || {};
+        const postList: Post[] = Object.keys(data).map(key => ({
+            id: key,
+            ...data[key],
+            likes: data[key].likes ? Object.keys(data[key].likes) : []
+        })).sort((a, b) => b.timestamp - a.timestamp);
+        setPosts(postList);
+    });
 
 
     return () => {
@@ -94,6 +123,7 @@ export function AppContextProvider({ children }: { children: React.ReactNode }) 
       coursesListener();
       adsListener();
       usersListener();
+      postsListener();
     };
   }, []);
 
@@ -117,7 +147,7 @@ export function AppContextProvider({ children }: { children: React.ReactNode }) 
   const login = async (email: string, type: 'user' | 'business') => {
     if (!auth.currentUser) throw new Error("Firebase user not authenticated.");
 
-    const { uid } = auth.currentUser;
+    const { uid, displayName, photoURL } = auth.currentUser;
     const userRef = ref(db, 'users/' + uid);
     
     const snapshot = await get(userRef);
@@ -127,9 +157,10 @@ export function AppContextProvider({ children }: { children: React.ReactNode }) 
         email, 
         type, 
         points: type === 'user' ? 100 : 500,
-        name: auth.currentUser.displayName || email.split('@')[0],
+        name: displayName || email.split('@')[0],
         followers: [],
         following: [],
+        photoURL: photoURL || '',
       };
       await set(userRef, newUser);
     }
@@ -333,12 +364,48 @@ export function AppContextProvider({ children }: { children: React.ReactNode }) 
     }
   };
 
+  const addPost = async (content: string): Promise<boolean> => {
+      if (!user || !content.trim()) return false;
+      
+      try {
+        const postsRef = ref(db, 'posts');
+        const newPostRef = push(postsRef);
+        const newPost: Omit<Post, 'id' | 'likes'> = {
+            creatorUid: user.uid,
+            creatorName: user.name,
+            creatorPhotoURL: user.photoURL || '',
+            content: content,
+            timestamp: serverTimestamp() as any, // This will be converted by firebase
+        };
+        await set(newPostRef, newPost);
+        return true;
+      } catch (e) {
+        return false;
+      }
+  };
+
+  const likePost = async (postId: string) => {
+      if (!user) return;
+      const postLikeRef = ref(db, `posts/${postId}/likes/${user.uid}`);
+      const post = posts.find(p => p.id === postId);
+
+      if (post) {
+        const isLiked = post.likes.includes(user.uid);
+        if (isLiked) {
+            await remove(postLikeRef);
+        } else {
+            await set(postLikeRef, true);
+        }
+      }
+  };
+
   const value = {
     user,
     allUsers,
     firebaseUser,
     courses,
     ads,
+    posts,
     purchasedCourses,
     login,
     logout,
@@ -352,6 +419,8 @@ export function AppContextProvider({ children }: { children: React.ReactNode }) 
     deleteAd,
     followUser,
     unfollowUser,
+    addPost,
+    likePost,
     loading,
   };
 
