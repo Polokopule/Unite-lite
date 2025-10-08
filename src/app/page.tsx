@@ -14,7 +14,7 @@ import { useMemo, useState, useEffect } from "react";
 import { useToast } from "@/hooks/use-toast";
 import Image from "next/image";
 import { Badge } from "@/components/ui/badge";
-import { Separator } from "@/components/ui/separator";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 
 
 // --- Comment Form ---
@@ -246,7 +246,7 @@ function CoursesContent() {
   };
 
   return (
-    <div className="space-y-8" id="courses">
+    <div className="space-y-8">
        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between">
             <div>
                 <h2 className="text-3xl font-bold font-headline">Courses</h2>
@@ -326,14 +326,18 @@ function CoursesContent() {
 export default function HomePage() {
     return (
         <div className="container mx-auto py-8">
-            <div className="space-y-12">
-                <CoursesContent />
-                <Separator />
-                 <div>
-                    <h2 className="text-3xl font-bold font-headline text-center mb-8">Community Feed</h2>
+            <Tabs defaultValue="courses" className="w-full">
+                <TabsList className="grid w-full grid-cols-2 mb-8 max-w-lg mx-auto">
+                    <TabsTrigger value="courses">Courses</TabsTrigger>
+                    <TabsTrigger value="feed">Community Feed</TabsTrigger>
+                </TabsList>
+                <TabsContent value="courses">
+                    <CoursesContent />
+                </TabsContent>
+                <TabsContent value="feed">
                     <FeedContent />
-                </div>
-            </div>
+                </TabsContent>
+            </Tabs>
         </div>
     );
 }
