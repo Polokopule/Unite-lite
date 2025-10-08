@@ -17,6 +17,7 @@ export type Ad = {
   content: string;
   creator: string; // user uid
   views: number;
+  itemType?: 'ad';
 };
 
 export type User = {
@@ -38,6 +39,15 @@ export type PurchasedCourse = {
   title: string;
 }
 
+export type Comment = {
+    id: string;
+    creatorUid: string;
+    creatorName: string;
+    creatorPhotoURL: string;
+    content: string;
+    timestamp: number;
+};
+
 export type Post = {
     id: string;
     creatorUid: string;
@@ -46,6 +56,8 @@ export type Post = {
     content: string;
     timestamp: number;
     likes: string[]; // Array of user UIDs
+    comments?: Comment[];
+    itemType?: 'post';
 };
 
 // Represents a user-created group
@@ -61,4 +73,4 @@ export type Group = {
 }
 
 // Represents either a Post or an Ad in a feed
-export type FeedItem = (Post & { itemType: 'post' }) | (Ad & { itemType: 'ad' });
+export type FeedItem = Post | Ad;

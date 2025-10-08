@@ -14,7 +14,7 @@ import {
   DropdownMenuTrigger,
 } from "./ui/dropdown-menu";
 import { Avatar, AvatarFallback, AvatarImage } from "./ui/avatar";
-import { Briefcase, ChevronDown, LogOut, User as UserIcon, Wallet, Users, Bell } from "lucide-react";
+import { Briefcase, ChevronDown, LogOut, User as UserIcon, Wallet, Users, Bell, Rss } from "lucide-react";
 
 export function Header() {
   const { user, firebaseUser, logout } = useAppContext();
@@ -35,6 +35,9 @@ export function Header() {
         <div className="flex flex-1 items-center justify-end space-x-4">
           <nav className="hidden md:flex items-center space-x-6 text-sm font-medium">
             <Link href="/courses" className="transition-colors hover:text-primary">Courses</Link>
+            {user?.type === 'user' && (
+                <Link href="/feed" className="transition-colors hover:text-primary">Feed</Link>
+            )}
             <Link href="/groups" className="transition-colors hover:text-primary">Groups</Link>
             <Link href="/community" className="transition-colors hover:text-primary">Community</Link>
             {user?.type === 'user' && (

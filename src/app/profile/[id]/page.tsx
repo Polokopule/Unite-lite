@@ -5,13 +5,14 @@ import { useParams } from "next/navigation";
 import { useAppContext } from "@/contexts/app-context";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
-import { useEffect, useState, useMemo } from "react";
-import { User as UserType, Post as PostType, FeedItem } from "@/lib/types";
-import { Loader2, UserPlus, UserMinus, Users, BookOpen, Heart, MessageCircle } from "lucide-react";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from "@/components/ui/card";
+import { useEffect, useState } from "react";
+import { User as UserType, Post as PostType, Comment as CommentType } from "@/lib/types";
+import { Loader2, UserPlus, UserMinus, MessageCircle, Heart, Send } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { Textarea } from "@/components/ui/textarea";
 import { formatDistanceToNow } from "date-fns";
+import { Input } from "@/components/ui/input";
 
 // --- Create Post Form ---
 function CreatePostForm() {
@@ -60,10 +61,74 @@ function CreatePostForm() {
     );
 }
 
+// --- Comment Form ---
+function CommentForm({ postId }: { postId: string }) {
+    const { addComment } = useAppContext();
+    const [comment, setComment] = useState("");
+    const [isCommenting, setIsCommenting] = useState(false);
+    const { toast } = useToast();
+
+    const handleSubmit = async (e: React.FormEvent) => {
+        e.preventDefault();
+        if (!comment.trim()) return;
+        setIsCommenting(true);
+        const success = await addComment(postId, comment);
+        setIsCommenting(false);
+        if (success) {
+            setComment("");
+        } else {
+            toast({ variant: "destructive", title: "Failed to add comment." });
+        }
+    };
+
+    return (
+        <form onSubmit={handleSubmit} className="flex items-center gap-2 pt-4">
+            <Input
+                placeholder="Write a comment..."
+                value={comment}
+                onChange={(e) => setComment(e.target.value)}
+                disabled={isCommenting}
+                className="flex-1"
+            />
+            <Button type="submit" size="icon" disabled={isCommenting || !comment.trim()}>
+                {isCommenting ? <Loader2 className="h-4 w-4 animate-spin" /> : <Send className="h-4 w-4" />}
+            </Button>
+        </form>
+    );
+}
+
+// --- Comment List ---
+function CommentList({ comments }: { comments: CommentType[] }) {
+    if (!comments || comments.length === 0) {
+        return <p className="text-xs text-muted-foreground pt-4">No comments yet.</p>;
+    }
+
+    return (
+        <div className="space-y-3 pt-4">
+            {comments.map((comment) => (
+                <div key={comment.id} className="flex items-start gap-3">
+                    <Avatar className="h-8 w-8">
+                        <AvatarImage src={comment.creatorPhotoURL} alt={comment.creatorName} />
+                        <AvatarFallback>{comment.creatorName.substring(0, 2)}</AvatarFallback>
+                    </Avatar>
+                    <div className="bg-muted rounded-lg p-2 text-sm w-full">
+                        <p className="font-semibold">{comment.creatorName}</p>
+                        <p className="text-xs text-muted-foreground pb-1">
+                            {formatDistanceToNow(new Date(comment.timestamp), { addSuffix: true })}
+                        </p>
+                        <p>{comment.content}</p>
+                    </div>
+                </div>
+            ))}
+        </div>
+    );
+}
+
 // --- Post Card ---
 function PostCard({ post }: { post: PostType }) {
     const { user, likePost } = useAppContext();
     const [isLiked, setIsLiked] = useState(false);
+    const [showComments, setShowComments] = useState(false);
 
     useEffect(() => {
         if(user) {
@@ -94,68 +159,39 @@ function PostCard({ post }: { post: PostType }) {
             <CardContent>
                 <p className="whitespace-pre-wrap">{post.content}</p>
             </CardContent>
-            <CardFooter className="border-t pt-4 flex items-center gap-4">
-                 <Button variant="ghost" size="sm" onClick={handleLike} className="flex items-center gap-2">
-                    <Heart className={`h-4 w-4 ${isLiked ? 'fill-red-500 text-red-500' : ''}`} />
-                    <span>{post.likes?.length || 0} Likes</span>
-                </Button>
-                 <Button variant="ghost" size="sm" className="flex items-center gap-2">
-                    <MessageCircle className="h-4 w-4" />
-                    <span>Comment</span>
-                </Button>
+            <CardFooter className="border-t pt-2 pb-2 flex-col items-start">
+                 <div className="flex items-center gap-4">
+                     <Button variant="ghost" size="sm" onClick={handleLike} className="flex items-center gap-2">
+                        <Heart className={`h-4 w-4 ${isLiked ? 'fill-red-500 text-red-500' : ''}`} />
+                        <span>{post.likes?.length || 0}</span>
+                    </Button>
+                     <Button variant="ghost" size="sm" className="flex items-center gap-2" onClick={() => setShowComments(!showComments)}>
+                        <MessageCircle className="h-4 w-4" />
+                        <span>{post.comments?.length || 0}</span>
+                    </Button>
+                </div>
+                {showComments && (
+                    <div className="w-full pt-2">
+                       <CommentList comments={post.comments || []} />
+                       {user && <CommentForm postId={post.id} />}
+                    </div>
+                )}
             </CardFooter>
         </Card>
     );
 }
 
-// --- Ad Card in Feed ---
-function AdCard({ ad }: { ad: Ad }) {
-    return (
-        <Card className="w-full bg-primary/5 border-primary/20">
-             <CardHeader>
-                <div className="flex justify-between items-center">
-                    <CardTitle className="text-lg">{ad.campaignName}</CardTitle>
-                    <span className="text-xs font-bold uppercase text-primary">AD</span>
-                </div>
-            </CardHeader>
-            <CardContent>
-                <p>{ad.content}</p>
-            </CardContent>
-        </Card>
-    );
-}
-
-
 export default function ProfilePage() {
     const params = useParams();
     const { id: profileUserId } = params;
-    const { user: currentUser, allUsers, loading, followUser, unfollowUser, posts, ads } = useAppContext();
+    const { user: currentUser, allUsers, loading, followUser, unfollowUser, posts } = useAppContext();
     const { toast } = useToast();
 
     const [profileUser, setProfileUser] = useState<UserType | null>(null);
     const [isFollowing, setIsFollowing] = useState(false);
     const [isProcessing, setIsProcessing] = useState(false);
     
-    // Create a memoized feed that combines posts and ads
-    const userFeed = useMemo(() => {
-        const userPosts = posts.filter(p => p.creatorUid === profileUserId).map(p => ({ ...p, itemType: 'post' as const }));
-
-        // Simple random ad injection
-        const feed: FeedItem[] = [...userPosts];
-        if (ads.length > 0) {
-            // Insert an ad every 5 posts, for example
-            for (let i = 0; i < feed.length; i += 5) {
-                const adIndex = Math.floor(Math.random() * ads.length);
-                const randomAd = ads[adIndex];
-                if (randomAd) {
-                    feed.splice(i + 4, 0, { ...randomAd, itemType: 'ad' as const });
-                }
-            }
-        }
-        return feed;
-
-    }, [posts, ads, profileUserId]);
-
+    const userPosts = posts.filter(p => p.creatorUid === profileUserId);
 
     useEffect(() => {
         if (!loading && allUsers.length > 0) {
@@ -189,6 +225,7 @@ export default function ProfilePage() {
     };
 
     const getInitials = (name: string) => {
+        if (!name) return '??';
         const names = name.split(' ');
         if (names.length > 1) {
             return names[0][0] + names[names.length - 1][0];
@@ -247,19 +284,14 @@ export default function ProfilePage() {
             <div className="space-y-6">
                 {isOwnProfile && <CreatePostForm />}
                 
-                <h3 className="text-xl font-semibold">Feed</h3>
+                <h3 className="text-xl font-semibold">Posts</h3>
                 
-                {userFeed.length > 0 ? (
+                {userPosts.length > 0 ? (
                     <div className="space-y-6">
-                        {userFeed.map((item) => 
-                            item.itemType === 'post' 
-                                ? <PostCard key={item.id} post={item} />
-                                : <AdCard key={item.id} ad={item} />
-                        )}
+                        {userPosts.map((post) => <PostCard key={post.id} post={post} />)}
                     </div>
                 ) : (
                     <div className="text-center text-muted-foreground py-12 border-2 border-dashed rounded-lg">
-                        <BookOpen className="mx-auto h-12 w-12 text-gray-400" />
                         <p className="mt-4">No posts yet.</p>
                         {isOwnProfile && <p className="text-sm">Why not create your first one?</p>}
                     </div>

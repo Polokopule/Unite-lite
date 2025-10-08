@@ -2,7 +2,7 @@
 "use client";
 
 import { PlaceHolderImages } from "@/lib/placeholder-images";
-import type { Course, Ad, User, PurchasedCourse, Post, Group } from "@/lib/types";
+import type { Course, Ad, User, PurchasedCourse, Post, Group, Comment } from "@/lib/types";
 import { useRouter } from "next/navigation";
 import React, { createContext, useContext, useEffect, useState } from "react";
 import { db, auth } from "@/lib/firebase";
@@ -33,6 +33,7 @@ interface AppContextType {
   unfollowUser: (targetUserId: string) => Promise<void>;
   addPost: (content: string) => Promise<boolean>;
   likePost: (postId: string) => Promise<void>;
+  addComment: (postId: string, content: string) => Promise<boolean>;
   createGroup: (groupData: { name: string; description: string; pin?: string }) => Promise<boolean>;
   joinGroup: (groupId: string, pin?: string) => Promise<boolean>;
   loading: boolean;
@@ -116,7 +117,8 @@ export function AppContextProvider({ children }: { children: React.ReactNode }) 
         const postList: Post[] = Object.keys(data).map(key => ({
             id: key,
             ...data[key],
-            likes: data[key].likes ? Object.keys(data[key].likes) : []
+            likes: data[key].likes ? Object.keys(data[key].likes) : [],
+            comments: data[key].comments ? Object.values(data[key].comments) : []
         })).sort((a, b) => b.timestamp - a.timestamp);
         setPosts(postList);
     });
@@ -386,7 +388,7 @@ export function AppContextProvider({ children }: { children: React.ReactNode }) 
       try {
         const postsRef = ref(db, 'posts');
         const newPostRef = push(postsRef);
-        const newPost: Omit<Post, 'id' | 'likes'> = {
+        const newPost: Omit<Post, 'id' | 'likes' | 'comments'> = {
             creatorUid: user.uid,
             creatorName: user.name,
             creatorPhotoURL: user.photoURL || '',
@@ -414,6 +416,27 @@ export function AppContextProvider({ children }: { children: React.ReactNode }) 
         }
       }
   };
+
+    const addComment = async (postId: string, content: string): Promise<boolean> => {
+        if (!user || !content.trim()) return false;
+        try {
+            const commentsRef = ref(db, `posts/${postId}/comments`);
+            const newCommentRef = push(commentsRef);
+            const newComment: Omit<Comment, 'id'> = {
+                id: newCommentRef.key!,
+                creatorUid: user.uid,
+                creatorName: user.name,
+                creatorPhotoURL: user.photoURL || '',
+                content: content,
+                timestamp: serverTimestamp() as any,
+            };
+            await set(newCommentRef, newComment);
+            return true;
+        } catch (e) {
+            return false;
+        }
+    };
+
 
   const createGroup = async (groupData: { name: string; description: string; pin?: string }): Promise<boolean> => {
     if (!user) return false;
@@ -483,6 +506,7 @@ export function AppContextProvider({ children }: { children: React.ReactNode }) 
     unfollowUser,
     addPost,
     likePost,
+    addComment,
     createGroup,
     joinGroup,
     loading,
