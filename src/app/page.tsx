@@ -15,6 +15,7 @@ import { useToast } from "@/hooks/use-toast";
 import Image from "next/image";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { CreatePostForm } from "@/components/create-post-form";
 
 
 // --- Comment Form ---
@@ -165,7 +166,7 @@ function AdCard({ ad }: { ad: Ad }) {
 }
 
 function FeedContent() {
-    const { loading, posts, ads } = useAppContext();
+    const { user, loading, posts, ads } = useAppContext();
 
     const feedItems = useMemo(() => {
         const allPosts: FeedItem[] = posts.map(p => ({ ...p, itemType: 'post' as const }));
@@ -203,6 +204,7 @@ function FeedContent() {
     
      return (
          <div className="space-y-6 max-w-2xl mx-auto">
+            {user && <CreatePostForm />}
             {feedItems.length > 0 ? (
                 feedItems.map((item) => 
                     item.itemType === 'post' 

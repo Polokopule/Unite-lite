@@ -13,64 +13,18 @@ import { useToast } from "@/hooks/use-toast";
 import { Textarea } from "@/components/ui/textarea";
 import { formatDistanceToNow } from "date-fns";
 import { Input } from "@/components/ui/input";
-
-// --- Create Post Form ---
-function CreatePostForm() {
-    const { addPost } = useAppContext();
-    const [content, setContent] = useState("");
-    const [isPosting, setIsPosting] = useState(false);
-    const { toast } = useToast();
-
-    const handleSubmit = async (e: React.FormEvent) => {
-        e.preventDefault();
-        if (!content.trim()) return;
-
-        setIsPosting(true);
-        const success = await addPost(content);
-        setIsPosting(false);
-
-        if (success) {
-            setContent("");
-            toast({ title: "Post created!" });
-        } else {
-            toast({ variant: "destructive", title: "Failed to create post." });
-        }
-    };
-
-    return (
-        <Card className="mb-8">
-            <CardHeader>
-                <CardTitle className="text-xl">Create a New Post</CardTitle>
-            </CardHeader>
-            <CardContent>
-                <form onSubmit={handleSubmit}>
-                    <Textarea
-                        placeholder="What's on your mind?"
-                        value={content}
-                        onChange={(e) => setContent(e.target.value)}
-                        rows={3}
-                        className="mb-4"
-                    />
-                    <Button type="submit" disabled={isPosting || !content.trim()}>
-                        {isPosting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                        Post
-                    </Button>
-                </form>
-            </CardContent>
-        </Card>
-    );
-}
+import { CreatePostForm } from "@/components/create-post-form";
 
 // --- Comment Form ---
 function CommentForm({ postId }: { postId: string }) {
-    const { addComment } = useAppContext();
+    const { user, addComment } = useAppContext();
     const [comment, setComment] = useState("");
     const [isCommenting, setIsCommenting] = useState(false);
     const { toast } = useToast();
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
-        if (!comment.trim()) return;
+        if (!comment.trim() || !user) return;
         setIsCommenting(true);
         const success = await addComment(postId, comment);
         setIsCommenting(false);
@@ -83,6 +37,10 @@ function CommentForm({ postId }: { postId: string }) {
 
     return (
         <form onSubmit={handleSubmit} className="flex items-center gap-2 pt-4">
+             <Avatar className="h-8 w-8">
+                <AvatarImage src={user?.photoURL} alt={user?.name} />
+                <AvatarFallback>{user?.name?.substring(0, 2)}</AvatarFallback>
+            </Avatar>
             <Input
                 placeholder="Write a comment..."
                 value={comment}
@@ -100,11 +58,11 @@ function CommentForm({ postId }: { postId: string }) {
 // --- Comment List ---
 function CommentList({ comments }: { comments: CommentType[] }) {
     if (!comments || comments.length === 0) {
-        return <p className="text-xs text-muted-foreground pt-4">No comments yet.</p>;
+        return null;
     }
 
     return (
-        <div className="space-y-3 pt-4">
+        <div className="space-y-3 pt-4 border-t mt-2">
             {comments.map((comment) => (
                 <div key={comment.id} className="flex items-start gap-3">
                     <Avatar className="h-8 w-8">
@@ -159,8 +117,8 @@ function PostCard({ post }: { post: PostType }) {
             <CardContent>
                 <p className="whitespace-pre-wrap">{post.content}</p>
             </CardContent>
-            <CardFooter className="border-t pt-2 pb-2 flex-col items-start">
-                 <div className="flex items-center gap-4">
+            <CardFooter className="pb-3 pt-3 flex-col items-start">
+                 <div className="flex items-center gap-4 text-muted-foreground">
                      <Button variant="ghost" size="sm" onClick={handleLike} className="flex items-center gap-2">
                         <Heart className={`h-4 w-4 ${isLiked ? 'fill-red-500 text-red-500' : ''}`} />
                         <span>{post.likes?.length || 0}</span>
