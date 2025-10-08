@@ -3,7 +3,6 @@
 
 import { useState } from "react";
 import { useAppContext } from "@/contexts/app-context";
-import { Card, CardContent } from "@/components/ui/card";
 import { Textarea } from "@/components/ui/textarea";
 import { Button } from "@/components/ui/button";
 import { Loader2 } from "lucide-react";

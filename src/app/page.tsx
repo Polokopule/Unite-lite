@@ -200,7 +200,6 @@ function FeedContent() {
     
      return (
          <div className="bg-card">
-            {user && <CreatePostForm />}
             {feedItems.length > 0 ? (
                 feedItems.map((item) => 
                     item.itemType === 'post' 
@@ -342,6 +341,7 @@ function NotificationsContent() {
 }
 
 export default function HomePage() {
+    const { user } = useAppContext();
     return (
         <div className="w-full">
             <Tabs defaultValue="home" className="w-full">
@@ -353,6 +353,7 @@ export default function HomePage() {
                             <TabsTrigger value="notifications"><Bell className="h-5 w-5" /></TabsTrigger>
                         </TabsList>
                     </div>
+                    {user && <CreatePostForm />}
                 </div>
                 <TabsContent value="home" className="mt-0">
                     <FeedContent />
@@ -367,5 +368,3 @@ export default function HomePage() {
         </div>
     );
 }
-
-    
