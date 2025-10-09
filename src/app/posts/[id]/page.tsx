@@ -35,6 +35,7 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   }
 
   const excerpt = post.content ? post.content.substring(0, 150) + '...' : "Check out this post on Unite.";
+  const postUrl = `https://unite-app.dev/posts/${post.id}`;
 
   return {
     title: `${post.creatorName}: "${excerpt}" | Unite`,
@@ -42,12 +43,13 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
     openGraph: {
       title: `${post.creatorName} on Unite`,
       description: excerpt,
+      url: postUrl,
       images: post.fileUrl && post.fileType === 'image' ? [
         {
           url: post.fileUrl,
           width: 1200,
           height: 630,
-          alt: post.content,
+          alt: post.content || 'Post image',
         },
       ] : [],
       type: 'article',
