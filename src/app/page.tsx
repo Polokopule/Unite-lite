@@ -1,4 +1,5 @@
 
+
 "use client";
 
 import { useAppContext } from "@/contexts/app-context";
@@ -966,13 +967,15 @@ function NotificationsContent() {
     }
 
     return (
-        <div className="container mx-auto py-8">
-            <h2 className="text-3xl font-bold font-headline mb-4">Notifications</h2>
-             <div className="bg-card border rounded-lg">
+        <div className="py-8">
+            <div className="container mx-auto">
+                <h2 className="text-3xl font-bold font-headline mb-4">Notifications</h2>
+            </div>
+             <div className="bg-card border-y">
                 <div className="p-0">
-                    {loading && <p className="p-6">Loading notifications...</p>}
+                    {loading && <p className="p-6 container mx-auto">Loading notifications...</p>}
                     {!loading && notifications.length === 0 ? (
-                        <div className="text-center text-muted-foreground py-12">
+                        <div className="text-center text-muted-foreground py-12 container mx-auto">
                             <Bell className="mx-auto h-12 w-12 mb-4" />
                             <h3 className="text-xl font-semibold">No new notifications</h3>
                             <p>Check back later to see updates.</p>
@@ -980,24 +983,26 @@ function NotificationsContent() {
                     ) : (
                         <ul className="divide-y">
                            {notifications.map(n => (
-                               <li key={n.id} className={`p-4 flex items-center gap-4 transition-colors ${!n.isRead ? 'bg-primary/5' : 'bg-transparent'}`}>
-                                   <Link href={`/profile/${n.actorUid}`}>
-                                        <Avatar className="h-10 w-10">
-                                            <AvatarImage src={n.actorPhotoURL} alt={n.actorName} />
-                                            <AvatarFallback>{n.actorName?.substring(0, 2)}</AvatarFallback>
-                                        </Avatar>
-                                   </Link>
-                                   <div className="flex-1">
-                                       <p className="text-sm">
-                                           <Link href={`/profile/${n.actorUid}`} className="font-bold hover:underline">{n.actorName}</Link>
-                                           {' '}
-                                           {getNotificationMessage(n)}
-                                       </p>
-                                       <p className="text-xs text-muted-foreground">{formatDistanceToNow(new Date(n.timestamp), { addSuffix: true })}</p>
+                               <li key={n.id} className={`transition-colors ${!n.isRead ? 'bg-primary/5' : 'bg-transparent'}`}>
+                                   <div className="container mx-auto p-4 flex items-center gap-4">
+                                       <Link href={`/profile/${n.actorUid}`}>
+                                            <Avatar className="h-10 w-10">
+                                                <AvatarImage src={n.actorPhotoURL} alt={n.actorName} />
+                                                <AvatarFallback>{n.actorName?.substring(0, 2)}</AvatarFallback>
+                                            </Avatar>
+                                       </Link>
+                                       <div className="flex-1">
+                                           <p className="text-sm">
+                                               <Link href={`/profile/${n.actorUid}`} className="font-bold hover:underline">{n.actorName}</Link>
+                                               {' '}
+                                               {getNotificationMessage(n)}
+                                           </p>
+                                           <p className="text-xs text-muted-foreground">{formatDistanceToNow(new Date(n.timestamp), { addSuffix: true })}</p>
+                                       </div>
+                                        <Button asChild variant="ghost" size="sm">
+                                            <Link href={n.targetUrl}>View</Link>
+                                        </Button>
                                    </div>
-                                    <Button asChild variant="ghost" size="sm">
-                                        <Link href={n.targetUrl}>View</Link>
-                                    </Button>
                                </li>
                            ))}
                         </ul>
