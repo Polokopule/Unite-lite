@@ -7,7 +7,7 @@ import { useAppContext } from "@/contexts/app-context";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from "@/components/ui/card";
-import { useEffect, useState, useMemo } from "react";
+import React, { useEffect, useState, useMemo } from "react";
 import { User as UserType, Post as PostType, Comment as CommentType, LinkPreview } from "@/lib/types";
 import { Loader2, UserPlus, UserMinus, MessageCircle, Heart, Send, File as FileIcon, Share2, Link2, SendToBack, Repeat } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
@@ -16,6 +16,41 @@ import { formatDistanceToNow } from "date-fns";
 import { Input } from "@/components/ui/input";
 import Image from "next/image";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+
+function LikersDialog({ likerUids }: { likerUids: string[] }) {
+    const { allUsers } = useAppContext();
+    const likers = useMemo(() => {
+        return allUsers.filter(user => likerUids.includes(user.uid));
+    }, [allUsers, likerUids]);
+
+    return (
+        <DialogContent>
+            <DialogHeader>
+                <DialogTitle>Liked by</DialogTitle>
+            </DialogHeader>
+            <div className="max-h-[400px] overflow-y-auto space-y-4 py-4">
+                {likers.length > 0 ? (
+                    likers.map(user => (
+                        <div key={user.uid} className="flex items-center gap-3">
+                            <Link href={`/profile/${user.uid}`}>
+                                <Avatar className="h-10 w-10">
+                                    <AvatarImage src={user.photoURL} alt={user.name} />
+                                    <AvatarFallback>{user.name.substring(0, 2)}</AvatarFallback>
+                                </Avatar>
+                            </Link>
+                             <Link href={`/profile/${user.uid}`}>
+                                <p className="font-semibold hover:underline">{user.name}</p>
+                             </Link>
+                        </div>
+                    ))
+                ) : (
+                    <p className="text-muted-foreground text-center">No likes yet.</p>
+                )}
+            </div>
+        </DialogContent>
+    );
+}
 
 // --- Comment Form ---
 function CommentForm({ postId, parentId = null, onCommentPosted }: { postId: string; parentId?: string | null, onCommentPosted?: () => void }) {
@@ -208,75 +243,82 @@ function PostCard({ post }: { post: PostType }) {
     };
 
     return (
-        <Card className="w-full">
-            <CardHeader>
-                {post.repostedFrom && (
-                    <div className="text-sm text-muted-foreground flex items-center gap-2 mb-2">
-                        <Repeat className="h-4 w-4" />
-                        Reposted from <Link href={`/profile/${post.repostedFrom.creatorUid}`} className="font-semibold hover:underline">{post.repostedFrom.creatorName}</Link>
+        <Dialog>
+            <Card className="w-full">
+                <CardHeader>
+                    {post.repostedFrom && (
+                        <div className="text-sm text-muted-foreground flex items-center gap-2 mb-2">
+                            <Repeat className="h-4 w-4" />
+                            Reposted from <Link href={`/profile/${post.repostedFrom.creatorUid}`} className="font-semibold hover:underline">{post.repostedFrom.creatorName}</Link>
+                        </div>
+                    )}
+                    <div className="flex items-center gap-4">
+                        <Link href={`/profile/${post.creatorUid}`}>
+                            <Avatar className="h-10 w-10">
+                                {post.creatorPhotoURL && <AvatarImage src={post.creatorPhotoURL} alt={post.creatorName} />}
+                                <AvatarFallback>{post.creatorName.substring(0, 2)}</AvatarFallback>
+                            </Avatar>
+                        </Link>
+                        <div>
+                            <Link href={`/profile/${post.creatorUid}`} className="font-semibold hover:underline">{post.creatorName}</Link>
+                            <p className="text-xs text-muted-foreground">
+                                {formatDistanceToNow(new Date(post.timestamp), { addSuffix: true })}
+                            </p>
+                        </div>
                     </div>
-                )}
-                <div className="flex items-center gap-4">
-                     <Link href={`/profile/${post.creatorUid}`}>
-                        <Avatar className="h-10 w-10">
-                            {post.creatorPhotoURL && <AvatarImage src={post.creatorPhotoURL} alt={post.creatorName} />}
-                            <AvatarFallback>{post.creatorName.substring(0, 2)}</AvatarFallback>
-                        </Avatar>
-                     </Link>
-                    <div>
-                         <Link href={`/profile/${post.creatorUid}`} className="font-semibold hover:underline">{post.creatorName}</Link>
-                        <p className="text-xs text-muted-foreground">
-                            {formatDistanceToNow(new Date(post.timestamp), { addSuffix: true })}
-                        </p>
-                    </div>
-                </div>
-            </CardHeader>
-            <CardContent>
-                {post.content && <p className="whitespace-pre-wrap mb-2 break-words">{post.content}</p>}
-                
-                {post.linkPreview && <LinkPreviewCard preview={post.linkPreview} />}
-                
-                <PostAttachment post={post} />
-            </CardContent>
-            <CardFooter className="pb-3 pt-3 flex-col items-start">
-                 <div className="pt-4 mt-4 border-t w-full">
-                    <div className="flex items-center gap-4 text-muted-foreground">
-                        <Button variant="ghost" size="sm" onClick={handleLike} className="flex items-center gap-2">
-                            <Heart className={`h-4 w-4 ${isLiked ? 'fill-red-500 text-red-500' : ''}`} />
-                            <span>{post.likes?.length || 0}</span>
-                        </Button>
-                        <Button variant="ghost" size="sm" className="flex items-center gap-2" onClick={() => setShowComments(!showComments)}>
-                            <MessageCircle className="h-4 w-4" />
-                            <span>{post.comments?.length || 0}</span>
-                        </Button>
-                        <DropdownMenu>
-                            <DropdownMenuTrigger asChild>
-                                <Button variant="ghost" size="sm" className="flex items-center gap-2">
-                                    <Share2 className="h-4 w-4" />
-                                    <span>Share</span>
+                </CardHeader>
+                <CardContent>
+                    {post.content && <p className="whitespace-pre-wrap mb-2 break-words">{post.content}</p>}
+                    
+                    {post.linkPreview && <LinkPreviewCard preview={post.linkPreview} />}
+                    
+                    <PostAttachment post={post} />
+                </CardContent>
+                <CardFooter className="pb-3 pt-3 flex-col items-start">
+                    <div className="pt-4 mt-4 border-t w-full">
+                        <div className="flex items-center gap-4 text-muted-foreground">
+                             <Button variant="ghost" size="sm" onClick={handleLike} className="flex items-center gap-2">
+                                <Heart className={`h-4 w-4 ${isLiked ? 'fill-red-500 text-red-500' : ''}`} />
+                            </Button>
+                             <DialogTrigger asChild>
+                                <Button variant="link" className="p-0 h-auto text-muted-foreground hover:underline" disabled={(post.likes?.length || 0) === 0}>
+                                    <span>{post.likes?.length || 0} likes</span>
                                 </Button>
-                            </DropdownMenuTrigger>
-                            <DropdownMenuContent>
-                                <DropdownMenuItem onClick={handleCopyLink}>
-                                    <Link2 className="mr-2 h-4 w-4" />
-                                    <span>Copy Link</span>
-                                </DropdownMenuItem>
-                                <DropdownMenuItem disabled>
-                                     <SendToBack className="mr-2 h-4 w-4" />
-                                     <span>Share in Unite (soon)</span>
-                                </DropdownMenuItem>
-                            </DropdownMenuContent>
-                        </DropdownMenu>
+                            </DialogTrigger>
+                            <Button variant="ghost" size="sm" className="flex items-center gap-2" onClick={() => setShowComments(!showComments)}>
+                                <MessageCircle className="h-4 w-4" />
+                                <span>{post.comments?.length || 0}</span>
+                            </Button>
+                            <DropdownMenu>
+                                <DropdownMenuTrigger asChild>
+                                    <Button variant="ghost" size="sm" className="flex items-center gap-2">
+                                        <Share2 className="h-4 w-4" />
+                                        <span>Share</span>
+                                    </Button>
+                                </DropdownMenuTrigger>
+                                <DropdownMenuContent>
+                                    <DropdownMenuItem onClick={handleCopyLink}>
+                                        <Link2 className="mr-2 h-4 w-4" />
+                                        <span>Copy Link</span>
+                                    </DropdownMenuItem>
+                                    <DropdownMenuItem disabled>
+                                        <SendToBack className="mr-2 h-4 w-4" />
+                                        <span>Share in Unite (soon)</span>
+                                    </DropdownMenuItem>
+                                </DropdownMenuContent>
+                            </DropdownMenu>
+                        </div>
                     </div>
-                 </div>
-                {showComments && (
-                    <div className="w-full pt-2">
-                        <CommentList comments={post.comments || []} postId={post.id} />
-                        {user && <CommentForm postId={post.id} />}
-                    </div>
-                )}
-            </CardFooter>
-        </Card>
+                    {showComments && (
+                        <div className="w-full pt-2">
+                            <CommentList comments={post.comments || []} postId={post.id} />
+                            {user && <CommentForm postId={post.id} />}
+                        </div>
+                    )}
+                </CardFooter>
+                 <LikersDialog likerUids={post.likes || []} />
+            </Card>
+        </Dialog>
     );
 }
 
@@ -396,5 +438,3 @@ export default function ProfilePage() {
         </div>
     );
 }
-
-    
