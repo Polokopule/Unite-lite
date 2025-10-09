@@ -69,7 +69,7 @@ export type LinkPreview = {
     url: string;
     title: string;
     description: string;
-    imageUrl: string;
+    imageUrl?: string;
 };
 
 export type Post = {

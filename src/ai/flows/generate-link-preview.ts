@@ -15,7 +15,7 @@ const LinkPreviewOutputSchema = z.object({
   url: z.string().url(),
   title: z.string(),
   description: z.string(),
-  imageUrl: z.string().url(),
+  imageUrl: z.string().url().optional(), // Make imageUrl optional
 }) as z.ZodType<LinkPreview>;
 
 export const generateLinkPreviewFlow = ai.defineFlow(
@@ -25,7 +25,7 @@ export const generateLinkPreviewFlow = ai.defineFlow(
     outputSchema: LinkPreviewOutputSchema,
   },
   async (input) => {
-    const prompt = `Extract the title, description, and a representative image URL from the webpage at the following URL. Provide the output in JSON format.
+    const prompt = `Extract the title, description, and a representative image URL from the webpage at the following URL. Provide the output in JSON format. If no suitable image is found, you can omit the imageUrl field.
         URL: ${input.url}
         
         Example JSON output:
