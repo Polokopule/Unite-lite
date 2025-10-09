@@ -946,39 +946,39 @@ function MessagesContent() {
     }
     
     return (
-        <div className="container mx-auto py-8">
-            <h1 className="text-3xl font-bold font-headline mb-4">Messages</h1>
-            <div className="relative mb-6">
-                <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground" />
-                <Input
-                    placeholder="Search for people to message"
-                    className="pl-10"
-                    value={searchTerm}
-                    onChange={(e) => setSearchTerm(e.target.value)}
-                />
-                {searchResults.length > 0 && (
-                    <Card className="absolute top-full mt-2 w-full z-10 max-h-60 overflow-y-auto">
-                        <CardContent className="p-2">
-                           {searchResults.map(foundUser => (
-                               <div key={foundUser.uid} onClick={() => handleStartConversation(foundUser)} className="flex items-center gap-3 p-2 rounded-md hover:bg-muted cursor-pointer">
-                                   <Avatar className="h-8 w-8">
-                                        <AvatarImage src={foundUser.photoURL} alt={foundUser.name} />
-                                        <AvatarFallback>{getInitials(foundUser.name)}</AvatarFallback>
-                                   </Avatar>
-                                   <span>{foundUser.name}</span>
-                               </div>
-                           ))}
-                        </CardContent>
-                    </Card>
-                )}
+        <div className="py-8">
+            <div className="container mx-auto">
+                <h1 className="text-3xl font-bold font-headline mb-4">Messages</h1>
+                <div className="relative mb-6">
+                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground" />
+                    <Input
+                        placeholder="Search for people to message"
+                        className="pl-10"
+                        value={searchTerm}
+                        onChange={(e) => setSearchTerm(e.target.value)}
+                    />
+                    {searchResults.length > 0 && (
+                        <Card className="absolute top-full mt-2 w-full z-10 max-h-60 overflow-y-auto">
+                            <CardContent className="p-2">
+                            {searchResults.map(foundUser => (
+                                <div key={foundUser.uid} onClick={() => handleStartConversation(foundUser)} className="flex items-center gap-3 p-2 rounded-md hover:bg-muted cursor-pointer">
+                                    <Avatar className="h-8 w-8">
+                                            <AvatarImage src={foundUser.photoURL} alt={foundUser.name} />
+                                            <AvatarFallback>{getInitials(foundUser.name)}</AvatarFallback>
+                                    </Avatar>
+                                    <span>{foundUser.name}</span>
+                                </div>
+                            ))}
+                            </CardContent>
+                        </Card>
+                    )}
+                </div>
+                <h2 className="text-2xl font-bold font-headline mb-4">Recent Conversations</h2>
             </div>
             
-            <Card>
-                <CardHeader>
-                    <CardTitle>Recent Conversations</CardTitle>
-                </CardHeader>
-                <CardContent>
-                    {loading && <p>Loading conversations...</p>}
+             <div className="border-y">
+                <div className="container mx-auto px-0">
+                    {loading && <p className="p-4">Loading conversations...</p>}
                     {!loading && conversations.length === 0 ? (
                         <div className="text-center text-muted-foreground py-12">
                             <MessageSquare className="mx-auto h-12 w-12 mb-4" />
@@ -986,13 +986,13 @@ function MessagesContent() {
                             <p>Use the search bar to find someone to talk to.</p>
                         </div>
                     ) : (
-                        <ul className="space-y-1">
+                        <ul className="space-y-0">
                             {conversations.map(convo => {
                                 const otherParticipant = getOtherParticipant(convo);
                                 if (!otherParticipant) return null;
                                 return (
-                                    <li key={convo.id}>
-                                         <Link href={`/messages/${convo.id}`} className="flex items-center gap-4 p-3 rounded-lg hover:bg-muted transition-colors">
+                                    <li key={convo.id} className="border-b last:border-b-0">
+                                         <Link href={`/messages/${convo.id}`} className="flex items-center gap-4 p-4 hover:bg-muted transition-colors">
                                             <Avatar className="h-10 w-10">
                                                 <AvatarImage src={otherParticipant.photoURL} alt={otherParticipant.name} />
                                                 <AvatarFallback>{getInitials(otherParticipant.name)}</AvatarFallback>
@@ -1010,8 +1010,8 @@ function MessagesContent() {
                             })}
                         </ul>
                     )}
-                </CardContent>
-            </Card>
+                </div>
+            </div>
 
         </div>
     );
@@ -1061,7 +1061,7 @@ function NotificationsContent() {
                         <ul className="divide-y">
                            {notifications.map(n => (
                                <li key={n.id} className={`transition-colors ${!n.isRead ? 'bg-primary/5' : 'bg-transparent'}`}>
-                                   <div className="mx-auto p-4 flex items-center gap-4">
+                                   <div className="mx-auto p-4 flex items-center gap-4 container">
                                        <Link href={`/profile/${n.actorUid}`}>
                                             <Avatar className="h-10 w-10">
                                                 <AvatarImage src={n.actorPhotoURL} alt={n.actorName} />
