@@ -64,7 +64,6 @@ export const generateLinkPreviewFlow = ai.defineFlow(
           url: input.url,
           title: 'Unable to load preview',
           description: 'Could not retrieve information for this link.',
-          imageUrl: '',
       }
     }
   }
