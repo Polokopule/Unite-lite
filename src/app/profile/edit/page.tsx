@@ -9,8 +9,11 @@ import { useToast } from "@/hooks/use-toast";
 import { useAppContext } from "@/contexts/app-context";
 import { useRouter } from "next/navigation";
 import { useEffect, useState, useRef } from "react";
-import { Loader2, Save, User as UserIcon, Upload } from "lucide-react";
+import { Loader2, Save, User as UserIcon, Upload, KeyRound } from "lucide-react";
 import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
+import { sendPasswordResetEmail } from "firebase/auth";
+import { auth } from "@/lib/firebase";
+import { Separator } from "@/components/ui/separator";
 
 export default function EditProfilePage() {
     const { user, updateUserProfile, loading } = useAppContext();
@@ -21,6 +24,7 @@ export default function EditProfilePage() {
     const [profileImage, setProfileImage] = useState<File | null>(null);
     const [profileImageUrl, setProfileImageUrl] = useState<string | null>(null);
     const [isSaving, setIsSaving] = useState(false);
+    const [isSendingReset, setIsSendingReset] = useState(false);
     const fileInputRef = useRef<HTMLInputElement>(null);
 
     useEffect(() => {
@@ -55,11 +59,30 @@ export default function EditProfilePage() {
 
         if (success) {
             toast({ title: "Profile Updated!", description: "Your changes have been saved." });
-            router.push('/dashboard');
         } else {
             toast({ variant: "destructive", title: "Update Failed", description: "Could not update your profile. Please try again." });
         }
     };
+
+    const handleChangePassword = async () => {
+        if (!user?.email) return;
+        setIsSendingReset(true);
+        try {
+            await sendPasswordResetEmail(auth, user.email);
+            toast({
+                title: "Password Reset Email Sent",
+                description: `An email has been sent to ${user.email} with instructions to reset your password.`,
+            });
+        } catch (error) {
+             toast({
+                variant: "destructive",
+                title: "Error",
+                description: "Could not send password reset email. Please try again later.",
+            });
+        } finally {
+            setIsSendingReset(false);
+        }
+    }
 
     const handleSubmit = (e: React.FormEvent) => {
         e.preventDefault();
@@ -88,7 +111,7 @@ export default function EditProfilePage() {
                             <UserIcon className="h-8 w-8 text-primary" />
                             <div>
                                 <CardTitle className="text-2xl font-headline">Edit Profile</CardTitle>
-                                <CardDescription>Update your name and profile picture.</CardDescription>
+                                <CardDescription>Update your name, profile picture, and password.</CardDescription>
                             </div>
                         </div>
                     </CardHeader>
@@ -116,6 +139,20 @@ export default function EditProfilePage() {
                                 required
                             />
                         </div>
+                        <Separator />
+                        <div className="space-y-2">
+                            <Label>Password</Label>
+                             <Card className="bg-muted/50 p-4 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+                                <div>
+                                    <p className="font-medium text-sm">Change Password</p>
+                                    <p className="text-sm text-muted-foreground">A password reset link will be sent to your email.</p>
+                                </div>
+                                <Button type="button" variant="secondary" onClick={handleChangePassword} disabled={isSendingReset}>
+                                    {isSendingReset ? <Loader2 className="mr-2 h-4 w-4 animate-spin"/> : <KeyRound className="mr-2 h-4 w-4"/>}
+                                    Send Reset Link
+                                </Button>
+                             </Card>
+                        </div>
                     </CardContent>
                     <CardFooter>
                         <Button type="submit" className="w-full sm:w-auto" disabled={isSaving || !name.trim()}>
@@ -128,5 +165,3 @@ export default function EditProfilePage() {
         </div>
     );
 }
-
-    

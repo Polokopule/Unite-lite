@@ -64,7 +64,10 @@ export default function LoginBusinessPage() {
               />
             </div>
             <div className="space-y-2">
-              <Label htmlFor="password">Password</Label>
+               <div className="flex justify-between items-center">
+                 <Label htmlFor="password">Password</Label>
+                 <Button variant="link" asChild className="p-0 h-auto text-xs"><Link href="/forgot-password">Forgot Password?</Link></Button>
+              </div>
               <Input
                 id="password"
                 type="password"
