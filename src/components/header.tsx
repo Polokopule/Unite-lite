@@ -5,15 +5,8 @@ import { useAppContext } from "@/contexts/app-context";
 import { Button } from "./ui/button";
 import { Logo } from "./logo";
 import Link from "next/link";
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
-} from "./ui/dropdown-menu";
 import { Avatar, AvatarFallback, AvatarImage } from "./ui/avatar";
-import { Briefcase, ChevronDown, LogOut, User as UserIcon, Wallet, Users, Home, MessageSquare, Edit, Menu } from "lucide-react";
-import { usePathname } from "next/navigation";
+import { Briefcase, LogOut, User as UserIcon, Wallet, Users, Home, MessageSquare, Edit, Menu, ShoppingBag, BookOpen } from "lucide-react";
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from "./ui/sheet";
 import { useState } from "react";
 import { Separator } from "./ui/separator";
@@ -103,18 +96,46 @@ function UserSheet() {
                          </div>
                         <span>{user.points}</span>
                      </div>
-                    <Button asChild variant="outline" onClick={handleLinkClick}>
-                        <Link href="/dashboard"><UserIcon className="mr-2 h-4 w-4" />Dashboard</Link>
-                    </Button>
-                    <Button asChild variant="outline" onClick={handleLinkClick}>
-                       <Link href={`/profile/${user.uid}`}><UserIcon className="mr-2 h-4 w-4" />My Profile</Link>
-                    </Button>
-                    <Button asChild variant="outline" onClick={handleLinkClick}>
-                       <Link href="/profile/edit"><Edit className="mr-2 h-4 w-4" />Edit Profile</Link>
-                    </Button>
-                    <Button asChild variant="outline" onClick={handleLinkClick}>
-                       <Link href="/"><Home className="mr-2 h-4 w-4" />Home</Link>
-                    </Button>
+                    <Separator />
+                     <div className="flex flex-col gap-2">
+                        <Button asChild variant="ghost" className="justify-start" onClick={handleLinkClick}>
+                           <Link href="/"><Home className="mr-2 h-4 w-4" />Home</Link>
+                        </Button>
+                        <Button asChild variant="ghost" className="justify-start" onClick={handleLinkClick}>
+                           <Link href="/#courses"><ShoppingBag className="mr-2 h-4 w-4" />Courses</Link>
+                        </Button>
+                         <Button asChild variant="ghost" className="justify-start" onClick={handleLinkClick}>
+                           <Link href="/#groups"><Users className="mr-2 h-4 w-4" />Groups</Link>
+                        </Button>
+                        <Button asChild variant="ghost" className="justify-start" onClick={handleLinkClick}>
+                           <Link href="/#community"><Users className="mr-2 h-4 w-4" />Community</Link>
+                        </Button>
+                         <Button asChild variant="ghost" className="justify-start" onClick={handleLinkClick}>
+                           <Link href="/#messages"><MessageSquare className="mr-2 h-4 w-4" />Messages</Link>
+                        </Button>
+                          {user?.type === 'user' && (
+                            <Button asChild variant="ghost" className="justify-start" onClick={handleLinkClick}>
+                                <Link href="/watch-ads"><Wallet className="mr-2 h-4 w-4" />Earn Points</Link>
+                            </Button>
+                          )}
+                           {user?.type === 'business' && (
+                             <Button asChild variant="ghost" className="justify-start" onClick={handleLinkClick}>
+                                <Link href="/create-ad"><Briefcase className="mr-2 h-4 w-4" />Create Ad</Link>
+                            </Button>
+                          )}
+                     </div>
+                    <Separator />
+                     <div className="flex flex-col gap-2">
+                        <Button asChild variant="outline" onClick={handleLinkClick}>
+                            <Link href="/dashboard"><UserIcon className="mr-2 h-4 w-4" />Dashboard</Link>
+                        </Button>
+                        <Button asChild variant="outline" onClick={handleLinkClick}>
+                           <Link href={`/profile/${user.uid}`}><UserIcon className="mr-2 h-4 w-4" />My Profile</Link>
+                        </Button>
+                        <Button asChild variant="outline" onClick={handleLinkClick}>
+                           <Link href="/profile/edit"><Edit className="mr-2 h-4 w-4" />Edit Profile</Link>
+                        </Button>
+                    </div>
                     <Separator />
                     <Button variant="ghost" onClick={() => { handleLinkClick(); logout(); }}>
                       <LogOut className="mr-2 h-4 w-4" />
@@ -129,69 +150,17 @@ function UserSheet() {
 
 export function Header() {
   const { user } = useAppContext();
-  const pathname = usePathname();
-
-  const isHomePage = pathname === '/';
 
   return (
     <header className="sticky top-0 z-50 w-full border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
       <div className="container flex h-16 items-center">
         <Logo />
         <div className="flex flex-1 items-center justify-end space-x-4">
-          <nav className="hidden md:flex items-center space-x-6 text-sm font-medium">
-             <Link href={isHomePage ? "/#home" : "/"} className={`transition-colors hover:text-primary ${isHomePage ? 'text-primary' : ''}`}>Home</Link>
-             <Link href="/#courses" className="transition-colors hover:text-primary">Courses</Link>
-             <Link href="/#groups" className="transition-colors hover:text-primary">Groups</Link>
-             <Link href="/#community" className="transition-colors hover:text-primary">Community</Link>
-             <Link href="/#messages" className="transition-colors hover:text-primary">Messages</Link>
-            {user?.type === 'user' && (
-              <Link href="/watch-ads" className="transition-colors hover:text-primary">Earn Points</Link>
-            )}
-             {user?.type === 'business' && (
-                <Link href="/create-ad" className="transition-colors hover:text-primary">Create Ad</Link>
-            )}
-          </nav>
-          <div className="flex items-center gap-4">
             {user ? (
-                <div className="md:hidden">
-                    <UserSheet />
-                </div>
+                <UserSheet />
             ) : (
-              <>
-                <div className="hidden md:flex items-center gap-2">
-                    <DropdownMenu>
-                    <DropdownMenuTrigger asChild>
-                        <Button variant="ghost">Login <ChevronDown className="h-4 w-4 ml-1" /></Button>
-                    </DropdownMenuTrigger>
-                    <DropdownMenuContent align="end">
-                        <DropdownMenuItem asChild>
-                        <Link href="/login-user"><UserIcon className="mr-2 h-4 w-4"/>As a User</Link>
-                        </DropdownMenuItem>
-                        <DropdownMenuItem asChild>
-                        <Link href="/login-business"><Briefcase className="mr-2 h-4 w-4"/>As a Business</Link>
-                        </DropdownMenuItem>
-                    </DropdownMenuContent>
-                    </DropdownMenu>
-                    <DropdownMenu>
-                    <DropdownMenuTrigger asChild>
-                        <Button>Sign Up <ChevronDown className="h-4 w-4 ml-1" /></Button>
-                    </DropdownMenuTrigger>
-                    <DropdownMenuContent align="end">
-                        <DropdownMenuItem asChild>
-                        <Link href="/signup-user"><UserIcon className="mr-2 h-4 w-4"/>As a User</Link>
-                        </DropdownMenuItem>
-                        <DropdownMenuItem asChild>
-                        <Link href="/signup-business"><Briefcase className="mr-2 h-4 w-4"/>As a Business</Link>
-                        </DropdownMenuItem>
-                    </DropdownMenuContent>
-                    </DropdownMenu>
-                </div>
-                 <div className="md:hidden">
-                    <AuthSheet />
-                 </div>
-              </>
+                <AuthSheet />
             )}
-          </div>
         </div>
       </div>
     </header>
