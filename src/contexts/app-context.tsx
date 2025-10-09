@@ -92,7 +92,7 @@ export function AppContextProvider({ children }: { children: React.ReactNode }) 
   const [loading, setLoading] = useState(true);
   const router = useRouter();
 
-  const urlRegex = /(https?:\/\/[^\s"'<>()\[\]{}]+)/;
+  const urlRegex = /(https?:\/\/[^\s"'<>()\[\]{}]+)/g;
 
   useEffect(() => {
     // Firebase auth state listener
@@ -1171,3 +1171,5 @@ export function useAppContext() {
   }
   return context;
 }
+
+    
