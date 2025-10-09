@@ -9,12 +9,13 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from "@/components/ui/card";
 import { useEffect, useState, useMemo } from "react";
 import { User as UserType, Post as PostType, Comment as CommentType, LinkPreview } from "@/lib/types";
-import { Loader2, UserPlus, UserMinus, MessageCircle, Heart, Send, File as FileIcon } from "lucide-react";
+import { Loader2, UserPlus, UserMinus, MessageCircle, Heart, Send, File as FileIcon, Share2, Link2, SendToBack } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import Link from "next/link";
 import { formatDistanceToNow } from "date-fns";
 import { Input } from "@/components/ui/input";
 import Image from "next/image";
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 
 // --- Comment Form ---
 function CommentForm({ postId, parentId = null, onCommentPosted }: { postId: string; parentId?: string | null, onCommentPosted?: () => void }) {
@@ -78,7 +79,7 @@ function CommentItem({ comment, postId }: { comment: CommentType; postId: string
             <div className="w-full">
                  <div className="bg-muted rounded-lg p-2 px-3 text-sm w-full">
                     <Link href={`/profile/${comment.creatorUid}`} className="font-semibold hover:underline">{comment.creatorName}</Link>
-                    <p className="whitespace-pre-wrap">{comment.content}</p>
+                    <p className="whitespace-pre-wrap break-words">{comment.content}</p>
                 </div>
                 <div className="flex items-center gap-2 text-xs text-muted-foreground px-2 pt-1">
                     <span>{formatDistanceToNow(new Date(comment.timestamp), { addSuffix: true })}</span>
@@ -142,6 +143,7 @@ function LinkPreviewCard({ preview }: { preview: LinkPreview }) {
             <div className="p-3">
                 <p className="font-semibold text-sm truncate">{preview.title}</p>
                 <p className="text-xs text-muted-foreground line-clamp-2">{preview.description}</p>
+                 <p className="text-xs text-muted-foreground truncate mt-1 break-all">{preview.url}</p>
             </div>
         </a>
     )
@@ -187,6 +189,7 @@ function PostCard({ post }: { post: PostType }) {
     const { user, likePost } = useAppContext();
     const [isLiked, setIsLiked] = useState(false);
     const [showComments, setShowComments] = useState(false);
+    const { toast } = useToast();
 
     useEffect(() => {
         if(user) {
@@ -196,6 +199,12 @@ function PostCard({ post }: { post: PostType }) {
 
     const handleLike = () => {
         if(user) likePost(post.id);
+    };
+
+    const handleCopyLink = () => {
+        const postUrl = `${window.location.origin}/posts/${post.id}`;
+        navigator.clipboard.writeText(postUrl);
+        toast({ title: "Link Copied!", description: "The post link has been copied to your clipboard." });
     };
 
     return (
@@ -217,7 +226,7 @@ function PostCard({ post }: { post: PostType }) {
                 </div>
             </CardHeader>
             <CardContent>
-                {post.content && <p className="whitespace-pre-wrap mb-2">{post.content}</p>}
+                {post.content && <p className="whitespace-pre-wrap mb-2 break-words">{post.content}</p>}
                 
                 {post.linkPreview && <LinkPreviewCard preview={post.linkPreview} />}
                 
@@ -234,6 +243,24 @@ function PostCard({ post }: { post: PostType }) {
                             <MessageCircle className="h-4 w-4" />
                             <span>{post.comments?.length || 0}</span>
                         </Button>
+                        <DropdownMenu>
+                            <DropdownMenuTrigger asChild>
+                                <Button variant="ghost" size="sm" className="flex items-center gap-2">
+                                    <Share2 className="h-4 w-4" />
+                                    <span>Share</span>
+                                </Button>
+                            </DropdownMenuTrigger>
+                            <DropdownMenuContent>
+                                <DropdownMenuItem onClick={handleCopyLink}>
+                                    <Link2 className="mr-2 h-4 w-4" />
+                                    <span>Copy Link</span>
+                                </DropdownMenuItem>
+                                <DropdownMenuItem disabled>
+                                     <SendToBack className="mr-2 h-4 w-4" />
+                                     <span>Share in Unite (soon)</span>
+                                </DropdownMenuItem>
+                            </DropdownMenuContent>
+                        </DropdownMenu>
                     </div>
                  </div>
                 {showComments && (

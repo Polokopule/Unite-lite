@@ -5,7 +5,7 @@
 import { useAppContext } from "@/contexts/app-context";
 import { Ad, Post as PostType, FeedItem, Comment as CommentType, Course, Group, User as UserType, Notification, LinkPreview, Conversation } from "@/lib/types";
 import { Button } from "@/components/ui/button";
-import { Loader2, MessageCircle, Heart, Send, ShoppingBag, Wallet, CheckCircle, PlusCircle, Home as HomeIcon, Bell, Users, Lock, User as UserIconLucide, Reply, File as FileIcon, Search, MessageSquare } from "lucide-react";
+import { Loader2, MessageCircle, Heart, Send, ShoppingBag, Wallet, CheckCircle, PlusCircle, Home as HomeIcon, Bell, Users, Lock, User as UserIconLucide, Reply, File as FileIcon, Search, MessageSquare, Share2, Link2, SendToBack } from "lucide-react";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { formatDistanceToNow } from "date-fns";
 import { Input } from "@/components/ui/input";
@@ -20,6 +20,7 @@ import { Card, CardHeader, CardTitle, CardContent, CardDescription, CardFooter }
 import { getAuth } from "firebase/auth";
 import { useRouter, usePathname } from "next/navigation";
 import { Separator } from "@/components/ui/separator";
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 
 
 // --- Comment Form ---
@@ -84,7 +85,7 @@ function CommentItem({ comment, postId }: { comment: CommentType; postId: string
             <div className="w-full">
                  <div className="bg-muted rounded-lg p-2 px-3 text-sm w-full">
                     <Link href={`/profile/${comment.creatorUid}`} className="font-semibold hover:underline">{comment.creatorName}</Link>
-                    <p className="whitespace-pre-wrap">{comment.content}</p>
+                    <p className="whitespace-pre-wrap break-words">{comment.content}</p>
                 </div>
                 <div className="flex items-center gap-2 text-xs text-muted-foreground px-2 pt-1">
                     <span>{formatDistanceToNow(new Date(comment.timestamp), { addSuffix: true })}</span>
@@ -148,6 +149,7 @@ function LinkPreviewCard({ preview }: { preview: LinkPreview }) {
             <div className="p-3">
                 <p className="font-semibold text-sm truncate">{preview.title}</p>
                 <p className="text-xs text-muted-foreground line-clamp-2">{preview.description}</p>
+                 <p className="text-xs text-muted-foreground truncate mt-1 break-all">{preview.url}</p>
             </div>
         </a>
     )
@@ -192,6 +194,7 @@ function PostCard({ post }: { post: PostType }) {
     const { user, likePost, loading } = useAppContext();
     const [isLiked, setIsLiked] = useState(false);
     const [showComments, setShowComments] = useState(false);
+    const { toast } = useToast();
 
     useEffect(() => {
         if(user) {
@@ -205,6 +208,12 @@ function PostCard({ post }: { post: PostType }) {
         if(user && !loading) {
             likePost(post.id);
         }
+    };
+    
+    const handleCopyLink = () => {
+        const postUrl = `${window.location.origin}/posts/${post.id}`;
+        navigator.clipboard.writeText(postUrl);
+        toast({ title: "Link Copied!", description: "The post link has been copied to your clipboard." });
     };
 
     return (
@@ -224,7 +233,7 @@ function PostCard({ post }: { post: PostType }) {
                         </p>
                     </div>
                 </div>
-                {post.content && <p className="whitespace-pre-wrap mb-2">{post.content}</p>}
+                {post.content && <p className="whitespace-pre-wrap mb-2 break-words">{post.content}</p>}
                 
                 {post.linkPreview && <LinkPreviewCard preview={post.linkPreview} />}
                 
@@ -240,6 +249,24 @@ function PostCard({ post }: { post: PostType }) {
                             <MessageCircle className="h-4 w-4" />
                             <span>{post.comments?.length || 0}</span>
                         </Button>
+                         <DropdownMenu>
+                            <DropdownMenuTrigger asChild>
+                                <Button variant="ghost" size="sm" className="flex items-center gap-2">
+                                    <Share2 className="h-4 w-4" />
+                                    <span>Share</span>
+                                </Button>
+                            </DropdownMenuTrigger>
+                            <DropdownMenuContent>
+                                <DropdownMenuItem onClick={handleCopyLink}>
+                                    <Link2 className="mr-2 h-4 w-4" />
+                                    <span>Copy Link</span>
+                                </DropdownMenuItem>
+                                <DropdownMenuItem disabled>
+                                     <SendToBack className="mr-2 h-4 w-4" />
+                                     <span>Share in Unite (soon)</span>
+                                </DropdownMenuItem>
+                            </DropdownMenuContent>
+                        </DropdownMenu>
                     </div>
                     {showComments && (
                         <div className="w-full pt-2">
@@ -800,5 +827,7 @@ export default function HomePage() {
         </div>
     );
 }
+
+    
 
     

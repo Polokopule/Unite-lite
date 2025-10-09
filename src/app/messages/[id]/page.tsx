@@ -40,7 +40,7 @@ function MessageBubble({ message, isOwnMessage, participant }: { message: Messag
                 );
             case 'text':
             default:
-                return <p className="whitespace-pre-wrap">{message.content}</p>;
+                return <p className="whitespace-pre-wrap break-words">{message.content}</p>;
         }
     };
 
@@ -201,3 +201,5 @@ export default function ConversationPage() {
         </div>
     );
 }
+
+    

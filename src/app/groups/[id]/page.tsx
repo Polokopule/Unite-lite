@@ -1,4 +1,5 @@
 
+
 "use client";
 
 import { useParams } from "next/navigation";
@@ -45,7 +46,7 @@ function MessageBubble({ message, isOwnMessage }: { message: Message; isOwnMessa
                 );
             case 'text':
             default:
-                return <p className="whitespace-pre-wrap">{message.content}</p>;
+                return <p className="whitespace-pre-wrap break-words">{message.content}</p>;
         }
     };
 
@@ -281,3 +282,5 @@ export default function GroupPage() {
         </div>
     );
 }
+
+    
