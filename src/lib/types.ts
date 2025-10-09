@@ -46,7 +46,7 @@ export type Notification = {
     actorUid: string;
     actorName: string;
     actorPhotoURL?: string;
-    type: 'new_follower' | 'new_comment' | 'new_reply' | 'post_like' | 'comment_like' | 'new_group_message' | 'new_direct_message' | 'message_reaction';
+    type: 'new_follower' | 'new_comment' | 'new_reply' | 'post_like' | 'comment_like' | 'new_group_message' | 'new_direct_message' | 'mention';
     targetUrl: string; // e.g., /posts/post-123#comment-456
     targetId: string; // e.g., post-123
     isRead: boolean;

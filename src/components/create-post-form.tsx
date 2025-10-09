@@ -4,7 +4,6 @@
 
 import { useState, useRef, useEffect } from "react";
 import { useAppContext } from "@/contexts/app-context";
-import { Textarea } from "@/components/ui/textarea";
 import { Button } from "@/components/ui/button";
 import { Loader2, Paperclip, X, Image as ImageIcon, File as FileIcon } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
@@ -13,6 +12,8 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, Dialog
 import { generateLinkPreview } from "@/services/link-preview";
 import { LinkPreview as LinkPreviewType } from "@/lib/types";
 import Image from "next/image";
+import { MentionsInput, Mention } from 'react-mentions';
+
 
 // A simple debounce hook
 function useDebounce(value: string, delay: number) {
@@ -100,7 +101,7 @@ function FilePreview({ file, onRemove }: { file: File, onRemove: () => void }) {
 
 
 export function CreatePostForm() {
-    const { user, addPost } = useAppContext();
+    const { user, addPost, allUsers } = useAppContext();
     const [content, setContent] = useState("");
     const [file, setFile] = useState<File | null>(null);
     const [linkPreview, setLinkPreview] = useState<LinkPreviewType | null>(null);
@@ -175,6 +176,8 @@ export function CreatePostForm() {
             toast({ variant: "destructive", title: "Failed to create post." });
         }
     };
+
+    const usersForMentions = allUsers.map(u => ({ id: u.uid, display: u.name }));
     
     return (
         <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
@@ -206,13 +209,26 @@ export function CreatePostForm() {
                 </DialogHeader>
                 <form onSubmit={handleSubmit}>
                     <div className="grid gap-4 py-4">
-                        <Textarea
-                            placeholder={`What's on your mind, ${user.name}?`}
+                         <MentionsInput
                             value={content}
                             onChange={(e) => setContent(e.target.value)}
-                            rows={5}
+                            placeholder={`What's on your mind, ${user.name}?`}
+                            className="mentions"
+                            classNames={{
+                               control: "mentions__control",
+                               input: "mentions__input",
+                               suggestions: "mentions__suggestions",
+                               item: "mentions__item",
+                               itemFocused: "mentions__item--focused",
+                            }}
                             autoFocus
-                        />
+                        >
+                            <Mention
+                                trigger="@"
+                                data={usersForMentions}
+                                className="mentions__mention"
+                            />
+                        </MentionsInput>
                          {file && <FilePreview file={file} onRemove={() => setFile(null)} />}
                          {isFetchingPreview && !linkPreview && <div className="text-sm text-muted-foreground">Fetching link preview...</div>}
                          {linkPreview && <LinkPreviewCard preview={linkPreview} onRemove={() => setLinkPreview(null)} />}

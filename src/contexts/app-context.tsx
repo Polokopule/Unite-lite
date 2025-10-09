@@ -505,6 +505,33 @@ export function AppContextProvider({ children }: { children: React.ReactNode }) 
         return 'file';
     }
 
+    const handleMentions = async (content: string, postId: string, commentId?: string) => {
+        if (!user) return;
+        const mentionRegex = /@\[(.+?)\]\((.+?)\)/g;
+        let match;
+        const mentionedUids = new Set<string>();
+
+        while ((match = mentionRegex.exec(content)) !== null) {
+            const mentionedUid = match[2];
+            if (mentionedUid !== user.uid) {
+                mentionedUids.add(mentionedUid);
+            }
+        }
+
+        for (const uid of mentionedUids) {
+            await createNotification({
+                recipientUid: uid,
+                actorUid: user.uid,
+                actorName: user.name,
+                actorPhotoURL: user.photoURL,
+                type: 'mention',
+                targetUrl: `/posts/${postId}${commentId ? `#comment-${commentId}` : ''}`,
+                targetId: commentId || postId,
+                message: commentId ? 'a comment' : 'a post',
+            });
+        }
+    };
+
   const addPost = async (postData: { content: string; file: File | null; linkPreview: LinkPreview | null }): Promise<boolean> => {
       if (!user) return false;
       const { content, file, linkPreview } = postData;
@@ -513,9 +540,10 @@ export function AppContextProvider({ children }: { children: React.ReactNode }) 
       try {
         const postsRef = ref(db, 'posts');
         const newPostRef = push(postsRef);
+        const postId = newPostRef.key!;
         
         let newPost: Omit<Post, 'id' | 'likes' | 'comments'> & {id: string} = {
-            id: newPostRef.key!,
+            id: postId,
             creatorUid: user.uid,
             creatorName: user.name,
             creatorPhotoURL: user.photoURL || '',
@@ -528,7 +556,7 @@ export function AppContextProvider({ children }: { children: React.ReactNode }) 
         }
 
         if (file) {
-            const fileStorageRef = storageRef(storage, `post-files/${newPostRef.key}/${file.name}`);
+            const fileStorageRef = storageRef(storage, `post-files/${postId}/${file.name}`);
             const snapshot = await uploadBytes(fileStorageRef, file);
             const downloadURL = await getDownloadURL(snapshot.ref);
             
@@ -538,6 +566,7 @@ export function AppContextProvider({ children }: { children: React.ReactNode }) 
         }
 
         await set(newPostRef, newPost);
+        await handleMentions(content, postId);
         return true;
       } catch (e) {
         console.error("Error adding post:", e);
@@ -552,6 +581,7 @@ export function AppContextProvider({ children }: { children: React.ReactNode }) 
       if (postSnapshot.exists() && postSnapshot.val().creatorUid === user.uid) {
           try {
               await update(postRef, { content: postData.content });
+              await handleMentions(postData.content, postId);
               return true;
           } catch (e) {
               console.error("Error updating post:", e);
@@ -608,8 +638,10 @@ export function AppContextProvider({ children }: { children: React.ReactNode }) 
         try {
             const commentsRef = ref(db, `posts/${postId}/comments`);
             const newCommentRef = push(commentsRef);
+            const commentId = newCommentRef.key!;
+
             const newComment: Omit<Comment, 'id' | 'likes'> = {
-                id: newCommentRef.key!,
+                id: commentId,
                 creatorUid: user.uid,
                 creatorName: user.name,
                 creatorPhotoURL: user.photoURL || '',
@@ -619,6 +651,8 @@ export function AppContextProvider({ children }: { children: React.ReactNode }) 
                 postId: postId
             };
             await set(newCommentRef, newComment);
+
+            await handleMentions(content, postId, commentId);
 
             const post = posts.find(p => p.id === postId);
             if (post && post.creatorUid !== user.uid) {

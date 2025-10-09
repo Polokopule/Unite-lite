@@ -66,3 +66,26 @@
     @apply bg-background text-foreground;
   }
 }
+
+/* React Mentions styles */
+.mentions {
+    @apply w-full text-sm;
+}
+.mentions__control {
+    @apply bg-background;
+}
+.mentions__input {
+    @apply w-full min-h-[80px] rounded-md border border-input bg-transparent px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50;
+}
+.mentions__suggestions {
+    @apply mt-1 border bg-popover text-popover-foreground rounded-md shadow-lg max-h-60 overflow-auto z-50;
+}
+.mentions__item {
+    @apply px-3 py-2 text-sm hover:bg-accent hover:text-accent-foreground cursor-pointer;
+}
+.mentions__item--focused {
+    @apply bg-accent text-accent-foreground;
+}
+.mentions__mention {
+    @apply bg-primary/20 text-primary font-semibold;
+}

@@ -21,11 +21,98 @@ import { getAuth } from "firebase/auth";
 import { useRouter, usePathname } from "next/navigation";
 import { Separator } from "@/components/ui/separator";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import { MentionsInput, Mention } from 'react-mentions';
 
 
-// --- Comment Form ---
+function SharePostDialog({ post, children }: { post: PostType, children: React.ReactNode }) {
+    const { user, allUsers, startConversation, sendDirectMessage } = useAppContext();
+    const { toast } = useToast();
+    const [open, setOpen] = useState(false);
+    const [searchTerm, setSearchTerm] = useState("");
+    const [selectedUser, setSelectedUser] = useState<UserType | null>(null);
+    const [isSharing, setIsSharing] = useState(false);
+
+    const searchResults = useMemo(() => {
+        if (!searchTerm) return [];
+        return allUsers.filter(u =>
+            u.uid !== user?.uid &&
+            u.name.toLowerCase().includes(searchTerm.toLowerCase())
+        );
+    }, [searchTerm, allUsers, user]);
+
+    const handleShare = async () => {
+        if (!selectedUser) return;
+        setIsSharing(true);
+        const postUrl = `${window.location.origin}/posts/${post.id}`;
+        const conversationId = await startConversation(selectedUser.uid);
+        if (conversationId) {
+            await sendDirectMessage(conversationId, {
+                content: `Check out this post: ${postUrl}`,
+                type: 'text'
+            });
+            toast({ title: "Post Shared!", description: `Successfully shared with ${selectedUser.name}.` });
+        } else {
+            toast({ variant: 'destructive', title: "Failed to share post." });
+        }
+        setIsSharing(false);
+        setOpen(false);
+        setSelectedUser(null);
+        setSearchTerm("");
+    };
+
+    return (
+        <Dialog open={open} onOpenChange={setOpen}>
+            <DialogTrigger asChild>{children}</DialogTrigger>
+            <DialogContent>
+                <DialogHeader>
+                    <DialogTitle>Share Post</DialogTitle>
+                </DialogHeader>
+                <div className="py-4 space-y-4">
+                    {selectedUser ? (
+                        <div className="flex items-center justify-between p-2 bg-muted rounded-md">
+                            <div className="flex items-center gap-2">
+                                <Avatar className="h-8 w-8">
+                                    <AvatarImage src={selectedUser.photoURL} alt={selectedUser.name} />
+                                    <AvatarFallback>{selectedUser.name.substring(0, 2)}</AvatarFallback>
+                                </Avatar>
+                                <span>{selectedUser.name}</span>
+                            </div>
+                            <Button variant="ghost" size="sm" onClick={() => setSelectedUser(null)}>Change</Button>
+                        </div>
+                    ) : (
+                        <div>
+                            <Input
+                                placeholder="Search for a user..."
+                                value={searchTerm}
+                                onChange={(e) => setSearchTerm(e.target.value)}
+                            />
+                            {searchResults.length > 0 && (
+                                <div className="mt-2 border rounded-md max-h-40 overflow-y-auto">
+                                    {searchResults.map(u => (
+                                        <div key={u.uid} onClick={() => setSelectedUser(u)} className="flex items-center gap-2 p-2 hover:bg-muted cursor-pointer">
+                                            <Avatar className="h-8 w-8">
+                                                <AvatarImage src={u.photoURL} alt={u.name} />
+                                                <AvatarFallback>{u.name.substring(0, 2)}</AvatarFallback>
+                                            </Avatar>
+                                            <span>{u.name}</span>
+                                        </div>
+                                    ))}
+                                </div>
+                            )}
+                        </div>
+                    )}
+                    <Button onClick={handleShare} disabled={!selectedUser || isSharing} className="w-full">
+                        {isSharing ? <Loader2 className="animate-spin" /> : `Share with ${selectedUser?.name || '...'}`}
+                    </Button>
+                </div>
+            </DialogContent>
+        </Dialog>
+    )
+}
+
 function CommentForm({ postId, parentId = null, onCommentPosted }: { postId: string; parentId?: string | null, onCommentPosted?: () => void }) {
-    const { user, addComment } = useAppContext();
+    const { user, addComment, allUsers } = useAppContext();
     const [comment, setComment] = useState("");
     const [isCommenting, setIsCommenting] = useState(false);
     const { toast } = useToast();
@@ -43,20 +130,37 @@ function CommentForm({ postId, parentId = null, onCommentPosted }: { postId: str
             toast({ variant: "destructive", title: "Failed to add comment." });
         }
     };
+    
+    const usersForMentions = allUsers.map(u => ({ id: u.uid, display: u.name }));
 
     return (
-        <form onSubmit={handleSubmit} className="flex items-center gap-2 pt-2">
+        <form onSubmit={handleSubmit} className="flex items-start gap-2 pt-2">
              <Avatar className="h-8 w-8">
                 <AvatarImage src={user?.photoURL} alt={user?.name} />
                 <AvatarFallback>{user?.name?.substring(0, 2)}</AvatarFallback>
             </Avatar>
-            <Input
-                placeholder="Write a reply..."
-                value={comment}
-                onChange={(e) => setComment(e.target.value)}
-                disabled={isCommenting}
-                className="flex-1 h-9"
-            />
+            <div className="flex-1">
+                 <MentionsInput
+                    value={comment}
+                    onChange={(e) => setComment(e.target.value)}
+                    placeholder="Write a reply..."
+                    className="mentions"
+                    classNames={{
+                      control: "mentions__control",
+                      input: "mentions__input",
+                      suggestions: "mentions__suggestions",
+                      item: "mentions__item",
+                      itemFocused: "mentions__item--focused",
+                    }}
+                    disabled={isCommenting}
+                >
+                    <Mention
+                        trigger="@"
+                        data={usersForMentions}
+                        className="mentions__mention"
+                    />
+                </MentionsInput>
+            </div>
             <Button type="submit" size="icon" variant="ghost" disabled={isCommenting || !comment.trim()}>
                 {isCommenting ? <Loader2 className="h-4 w-4 animate-spin" /> : <Send className="h-4 w-4" />}
             </Button>
@@ -76,6 +180,26 @@ function CommentItem({ comment, postId }: { comment: CommentType; postId: string
         likeComment(postId, comment.id);
     }
     
+    const renderContentWithMentions = (content: string) => {
+        // Simple regex to find mentions like @[User Name](userId)
+        const mentionRegex = /@\[(.+?)\]\((.+?)\)/g;
+        const parts = content.split(mentionRegex);
+        return parts.map((part, index) => {
+            if (index % 3 === 1) { // This is the user name
+                const userId = parts[index + 1];
+                return (
+                    <Link key={index} href={`/profile/${userId}`} className="text-primary font-semibold hover:underline">
+                        @{part}
+                    </Link>
+                );
+            }
+            if (index % 3 === 2) { // This is the user id, we skip it
+                return null;
+            }
+            return part; // This is regular text
+        });
+    };
+    
     return (
         <div className="flex items-start gap-3">
             <Avatar className="h-8 w-8">
@@ -85,7 +209,7 @@ function CommentItem({ comment, postId }: { comment: CommentType; postId: string
             <div className="w-full">
                  <div className="bg-muted rounded-lg p-2 px-3 text-sm w-full">
                     <Link href={`/profile/${comment.creatorUid}`} className="font-semibold hover:underline">{comment.creatorName}</Link>
-                    <p className="whitespace-pre-wrap break-words">{comment.content}</p>
+                    <p className="whitespace-pre-wrap break-words">{renderContentWithMentions(comment.content)}</p>
                 </div>
                 <div className="flex items-center gap-2 text-xs text-muted-foreground px-2 pt-1">
                     <span>{formatDistanceToNow(new Date(comment.timestamp), { addSuffix: true })}</span>
@@ -216,6 +340,25 @@ function PostCard({ post }: { post: PostType }) {
         toast({ title: "Link Copied!", description: "The post link has been copied to your clipboard." });
     };
 
+    const renderContentWithMentions = (content: string) => {
+        const mentionRegex = /@\[(.+?)\]\((.+?)\)/g;
+        const parts = content.split(mentionRegex);
+        return parts.map((part, index) => {
+            if (index % 3 === 1) { // This is the user name
+                const userId = parts[index + 1];
+                return (
+                    <Link key={index} href={`/profile/${userId}`} className="text-primary font-semibold hover:underline">
+                        @{part}
+                    </Link>
+                );
+            }
+            if (index % 3 === 2) { // This is the user id, we skip it
+                return null;
+            }
+            return part; // This is regular text
+        });
+    };
+
     return (
         <div className="w-full bg-card border-b py-4">
             <div className="container mx-auto">
@@ -233,7 +376,7 @@ function PostCard({ post }: { post: PostType }) {
                         </p>
                     </div>
                 </div>
-                {post.content && <p className="whitespace-pre-wrap mb-2 break-words">{post.content}</p>}
+                {post.content && <p className="whitespace-pre-wrap mb-2 break-words">{renderContentWithMentions(post.content)}</p>}
                 
                 {post.linkPreview && <LinkPreviewCard preview={post.linkPreview} />}
                 
@@ -261,10 +404,12 @@ function PostCard({ post }: { post: PostType }) {
                                     <Link2 className="mr-2 h-4 w-4" />
                                     <span>Copy Link</span>
                                 </DropdownMenuItem>
-                                <DropdownMenuItem disabled>
-                                     <SendToBack className="mr-2 h-4 w-4" />
-                                     <span>Share in Unite (soon)</span>
-                                </DropdownMenuItem>
+                                <SharePostDialog post={post}>
+                                     <DropdownMenuItem onSelect={(e) => e.preventDefault()}>
+                                         <SendToBack className="mr-2 h-4 w-4" />
+                                         <span>Share in Unite</span>
+                                    </DropdownMenuItem>
+                                </SharePostDialog>
                             </DropdownMenuContent>
                         </DropdownMenu>
                     </div>
@@ -696,6 +841,8 @@ function NotificationsContent() {
                 return <>commented on your post.</>;
             case 'new_reply':
                 return <>replied to your comment.</>;
+            case 'mention':
+                return <>mentioned you in a {n.message}.</>
             case 'new_group_message':
                 return <span className="text-muted-foreground">{n.message}</span>;
             case 'new_direct_message':

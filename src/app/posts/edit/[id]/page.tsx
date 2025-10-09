@@ -3,7 +3,6 @@
 
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
-import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
 import { useAppContext } from "@/contexts/app-context";
@@ -11,9 +10,10 @@ import { useRouter, useParams } from "next/navigation";
 import { useEffect, useState } from "react";
 import { Loader2, Save, BookText } from "lucide-react";
 import { Post } from "@/lib/types";
+import { MentionsInput, Mention } from "react-mentions";
 
 export default function EditPostPage() {
-  const { user, posts, updatePost, loading } = useAppContext();
+  const { user, posts, updatePost, loading, allUsers } = useAppContext();
   const router = useRouter();
   const params = useParams();
   const { toast } = useToast();
@@ -79,6 +79,8 @@ export default function EditPostPage() {
     e.preventDefault();
     handleSave();
   };
+
+  const usersForMentions = allUsers.map(u => ({ id: u.uid, display: u.name }));
   
   if (loading || !post || !isAuthorized) {
       return <div className="container mx-auto py-8"><p>Loading editor...</p></div>
@@ -100,13 +102,25 @@ export default function EditPostPage() {
           <CardContent className="space-y-6">
             <div className="space-y-2">
               <Label htmlFor="content">Post Content</Label>
-              <Textarea
-                id="content"
-                value={content}
-                onChange={(e) => setContent(e.target.value)}
-                required
-                rows={8}
-              />
+               <MentionsInput
+                    value={content}
+                    onChange={(e) => setContent(e.target.value)}
+                    placeholder={`What's on your mind, ${user?.name}?`}
+                    className="mentions"
+                     classNames={{
+                      control: "mentions__control",
+                      input: "mentions__input",
+                      suggestions: "mentions__suggestions",
+                      item: "mentions__item",
+                      itemFocused: "mentions__item--focused",
+                    }}
+                >
+                    <Mention
+                        trigger="@"
+                        data={usersForMentions}
+                        className="mentions__mention"
+                    />
+                </MentionsInput>
             </div>
             {post.fileUrl && (
                 <div className="space-y-2">
