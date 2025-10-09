@@ -99,10 +99,10 @@ function FilePreview({ file, onRemove }: { file: File, onRemove: () => void }) {
 }
 
 
-function PostForm({ onPostSuccess }: { onPostSuccess: () => void }) {
+function PostForm({ onPostSuccess, initialFile }: { onPostSuccess: () => void, initialFile?: File | null }) {
     const { user, addPost } = useAppContext();
     const [content, setContent] = useState("");
-    const [file, setFile] = useState<File | null>(null);
+    const [file, setFile] = useState<File | null>(initialFile || null);
     const [linkPreview, setLinkPreview] = useState<LinkPreviewType | null>(null);
     const [isFetchingPreview, setIsFetchingPreview] = useState(false);
     const [isPosting, setIsPosting] = useState(false);
@@ -132,6 +132,12 @@ function PostForm({ onPostSuccess }: { onPostSuccess: () => void }) {
         };
         fetchPreview();
     }, [debouncedContent, linkPreview, file]);
+    
+    useEffect(() => {
+        if(initialFile) {
+            setFile(initialFile)
+        }
+    }, [initialFile])
 
     if (!user) return null;
 
@@ -177,19 +183,14 @@ function PostForm({ onPostSuccess }: { onPostSuccess: () => void }) {
                 {isFetchingPreview && !linkPreview && <div className="text-sm text-muted-foreground">Fetching link preview...</div>}
                 {linkPreview && <LinkPreviewCard preview={linkPreview} onRemove={() => setLinkPreview(null)} />}
             </div>
-            <DialogFooter className="flex-col sm:flex-row sm:justify-between items-center border-t pt-2">
-                <div className="flex items-center gap-2">
-                    <input
-                        type="file"
-                        ref={fileInputRef}
-                        onChange={handleFileChange}
-                        className="hidden"
-                        accept="image/*,video/*,audio/*,application/pdf,.doc,.docx,.xls,.xlsx,.ppt,.pptx"
-                    />
-                    <Button type="button" variant="ghost" size="icon" onClick={() => fileInputRef.current?.click()} title="Attach file">
-                        <Paperclip className="h-5 w-5" />
-                    </Button>
-                </div>
+            <DialogFooter>
+                 <input
+                    type="file"
+                    ref={fileInputRef}
+                    onChange={handleFileChange}
+                    className="hidden"
+                    accept="image/*,video/*,audio/*,application/pdf,.doc,.docx,.xls,.xlsx,.ppt,.pptx"
+                />
                 <Button type="submit" disabled={isPosting || (!content.trim() && !file)} className="w-full sm:w-auto">
                     {isPosting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
                     Post
@@ -203,40 +204,52 @@ function PostForm({ onPostSuccess }: { onPostSuccess: () => void }) {
 export function CreatePostForm() {
     const { user } = useAppContext();
     const [isDialogOpen, setIsDialogOpen] = useState(false);
-    
+    const [initialFile, setInitialFile] = useState<File | null>(null);
+    const fileInputRef = useRef<HTMLInputElement>(null);
+
     if (!user) {
         return null;
     }
 
     const handlePostSuccess = () => {
         setIsDialogOpen(false);
+        setInitialFile(null);
     };
+
+    const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+        const file = e.target.files?.[0];
+        if (file) {
+            setInitialFile(file);
+            setIsDialogOpen(true);
+        }
+        // Reset file input to allow selecting the same file again
+        if(e.target) e.target.value = '';
+    }
 
     return (
         <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
             <div className="bg-card border-b p-4">
-                 <div className="container mx-auto flex items-center flex-wrap gap-4">
+                 <div className="container mx-auto flex items-center gap-2">
                     <DialogTrigger asChild>
                         <div className="flex-1 h-10 rounded-full border border-input bg-background px-4 py-2 text-sm text-muted-foreground hover:bg-accent cursor-text flex items-center min-w-0">
                             <span className="truncate">{`What's on your mind, ${user.name}?`}</span>
                         </div>
                     </DialogTrigger>
-                    <div className="flex items-center gap-2">
-                         <Button variant="ghost" size="icon" className="rounded-full hidden sm:inline-flex" onClick={() => setIsDialogOpen(true)}>
-                            <ImageIcon className="text-green-500"/>
-                        </Button>
-                         <Button variant="ghost" size="icon" className="rounded-full hidden sm:inline-flex" onClick={() => setIsDialogOpen(true)}>
-                            <Paperclip className="text-blue-500" />
-                        </Button>
-                         <Button onClick={() => setIsDialogOpen(true)} className="rounded-full">Post</Button>
-                    </div>
+                    
+                    <input type="file" ref={fileInputRef} onChange={handleFileChange} className="hidden" />
+
+                    <Button variant="ghost" size="icon" className="rounded-full" onClick={() => fileInputRef.current?.click()}>
+                        <Paperclip className="text-blue-500" />
+                    </Button>
+                    
+                    <Button onClick={() => setIsDialogOpen(true)} className="rounded-full">Post</Button>
                  </div>
             </div>
             <DialogContent className="sm:max-w-md">
                  <DialogHeader>
                     <DialogTitle>Create Post</DialogTitle>
                 </DialogHeader>
-                <PostForm onPostSuccess={handlePostSuccess} />
+                <PostForm onPostSuccess={handlePostSuccess} initialFile={initialFile} />
             </DialogContent>
         </Dialog>
     );
