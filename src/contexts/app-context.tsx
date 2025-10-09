@@ -8,7 +8,7 @@ import { useRouter } from "next/navigation";
 import React, { createContext, useContext, useEffect, useState } from "react";
 import { db, auth, storage } from "@/lib/firebase";
 import { ref, onValue, set, get, update, remove, push, serverTimestamp, query, orderByChild, equalTo } from "firebase/database";
-import { onAuthStateChanged, signOut, User as FirebaseUser } from "firebase/auth";
+import { onAuthStateChanged, signOut, User as FirebaseUser, updateProfile as updateFirebaseProfile } from "firebase/auth";
 import { ref as storageRef, uploadBytes, getDownloadURL } from "firebase/storage";
 
 // --- CONTEXT TYPE ---
@@ -25,6 +25,7 @@ interface AppContextType {
   notifications: Notification[];
   login: (email: string, type: 'user' | 'business') => Promise<void>;
   logout: () => void;
+  updateUserProfile: (name: string, photoFile: File | null) => Promise<boolean>;
   addCourse: (course: Omit<Course, 'id' | 'creator' | 'creatorName' | 'imageHint'>) => Promise<boolean>;
   updateCourse: (courseId: string, courseData: Partial<Omit<Course, 'id' | 'creator' | 'creatorName'>>) => Promise<boolean>;
   deleteCourse: (courseId: string) => Promise<boolean>;
@@ -260,6 +261,39 @@ export function AppContextProvider({ children }: { children: React.ReactNode }) 
     setFirebaseUser(null);
     router.push("/");
   };
+  
+    const updateUserProfile = async (name: string, photoFile: File | null): Promise<boolean> => {
+        if (!firebaseUser) return false;
+
+        try {
+            const updates: { displayName?: string, photoURL?: string } = {};
+            let photoURL = firebaseUser.photoURL;
+
+            if (photoFile) {
+                const photoStorageRef = storageRef(storage, `profile-pictures/${firebaseUser.uid}`);
+                const uploadResult = await uploadBytes(photoStorageRef, photoFile);
+                photoURL = await getDownloadURL(uploadResult.ref);
+                updates.photoURL = photoURL;
+            }
+
+            if (name !== firebaseUser.displayName) {
+                updates.displayName = name;
+            }
+
+            // Update Firebase Auth profile
+            await updateFirebaseProfile(firebaseUser, updates);
+
+            // Update RTDB profile
+            const userDbRef = ref(db, `users/${firebaseUser.uid}`);
+            await update(userDbRef, { name, photoURL });
+            
+            return true;
+        } catch (error) {
+            console.error("Error updating profile:", error);
+            return false;
+        }
+    };
+
 
   const addCourse = async (courseData: Omit<Course, 'id' | 'creator' | 'creatorName' | 'imageHint'>): Promise<boolean> => {
     if (!user || user.type !== 'user') return false;
@@ -947,6 +981,7 @@ export function AppContextProvider({ children }: { children: React.ReactNode }) 
     notifications,
     login,
     logout,
+    updateUserProfile,
     addCourse,
     updateCourse,
     deleteCourse,

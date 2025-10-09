@@ -14,7 +14,7 @@ import {
   DropdownMenuTrigger,
 } from "./ui/dropdown-menu";
 import { Avatar, AvatarFallback, AvatarImage } from "./ui/avatar";
-import { Briefcase, ChevronDown, LogOut, User as UserIcon, Wallet, Users, Home, MessageSquare } from "lucide-react";
+import { Briefcase, ChevronDown, LogOut, User as UserIcon, Wallet, Users, Home, MessageSquare, Edit } from "lucide-react";
 import { usePathname } from "next/navigation";
 
 export function Header() {
@@ -30,7 +30,7 @@ export function Header() {
     return name.substring(0, 2).toUpperCase();
   };
 
-  const isHomeActive = pathname === '/';
+  const isHomePage = pathname === '/';
 
   return (
     <header className="sticky top-0 z-50 w-full border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
@@ -38,11 +38,11 @@ export function Header() {
         <Logo />
         <div className="flex flex-1 items-center justify-end space-x-4">
           <nav className="hidden md:flex items-center space-x-6 text-sm font-medium">
-            <Link href="/#home" className={`transition-colors hover:text-primary ${isHomeActive ? 'text-primary' : ''}`}>Home</Link>
-            <Link href="/#courses" className="transition-colors hover:text-primary">Courses</Link>
-            <Link href="/#groups" className="transition-colors hover:text-primary">Groups</Link>
-            <Link href="/#community" className="transition-colors hover:text-primary">Community</Link>
-            <Link href="/#messages" className="transition-colors hover:text-primary">Messages</Link>
+             <Link href={isHomePage ? "/#home" : "/"} className={`transition-colors hover:text-primary ${isHomePage ? 'text-primary' : ''}`}>Home</Link>
+             <Link href="/#courses" className="transition-colors hover:text-primary">Courses</Link>
+             <Link href="/#groups" className="transition-colors hover:text-primary">Groups</Link>
+             <Link href="/#community" className="transition-colors hover:text-primary">Community</Link>
+             <Link href="/#messages" className="transition-colors hover:text-primary">Messages</Link>
             {user?.type === 'user' && (
               <Link href="/watch-ads" className="transition-colors hover:text-primary">Earn Points</Link>
             )}
@@ -83,6 +83,9 @@ export function Header() {
                     </DropdownMenuItem>
                     <DropdownMenuItem asChild>
                        <Link href={`/profile/${user.uid}`}><UserIcon className="mr-2 h-4 w-4" />My Profile</Link>
+                    </DropdownMenuItem>
+                    <DropdownMenuItem asChild>
+                       <Link href="/profile/edit"><Edit className="mr-2 h-4 w-4" />Edit Profile</Link>
                     </DropdownMenuItem>
                     <DropdownMenuItem asChild>
                        <Link href="/"><Home className="mr-2 h-4 w-4" />Home</Link>

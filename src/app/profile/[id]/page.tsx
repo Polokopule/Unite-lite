@@ -347,8 +347,6 @@ export default function ProfilePage() {
             </Card>
 
             <div className="space-y-6">
-                {isOwnProfile && <CreatePostForm />}
-                
                 <h3 className="text-xl font-semibold">Posts</h3>
                 
                 {userPosts.length > 0 ? (
@@ -358,7 +356,6 @@ export default function ProfilePage() {
                 ) : (
                     <div className="text-center text-muted-foreground py-12 border-2 border-dashed rounded-lg">
                         <p className="mt-4">No posts yet.</p>
-                        {isOwnProfile && <p className="text-sm">Why not create your first one?</p>}
                     </div>
                 )}
             </div>

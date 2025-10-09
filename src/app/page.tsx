@@ -18,7 +18,8 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { CreatePostForm } from "@/components/create-post-form";
 import { Card, CardHeader, CardTitle, CardContent, CardDescription, CardFooter } from "@/components/ui/card";
 import { getAuth } from "firebase/auth";
-import { useRouter } from "next/navigation";
+import { useRouter, usePathname } from "next/navigation";
+import { Separator } from "@/components/ui/separator";
 
 
 // --- Comment Form ---
@@ -229,7 +230,7 @@ function PostCard({ post }: { post: PostType }) {
                 
                 <PostAttachment post={post} />
 
-                <div className="pb-3 pt-3 flex-col items-start">
+                <div className="pt-4 mt-4 border-t">
                     <div className="flex items-center gap-4 text-muted-foreground">
                         <Button variant="ghost" size="sm" onClick={handleLike} disabled={!user} className="flex items-center gap-2">
                             <Heart className={`h-4 w-4 ${isLiked ? 'fill-red-500 text-red-500' : ''}`} />
@@ -468,7 +469,7 @@ function GroupsContent() {
                             <CardFooter>
                                  <Button asChild className="w-full">
                                     <Link href={`/groups/${group.id}`}>View Group</Link>
-                                </Button>
+                                 </Button>
                             </CardFooter>
                         </Card>
                     ))}
@@ -722,16 +723,25 @@ function NotificationsContent() {
 
 export default function HomePage() {
     const { user, notifications, markNotificationsAsRead } = useAppContext();
+    const router = useRouter();
+    const pathname = usePathname();
     const [activeTab, setActiveTab] = useState("home");
     
+    // This effect handles both setting the initial tab from the URL hash
+    // and navigating to the hash when the tab is changed.
     useEffect(() => {
-        if (window.location.hash) {
-            const tab = window.location.hash.substring(1);
-            if (['home', 'courses', 'groups', 'community', 'messages', 'notifications'].includes(tab)) {
-                setActiveTab(tab);
-            }
+        const hash = window.location.hash.substring(1);
+        if (hash && ['home', 'courses', 'groups', 'community', 'messages', 'notifications'].includes(hash)) {
+            setActiveTab(hash);
+        } else {
+             setActiveTab('home');
         }
-    }, []);
+    }, [pathname]); // Rerun when path changes, e.g. navigating away and back.
+    
+    const handleTabChange = (tab: string) => {
+        setActiveTab(tab);
+        router.push(`/#${tab}`, { scroll: false });
+    };
 
     const hasUnreadNotifications = notifications.some(n => !n.isRead);
 
@@ -744,9 +754,14 @@ export default function HomePage() {
         }
     }, [activeTab, hasUnreadNotifications, markNotificationsAsRead]);
 
+    // Don't show tabs on profile pages
+    if (pathname.startsWith('/profile/')) {
+        return null; // Or some other layout
+    }
+
     return (
         <div className="w-full">
-            <Tabs defaultValue="home" value={activeTab} onValueChange={setActiveTab} className="w-full">
+            <Tabs defaultValue="home" value={activeTab} onValueChange={handleTabChange} className="w-full">
                 <div className="sticky top-16 z-40 bg-background border-b">
                     <div className="container mx-auto">
                         <TabsList className="grid w-full grid-cols-6 max-w-2xl mx-auto">

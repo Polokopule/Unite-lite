@@ -1,4 +1,5 @@
 
+
 "use client";
 
 import { Button } from "@/components/ui/button";
@@ -6,7 +7,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter }
 import { Separator } from "@/components/ui/separator";
 import { useAppContext } from "@/contexts/app-context";
 import { Ad, Course, Post as PostType, FeedItem, Comment as CommentType } from "@/lib/types";
-import { ArrowRight, BookCopy, Eye, PlusCircle, ShoppingBag, Pencil, Trash2, Loader2, MessageCircle, Heart, Send } from "lucide-react";
+import { ArrowRight, BookCopy, Eye, PlusCircle, ShoppingBag, Pencil, Trash2, Loader2, MessageCircle, Heart, Send, Edit } from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useEffect, useState, useMemo } from "react";
@@ -262,6 +263,9 @@ function UserCoursesDashboard() {
                 </Button>
                  <Button asChild size="lg" variant="secondary">
                     <Link href="/courses/create"><PlusCircle className="mr-2 h-4 w-4"/>Create a New Course</Link>
+                </Button>
+                 <Button asChild size="lg" variant="outline">
+                    <Link href="/profile/edit"><Edit className="mr-2 h-4 w-4"/>Edit Profile</Link>
                 </Button>
             </CardContent>
         </Card>
