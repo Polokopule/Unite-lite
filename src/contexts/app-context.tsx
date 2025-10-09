@@ -92,7 +92,7 @@ export function AppContextProvider({ children }: { children: React.ReactNode }) 
   const [loading, setLoading] = useState(true);
   const router = useRouter();
 
-  const urlRegex = /(https?:\/\/[^\s]+)/;
+  const urlRegex = /(https?:\/\/[^\s"'<>()\[\]{}]+)/;
 
   useEffect(() => {
     // Firebase auth state listener
@@ -322,10 +322,10 @@ export function AppContextProvider({ children }: { children: React.ReactNode }) 
     if (!user || user.type !== 'user') return false;
     
     const { title, content, price, coverImage } = courseData;
-    const courseId = `course-${Date.now()}`;
-
+    
     try {
         // 1. Upload image to Firebase Storage
+        const courseId = `course-${Date.now()}`;
         const imageStorageRef = storageRef(storage, `course-images/${courseId}/${coverImage.name}`);
         const uploadResult = await uploadBytes(imageStorageRef, coverImage);
         const imageUrl = await getDownloadURL(uploadResult.ref);
