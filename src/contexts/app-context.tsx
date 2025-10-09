@@ -40,7 +40,7 @@ interface AppContextType {
   likeComment: (postId: string, commentId: string) => Promise<void>;
   createGroup: (groupData: { name: string; description: string; pin?: string }) => Promise<boolean>;
   joinGroup: (groupId: string, pin?: string) => Promise<boolean>;
-  sendMessage: (groupId: string, messageData: { content: string; type: 'text' } | { file: File; type: 'image' | 'file' }) => Promise<boolean>;
+  sendMessage: (groupId: string, messageData: { content: string; type: 'text' } | { file: File; type: 'image' | 'audio' | 'video' | 'file' }) => Promise<boolean>;
   markNotificationsAsRead: () => Promise<void>;
   loading: boolean;
 }
@@ -429,6 +429,13 @@ export function AppContextProvider({ children }: { children: React.ReactNode }) 
     }
   };
 
+    const getFileType = (file: File): 'image' | 'audio' | 'video' | 'file' => {
+        if (file.type.startsWith('image/')) return 'image';
+        if (file.type.startsWith('audio/')) return 'audio';
+        if (file.type.startsWith('video/')) return 'video';
+        return 'file';
+    }
+
   const addPost = async (postData: { content: string; file: File | null; linkPreview: LinkPreview | null }): Promise<boolean> => {
       if (!user) return false;
       const { content, file, linkPreview } = postData;
@@ -454,13 +461,10 @@ export function AppContextProvider({ children }: { children: React.ReactNode }) 
             const fileStorageRef = storageRef(storage, `post-files/${newPostRef.key}/${file.name}`);
             const snapshot = await uploadBytes(fileStorageRef, file);
             const downloadURL = await getDownloadURL(snapshot.ref);
-
-            newPost = {
-                ...newPost,
-                fileUrl: downloadURL,
-                fileName: file.name,
-                fileType: file.type.startsWith('image/') ? 'image' : 'file',
-            }
+            
+            newPost.fileUrl = downloadURL;
+            newPost.fileName = file.name;
+            newPost.fileType = getFileType(file);
         }
 
         await set(newPostRef, newPost);
@@ -620,7 +624,7 @@ export function AppContextProvider({ children }: { children: React.ReactNode }) 
       }
   };
 
-  const sendMessage = async (groupId: string, messageData: { content: string; type: 'text' } | { file: File; type: 'image' | 'file' }): Promise<boolean> => {
+  const sendMessage = async (groupId: string, messageData: { content: string; type: 'text' } | { file: File; type: 'image' | 'audio' | 'video' | 'file' }): Promise<boolean> => {
     if (!user) return false;
     
     const group = groups.find(g => g.id === groupId);
@@ -650,11 +654,11 @@ export function AppContextProvider({ children }: { children: React.ReactNode }) 
             const fileRef = storageRef(storage, `group-files/${groupId}/${Date.now()}_${file.name}`);
             const snapshot = await uploadBytes(fileRef, file);
             const downloadURL = await getDownloadURL(snapshot.ref);
-
+            
             messagePayload = {
                 ...messagePayload,
                 content: '',
-                type: messageData.type,
+                type: getFileType(file),
                 fileUrl: downloadURL,
                 fileName: file.name,
             };

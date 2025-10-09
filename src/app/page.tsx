@@ -162,6 +162,18 @@ function PostAttachment({ post }: { post: PostType }) {
         )
     }
     
+    if (post.fileType === 'video') {
+        return (
+             <video controls src={post.fileUrl} className="w-full rounded-lg mt-2 border bg-black" />
+        )
+    }
+    
+    if (post.fileType === 'audio') {
+        return (
+             <audio controls src={post.fileUrl} className="w-full mt-2" />
+        )
+    }
+    
     return (
         <a href={post.fileUrl} target="_blank" rel="noopener noreferrer" className="mt-2 flex items-center gap-3 bg-muted p-3 rounded-lg border hover:bg-muted/50 transition-colors">
             <FileIcon className="h-8 w-8 text-muted-foreground" />
@@ -297,7 +309,7 @@ function FeedContent() {
             {feedItems.length > 0 ? (
                 feedItems.map((item) => {
                     if (item.itemType === 'post') {
-                        return <PostCard key={item.id} post={item} />
+                        return <PostCard key={item.id} post={item as PostType} />
                     }
                     // The uniqueId is used here to avoid key collision for ads
                     return <AdCard key={(item as any).uniqueId} ad={item as Ad} />

@@ -1,4 +1,5 @@
 
+
 "use client";
 
 import { useState, useRef, useEffect } from "react";
@@ -59,6 +60,8 @@ function LinkPreviewCard({ preview, onRemove }: { preview: LinkPreviewType, onRe
 
 function FilePreview({ file, onRemove }: { file: File, onRemove: () => void }) {
      const isImage = file.type.startsWith('image/');
+     const isVideo = file.type.startsWith('video/');
+     const isAudio = file.type.startsWith('audio/');
      const objectUrl = URL.createObjectURL(file);
 
      return (
@@ -71,11 +74,18 @@ function FilePreview({ file, onRemove }: { file: File, onRemove: () => void }) {
             >
                 <X className="h-4 w-4" />
             </Button>
-            {isImage ? (
+            {isImage && (
                 <div className="relative aspect-video">
                     <Image src={objectUrl} alt={file.name} fill className="object-cover" />
                 </div>
-            ) : (
+            )}
+            {isVideo && (
+                <video controls src={objectUrl} className="w-full rounded-lg" />
+            )}
+            {isAudio && (
+                 <audio controls src={objectUrl} className="w-full" />
+            )}
+            {!isImage && !isVideo && !isAudio && (
                 <div className="p-3 bg-muted/50 flex items-center gap-3">
                     <FileIcon className="h-8 w-8 text-muted-foreground" />
                     <div>
@@ -214,6 +224,7 @@ export function CreatePostForm() {
                                 ref={fileInputRef}
                                 onChange={handleFileChange}
                                 className="hidden"
+                                accept="image/*,video/*,audio/*,application/pdf,.doc,.docx,.xls,.xlsx,.ppt,.pptx"
                             />
                             <Button type="button" variant="ghost" size="icon" onClick={() => fileInputRef.current?.click()} title="Attach file">
                                 <Paperclip className="h-5 w-5" />

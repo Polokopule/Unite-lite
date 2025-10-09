@@ -84,7 +84,7 @@ export type Post = {
     itemType?: 'post';
     fileUrl?: string;
     fileName?: string;
-    fileType?: 'image' | 'file';
+    fileType?: 'image' | 'audio' | 'video' | 'file';
     linkPreview?: LinkPreview;
 };
 
@@ -96,7 +96,7 @@ export type Message = {
     creatorName: string;
     creatorPhotoURL: string;
     timestamp: number;
-    type: 'text' | 'image' | 'file';
+    type: 'text' | 'image' | 'audio' | 'video' | 'file';
     fileUrl?: string;
     fileName?: string;
 }

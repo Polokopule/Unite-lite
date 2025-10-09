@@ -10,7 +10,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
-import { Loader2, Lock, Users, Send, Paperclip, Image as ImageIcon, Download, File } from "lucide-react";
+import { Loader2, Lock, Users, Send, Paperclip, Image as ImageIcon, Download, File, Music, Video } from "lucide-react";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import Image from "next/image";
 import Link from "next/link";
@@ -24,6 +24,14 @@ function MessageBubble({ message, isOwnMessage }: { message: Message; isOwnMessa
                     <div className="relative aspect-video max-w-xs rounded-lg overflow-hidden">
                         <Image src={message.fileUrl!} alt={message.fileName || 'Uploaded image'} fill className="object-cover" />
                     </div>
+                );
+            case 'video':
+                return (
+                    <video controls src={message.fileUrl!} className="max-w-xs rounded-lg" />
+                );
+            case 'audio':
+                return (
+                    <audio controls src={message.fileUrl!} className="w-full" />
                 );
             case 'file':
                 return (
@@ -70,7 +78,6 @@ function ChatArea({ groupId, messages }: { groupId: string; messages: Message[] 
     const [text, setText] = useState("");
     const [isSending, setIsSending] = useState(false);
     const fileInputRef = useRef<HTMLInputElement>(null);
-    const imageInputRef = useRef<HTMLInputElement>(null);
     const messagesEndRef = useRef<HTMLDivElement>(null);
 
     useEffect(() => {
@@ -89,15 +96,15 @@ function ChatArea({ groupId, messages }: { groupId: string; messages: Message[] 
         setIsSending(false);
     };
     
-    const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>, type: 'image' | 'file') => {
+    const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
         const file = e.target.files?.[0];
         if (!file) return;
 
         setIsSending(true);
         toast({ title: 'Uploading...', description: `Sending ${file.name}`});
-        const success = await sendMessage(groupId, { file, type });
+        const success = await sendMessage(groupId, { file, type: 'file' }); // Type is generic here, backend determines specific type
         if (!success) {
-            toast({ variant: 'destructive', title: `Failed to upload ${type}` });
+            toast({ variant: 'destructive', title: `Failed to upload file` });
         }
         setIsSending(false);
         // Reset file input
@@ -130,11 +137,13 @@ function ChatArea({ groupId, messages }: { groupId: string; messages: Message[] 
                         onKeyDown={(e) => e.key === 'Enter' && !isSending && handleSendText()}
                         disabled={isSending}
                     />
-                    <input type="file" ref={imageInputRef} onChange={(e) => handleFileChange(e, 'image')} accept="image/*" className="hidden" />
-                    <Button size="icon" variant="outline" onClick={() => imageInputRef.current?.click()} disabled={isSending}>
-                        <ImageIcon className="h-4 w-4" />
-                    </Button>
-                    <input type="file" ref={fileInputRef} onChange={(e) => handleFileChange(e, 'file')} className="hidden" />
+                    <input 
+                        type="file" 
+                        ref={fileInputRef} 
+                        onChange={handleFileChange} 
+                        accept="image/*,video/*,audio/*,application/pdf,.doc,.docx,.xls,.xlsx,.ppt,.pptx" 
+                        className="hidden" 
+                    />
                     <Button size="icon" variant="outline" onClick={() => fileInputRef.current?.click()} disabled={isSending}>
                         <Paperclip className="h-4 w-4" />
                     </Button>
