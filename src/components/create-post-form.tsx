@@ -210,6 +210,7 @@ export function CreatePostForm() {
     const { user } = useAppContext();
     const [isDialogOpen, setIsDialogOpen] = useState(false);
     const [initialFile, setInitialFile] = useState<File | null>(null);
+    const fileInputRef = useRef<HTMLInputElement>(null);
 
     if (!user) {
         return null;
@@ -220,11 +221,19 @@ export function CreatePostForm() {
         setInitialFile(null);
     };
 
+    const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+        const selectedFile = e.target.files?.[0];
+        if (selectedFile) {
+            setInitialFile(selectedFile);
+            setIsDialogOpen(true);
+        }
+    };
+
     return (
         <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
             <div className="bg-card border-b p-4">
-                 <div className="container mx-auto flex items-center gap-4">
-                    <Avatar className="h-9 w-9">
+                 <div className="container mx-auto flex items-center gap-2">
+                    <Avatar className="h-8 w-8">
                         <AvatarImage src={user.photoURL} alt={user.name} />
                         <AvatarFallback>{user.name.substring(0, 2)}</AvatarFallback>
                     </Avatar>
@@ -233,6 +242,16 @@ export function CreatePostForm() {
                             <span className="truncate">{`What's on your mind, ${user.name}?`}</span>
                         </div>
                     </DialogTrigger>
+                    <input
+                        type="file"
+                        ref={fileInputRef}
+                        onChange={handleFileChange}
+                        className="hidden"
+                        accept="image/*,video/*,audio/*,application/pdf,.doc,.docx,.xls,.xlsx,.ppt,.pptx"
+                    />
+                     <Button type="button" variant="ghost" size="icon" className="h-8 w-8" onClick={() => fileInputRef.current?.click()}>
+                        <Paperclip className="h-5 w-5" />
+                    </Button>
                  </div>
             </div>
             <DialogContent className="sm:max-w-md">
