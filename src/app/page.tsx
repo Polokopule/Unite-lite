@@ -1064,7 +1064,7 @@ function NotificationsContent() {
 }
 
 export default function HomePage() {
-    const { user, notifications, markNotificationsAsRead } = useAppContext();
+    const { user, loading, notifications, markNotificationsAsRead } = useAppContext();
     const router = useRouter();
     const pathname = usePathname();
     const [activeTab, setActiveTab] = useState("home");
@@ -1073,14 +1073,23 @@ export default function HomePage() {
     // and navigating to the hash when the tab is changed.
     useEffect(() => {
         const hash = window.location.hash.substring(1);
-        if (hash && ['home', 'courses', 'groups', 'community', 'messages', 'notifications'].includes(hash)) {
-            setActiveTab(hash);
+        const validTabs = ['home', 'courses', 'groups', 'community', 'messages', 'notifications'];
+        if (hash && validTabs.includes(hash)) {
+            if (!loading && !user && (hash === 'messages' || hash === 'notifications')) {
+                router.push('/login-user');
+            } else {
+                setActiveTab(hash);
+            }
         } else {
              setActiveTab('home');
         }
-    }, [pathname]); // Rerun when path changes, e.g. navigating away and back.
+    }, [pathname, user, loading, router]); // Rerun when path changes, e.g. navigating away and back.
     
     const handleTabChange = (tab: string) => {
+        if (!loading && !user && (tab === 'messages' || tab === 'notifications')) {
+            router.push('/login-user');
+            return;
+        }
         setActiveTab(tab);
         router.push(`/#${tab}`, { scroll: false });
     };

@@ -14,8 +14,45 @@ import {
   DropdownMenuTrigger,
 } from "./ui/dropdown-menu";
 import { Avatar, AvatarFallback, AvatarImage } from "./ui/avatar";
-import { Briefcase, ChevronDown, LogOut, User as UserIcon, Wallet, Users, Home, MessageSquare, Edit } from "lucide-react";
+import { Briefcase, ChevronDown, LogOut, User as UserIcon, Wallet, Users, Home, MessageSquare, Edit, Menu } from "lucide-react";
 import { usePathname } from "next/navigation";
+import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from "./ui/sheet";
+import { useState } from "react";
+import { Separator } from "./ui/separator";
+
+function AuthSheet() {
+    const [open, setOpen] = useState(false);
+
+    return (
+        <Sheet open={open} onOpenChange={setOpen}>
+            <SheetTrigger asChild>
+                 <Button variant="ghost" size="icon">
+                    <Menu />
+                    <span className="sr-only">Open Menu</span>
+                </Button>
+            </SheetTrigger>
+            <SheetContent>
+                <SheetHeader>
+                    <SheetTitle>Welcome to Unite</SheetTitle>
+                </SheetHeader>
+                <div className="grid gap-4 py-4">
+                     <div className="flex flex-col space-y-2">
+                        <h3 className="font-semibold">User Account</h3>
+                        <Button asChild variant="outline" onClick={() => setOpen(false)}><Link href="/login-user">Login</Link></Button>
+                        <Button asChild onClick={() => setOpen(false)}><Link href="/signup-user">Sign Up</Link></Button>
+                    </div>
+                    <Separator />
+                     <div className="flex flex-col space-y-2">
+                        <h3 className="font-semibold">Business Account</h3>
+                         <Button asChild variant="outline" onClick={() => setOpen(false)}><Link href="/login-business">Login</Link></Button>
+                        <Button asChild onClick={() => setOpen(false)}><Link href="/signup-business">Sign Up</Link></Button>
+                    </div>
+                </div>
+            </SheetContent>
+        </Sheet>
+    )
+}
+
 
 export function Header() {
   const { user, firebaseUser, logout } = useAppContext();
@@ -99,43 +136,43 @@ export function Header() {
                 </DropdownMenu>
               </>
             ) : (
-              <div className="hidden md:flex items-center gap-2">
-                 <DropdownMenu>
-                  <DropdownMenuTrigger asChild>
-                    <Button variant="ghost">Login <ChevronDown className="h-4 w-4 ml-1" /></Button>
-                  </DropdownMenuTrigger>
-                  <DropdownMenuContent align="end">
-                    <DropdownMenuItem asChild>
-                      <Link href="/login-user"><UserIcon className="mr-2 h-4 w-4"/>As a User</Link>
-                    </DropdownMenuItem>
-                    <DropdownMenuItem asChild>
-                      <Link href="/login-business"><Briefcase className="mr-2 h-4 w-4"/>As a Business</Link>
-                    </DropdownMenuItem>
-                  </DropdownMenuContent>
-                </DropdownMenu>
-                <DropdownMenu>
-                  <DropdownMenuTrigger asChild>
-                    <Button>Sign Up <ChevronDown className="h-4 w-4 ml-1" /></Button>
-                  </DropdownMenuTrigger>
-                  <DropdownMenuContent align="end">
-                    <DropdownMenuItem asChild>
-                      <Link href="/signup-user"><UserIcon className="mr-2 h-4 w-4"/>As a User</Link>
-                    </DropdownMenuItem>
-                    <DropdownMenuItem asChild>
-                      <Link href="/signup-business"><Briefcase className="mr-2 h-4 w-4"/>As a Business</Link>
-                    </DropdownMenuItem>
-                  </DropdownMenuContent>
-                </DropdownMenu>
-              </div>
+              <>
+                <div className="hidden md:flex items-center gap-2">
+                    <DropdownMenu>
+                    <DropdownMenuTrigger asChild>
+                        <Button variant="ghost">Login <ChevronDown className="h-4 w-4 ml-1" /></Button>
+                    </DropdownMenuTrigger>
+                    <DropdownMenuContent align="end">
+                        <DropdownMenuItem asChild>
+                        <Link href="/login-user"><UserIcon className="mr-2 h-4 w-4"/>As a User</Link>
+                        </DropdownMenuItem>
+                        <DropdownMenuItem asChild>
+                        <Link href="/login-business"><Briefcase className="mr-2 h-4 w-4"/>As a Business</Link>
+                        </DropdownMenuItem>
+                    </DropdownMenuContent>
+                    </DropdownMenu>
+                    <DropdownMenu>
+                    <DropdownMenuTrigger asChild>
+                        <Button>Sign Up <ChevronDown className="h-4 w-4 ml-1" /></Button>
+                    </DropdownMenuTrigger>
+                    <DropdownMenuContent align="end">
+                        <DropdownMenuItem asChild>
+                        <Link href="/signup-user"><UserIcon className="mr-2 h-4 w-4"/>As a User</Link>
+                        </DropdownMenuItem>
+                        <DropdownMenuItem asChild>
+                        <Link href="/signup-business"><Briefcase className="mr-2 h-4 w-4"/>As a Business</Link>
+                        </DropdownMenuItem>
+                    </DropdownMenuContent>
+                    </DropdownMenu>
+                </div>
+                 <div className="md:hidden">
+                    <AuthSheet />
+                 </div>
+              </>
             )}
-             <div className="md:hidden">
-                {/* Mobile menu could be implemented here with a Sheet component */}
-             </div>
           </div>
         </div>
       </div>
     </header>
   );
 }
-
-    
