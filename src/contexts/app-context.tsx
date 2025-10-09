@@ -12,6 +12,13 @@ import { onAuthStateChanged, signOut, User as FirebaseUser, updateProfile as upd
 import { ref as storageRef, uploadBytes, getDownloadURL } from "firebase/storage";
 import { generateLinkPreview } from "@/services/link-preview";
 
+type AddCourseData = {
+    title: string;
+    content: string;
+    price: number;
+    coverImage: File;
+};
+
 type AddPostData = {
     content: string;
     repostedFrom?: { creatorUid: string; creatorName: string } | null;
@@ -38,7 +45,7 @@ interface AppContextType {
   login: (email: string, type: 'user' | 'business') => Promise<void>;
   logout: () => void;
   updateUserProfile: (name: string, photoFile: File | null) => Promise<boolean>;
-  addCourse: (course: Omit<Course, 'id' | 'creator' | 'creatorName' | 'imageHint'>) => Promise<boolean>;
+  addCourse: (courseData: AddCourseData) => Promise<boolean>;
   updateCourse: (courseId: string, courseData: Partial<Omit<Course, 'id' | 'creator' | 'creatorName'>>) => Promise<boolean>;
   deleteCourse: (courseId: string) => Promise<boolean>;
   purchaseCourse: (courseId: string) => Promise<boolean>;
@@ -311,22 +318,35 @@ export function AppContextProvider({ children }: { children: React.ReactNode }) 
     };
 
 
-  const addCourse = async (courseData: Omit<Course, 'id' | 'creator' | 'creatorName' | 'imageHint'>): Promise<boolean> => {
+  const addCourse = async (courseData: AddCourseData): Promise<boolean> => {
     if (!user || user.type !== 'user') return false;
     
+    const { title, content, price, coverImage } = courseData;
     const courseId = `course-${Date.now()}`;
-    const newCourse: Course = { 
-        ...courseData, 
-        id: courseId,
-        creator: user.uid,
-        creatorName: user.name,
-        imageHint: "new course" // Placeholder hint
-    };
 
     try {
+        // 1. Upload image to Firebase Storage
+        const imageStorageRef = storageRef(storage, `course-images/${courseId}/${coverImage.name}`);
+        const uploadResult = await uploadBytes(imageStorageRef, coverImage);
+        const imageUrl = await getDownloadURL(uploadResult.ref);
+
+        // 2. Create course object with the storage URL
+        const newCourse: Course = {
+            id: courseId,
+            title,
+            content,
+            price,
+            imageUrl,
+            creator: user.uid,
+            creatorName: user.name,
+            imageHint: "new course" // Placeholder hint
+        };
+
+        // 3. Save course to Realtime Database
         await set(ref(db, `courses/${courseId}`), newCourse);
         return true;
     } catch(e) {
+        console.error("Error adding course:", e);
         return false;
     }
   };
@@ -673,6 +693,13 @@ export function AppContextProvider({ children }: { children: React.ReactNode }) 
     const addComment = async (postId: string, content: string, parentId: string | null = null): Promise<boolean> => {
         if (!user || !content.trim()) return false;
         try {
+            const postRef = ref(db, `posts/${postId}`);
+            const postSnapshot = await get(postRef);
+            if (!postSnapshot.exists()) {
+                console.error("Post does not exist.");
+                return false;
+            }
+
             const commentsRef = ref(db, `posts/${postId}/comments`);
             const newCommentRef = push(commentsRef);
             const commentId = newCommentRef.key!;
@@ -729,6 +756,7 @@ export function AppContextProvider({ children }: { children: React.ReactNode }) 
             }
             return true;
         } catch (e) {
+            console.error("Failed to add comment:", e);
             return false;
         }
     };

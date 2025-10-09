@@ -49,15 +49,13 @@ export default function CreateCoursePage() {
   const handleCoverImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (file) {
-      // In a real app, you'd upload this to Firebase Storage and get a URL.
-      // For now, we'll use a local blob URL.
       setCoverImage(file);
       setCoverImageUrl(URL.createObjectURL(file));
     }
   };
 
   const handlePublish = async () => {
-    if (!title || !content || price <= 0 || !coverImageUrl) {
+    if (!title || !content || price <= 0 || !coverImage) {
         toast({
             variant: "destructive",
             title: "Missing Information",
@@ -67,9 +65,7 @@ export default function CreateCoursePage() {
     }
     
     setIsPublishing(true);
-    // In a real app, you would upload the image file to storage first.
-    // For now, we're just passing the blob URL which won't persist.
-    const success = await addCourse({ title, content, price, imageUrl: coverImageUrl });
+    const success = await addCourse({ title, content, price, coverImage });
     setIsPublishing(false);
 
     if(success) {
