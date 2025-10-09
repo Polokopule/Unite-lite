@@ -32,7 +32,7 @@ export default function EditPostPage() {
     if (foundPost) {
         if (user && user.uid === foundPost.creatorUid) {
             setPost(foundPost);
-            setContent(foundPost.content);
+            setContent(foundPost.content || "");
             setIsAuthorized(true);
         } else {
              toast({ variant: 'destructive', title: 'Unauthorized', description: 'You are not the creator of this post.'});
