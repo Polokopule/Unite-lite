@@ -7,7 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Loader2, Paperclip, X, Image as ImageIcon, File as FileIcon } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { Avatar, AvatarFallback, AvatarImage } from "./ui/avatar";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogTrigger } from "@/components/ui/dialog";
 import { generateLinkPreview } from "@/services/link-preview";
 import { LinkPreview as LinkPreviewType } from "@/lib/types";
 import Image from "next/image";
@@ -232,7 +232,7 @@ export function CreatePostForm() {
     return (
         <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
             <div className="bg-card border-b p-4">
-                 <div className="flex items-center gap-2 container">
+                 <div className="flex items-center gap-2 container w-full">
                     <Avatar className="h-8 w-8">
                         <AvatarImage src={user.photoURL} alt={user.name} />
                         <AvatarFallback>{user.name.substring(0, 2)}</AvatarFallback>
