@@ -46,7 +46,7 @@ export type Notification = {
     actorUid: string;
     actorName: string;
     actorPhotoURL?: string;
-    type: 'new_follower' | 'new_comment' | 'new_reply' | 'post_like' | 'comment_like' | 'new_group_message' | 'new_direct_message';
+    type: 'new_follower' | 'new_comment' | 'new_reply' | 'post_like' | 'comment_like' | 'new_group_message' | 'new_direct_message' | 'message_reaction';
     targetUrl: string; // e.g., /posts/post-123#comment-456
     targetId: string; // e.g., post-123
     isRead: boolean;
@@ -100,6 +100,7 @@ export type Message = {
     type: 'text' | 'image' | 'audio' | 'video' | 'file';
     fileUrl?: string;
     fileName?: string;
+    isEdited?: boolean;
 }
 
 // Represents a user-created group

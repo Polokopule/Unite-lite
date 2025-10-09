@@ -46,15 +46,19 @@ export default function DashboardPage() {
       <p className="text-muted-foreground mb-8">Here's a summary of your activity on Unite.</p>
       
       <Tabs defaultValue={defaultTab} className="w-full">
-         {user.type === 'user' ? (
-            <TabsList className="grid w-full max-w-lg mx-auto grid-cols-1 mb-8">
-                <TabsTrigger value="my_courses">My Courses</TabsTrigger>
-            </TabsList>
-         ) : (
-            <TabsList className="grid w-full max-w-lg mx-auto grid-cols-1 mb-8">
-                <TabsTrigger value="my_ads">My Ad Campaigns</TabsTrigger>
-            </TabsList>
-         )}
+         <TabsList className="grid w-full max-w-lg mx-auto grid-cols-2 mb-8">
+            {user.type === 'user' ? (
+                <>
+                    <TabsTrigger value="my_courses">My Courses</TabsTrigger>
+                    <TabsTrigger value="my_posts">My Posts</TabsTrigger>
+                </>
+            ) : (
+                <>
+                    <TabsTrigger value="my_ads">My Ad Campaigns</TabsTrigger>
+                    <TabsTrigger value="my_posts">My Posts</TabsTrigger>
+                </>
+            )}
+        </TabsList>
         
         <TabsContent value="my_courses">
             {user.type === 'user' && <UserCoursesDashboard />}
@@ -63,9 +67,85 @@ export default function DashboardPage() {
         <TabsContent value="my_ads">
             {user.type === 'business' && <BusinessDashboard />}
         </TabsContent>
+
+        <TabsContent value="my_posts">
+            <UserPostsDashboard />
+        </TabsContent>
       </Tabs>
     </div>
   );
+}
+
+function UserPostsDashboard() {
+    const { user, posts, deletePost } = useAppContext();
+    const { toast } = useToast();
+    const [deletingId, setDeletingId] = useState<string|null>(null);
+
+    if (!user) return null;
+
+    const userPosts = posts.filter(post => post.creatorUid === user.uid);
+
+    const handleDeletePost = async (postId: string) => {
+        setDeletingId(postId);
+        const success = await deletePost(postId);
+        setDeletingId(null);
+        if (success) {
+            toast({ title: "Post Deleted", description: "Your post has been removed." });
+        } else {
+            toast({ variant: 'destructive', title: "Error", description: "Failed to delete the post." });
+        }
+    }
+
+    return (
+         <Card>
+          <CardHeader>
+            <CardTitle>My Posts</CardTitle>
+            <CardDescription>The posts you have created.</CardDescription>
+          </CardHeader>
+          <CardContent>
+            {userPosts.length > 0 ? (
+                <ul className="space-y-2">
+                    {userPosts.map(post => (
+                        <li key={post.id} className="flex items-center justify-between p-3 bg-muted/50 rounded-lg">
+                            <span className="font-medium truncate pr-4">{post.content.substring(0, 100) || "Media Post"}</span>
+                            <div className="flex items-center gap-2 flex-shrink-0">
+                                <Button variant="outline" size="icon" asChild>
+                                    <Link href={`/posts/edit/${post.id}`}><Pencil className="h-4 w-4" /></Link>
+                                </Button>
+                                 <AlertDialog>
+                                    <AlertDialogTrigger asChild>
+                                        <Button variant="destructive" size="icon" disabled={deletingId === post.id}>
+                                            {deletingId === post.id ? <Loader2 className="h-4 w-4 animate-spin"/> : <Trash2 className="h-4 w-4" />}
+                                        </Button>
+                                    </AlertDialogTrigger>
+                                    <AlertDialogContent>
+                                        <AlertDialogHeader>
+                                            <AlertDialogTitle>Are you sure?</AlertDialogTitle>
+                                            <AlertDialogDescription>
+                                                This will permanently delete your post. This action cannot be undone.
+                                            </AlertDialogDescription>
+                                        </AlertDialogHeader>
+                                        <AlertDialogFooter>
+                                            <AlertDialogCancel>Cancel</AlertDialogCancel>
+                                            <AlertDialogAction onClick={() => handleDeletePost(post.id)}>Delete</AlertDialogAction>
+                                        </AlertDialogFooter>
+                                    </AlertDialogContent>
+                                </AlertDialog>
+                            </div>
+                        </li>
+                    ))}
+                </ul>
+            ) : (
+                 <div className="text-center py-8 border-2 border-dashed rounded-lg">
+                    <p className="text-muted-foreground">You haven't created any posts yet.</p>
+                    <Button asChild variant="link" className="mt-2">
+                        <Link href="/">Create your first post <ArrowRight className="h-4 w-4 ml-2"/></Link>
+                    </Button>
+                </div>
+            )}
+          </CardContent>
+        </Card>
+    );
 }
 
 function UserCoursesDashboard() {
@@ -178,7 +258,7 @@ function UserCoursesDashboard() {
             </CardHeader>
             <CardContent className="flex flex-col gap-4">
                  <Button asChild size="lg">
-                    <Link href="/courses"><ShoppingBag className="mr-2 h-4 w-4"/>Browse Marketplace</Link>
+                    <Link href="/#courses"><ShoppingBag className="mr-2 h-4 w-4"/>Browse Marketplace</Link>
                 </Button>
                  <Button asChild size="lg" variant="secondary">
                     <Link href="/courses/create"><PlusCircle className="mr-2 h-4 w-4"/>Create a New Course</Link>

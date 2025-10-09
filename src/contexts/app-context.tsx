@@ -36,14 +36,20 @@ interface AppContextType {
   followUser: (targetUserId: string) => Promise<void>;
   unfollowUser: (targetUserId: string) => Promise<void>;
   addPost: (postData: { content: string; file: File | null; linkPreview: LinkPreview | null }) => Promise<boolean>;
+  updatePost: (postId: string, postData: { content: string }) => Promise<boolean>;
+  deletePost: (postId: string) => Promise<boolean>;
   likePost: (postId: string) => Promise<void>;
   addComment: (postId: string, content: string, parentId?: string | null) => Promise<boolean>;
   likeComment: (postId: string, commentId: string) => Promise<void>;
   createGroup: (groupData: { name: string; description: string; pin?: string }) => Promise<boolean>;
   joinGroup: (groupId: string, pin?: string) => Promise<boolean>;
   sendMessage: (groupId: string, messageData: { content: string; type: 'text' } | { file: File; type: 'image' | 'audio' | 'video' | 'file' }) => Promise<boolean>;
+  editMessage: (groupId: string, messageId: string, newContent: string) => Promise<boolean>;
+  deleteMessage: (groupId: string, messageId: string) => Promise<boolean>;
   startConversation: (otherUserId: string) => Promise<string | null>;
   sendDirectMessage: (conversationId: string, messageData: { content: string; type: 'text' } | { file: File; type: 'image' | 'audio' | 'video' | 'file' }) => Promise<boolean>;
+  editDirectMessage: (conversationId: string, messageId: string, newContent: string) => Promise<boolean>;
+  deleteDirectMessage: (conversationId: string, messageId: string) => Promise<boolean>;
   getConversationById: (conversationId: string) => Conversation | undefined;
   markNotificationsAsRead: () => Promise<void>;
   loading: boolean;
@@ -189,10 +195,10 @@ export function AppContextProvider({ children }: { children: React.ReactNode }) 
               onValue(convoRef, (convoSnapshot) => {
                   const allConvos = convoSnapshot.val() || {};
                   const userConvos = Object.keys(convoIds)
-                    .map(id => allConvos[id])
-                    .filter(Boolean)
+                    .map(id => ({ id, ...allConvos[id] }))
+                    .filter(c => c.participantUids)
                     .map(c => ({...c, messages: c.messages ? Object.values(c.messages) : [] }))
-                    .sort((a, b) => b.timestamp - a.timestamp);
+                    .sort((a, b) => (b.lastMessage?.timestamp || b.timestamp) - (a.lastMessage?.timestamp || a.timestamp));
                   setConversations(userConvos);
               })
           } else {
@@ -472,7 +478,8 @@ export function AppContextProvider({ children }: { children: React.ReactNode }) 
         const postsRef = ref(db, 'posts');
         const newPostRef = push(postsRef);
         
-        let newPost: Omit<Post, 'id' | 'likes' | 'comments'> = {
+        let newPost: Omit<Post, 'id' | 'likes' | 'comments'> & {id: string} = {
+            id: newPostRef.key!,
             creatorUid: user.uid,
             creatorName: user.name,
             creatorPhotoURL: user.photoURL || '',
@@ -501,6 +508,38 @@ export function AppContextProvider({ children }: { children: React.ReactNode }) 
         return false;
       }
   };
+  
+  const updatePost = async (postId: string, postData: { content: string }): Promise<boolean> => {
+      if (!user) return false;
+      const postRef = ref(db, `posts/${postId}`);
+      const postSnapshot = await get(postRef);
+      if (postSnapshot.exists() && postSnapshot.val().creatorUid === user.uid) {
+          try {
+              await update(postRef, { content: postData.content });
+              return true;
+          } catch (e) {
+              console.error("Error updating post:", e);
+              return false;
+          }
+      }
+      return false;
+  };
+  
+  const deletePost = async (postId: string): Promise<boolean> => {
+      if (!user) return false;
+      const postRef = ref(db, `posts/${postId}`);
+      const postSnapshot = await get(postRef);
+      if (postSnapshot.exists() && postSnapshot.val().creatorUid === user.uid) {
+          try {
+              await remove(postRef);
+              return true;
+          } catch (e) {
+              console.error("Error deleting post:", e);
+              return false;
+          }
+      }
+      return false;
+  };
 
   const likePost = async (postId: string) => {
       if (!user) return;
@@ -520,7 +559,7 @@ export function AppContextProvider({ children }: { children: React.ReactNode }) 
                     actorName: user.name,
                     actorPhotoURL: user.photoURL,
                     type: 'post_like',
-                    targetUrl: `/profile/${post.creatorUid}`,
+                    targetUrl: `/profile/${post.creatorUid}`, // Or a dedicated post page later
                     targetId: postId,
                 });
             }
@@ -553,7 +592,7 @@ export function AppContextProvider({ children }: { children: React.ReactNode }) 
                     actorName: user.name,
                     actorPhotoURL: user.photoURL,
                     type: parentId ? 'new_reply' : 'new_comment',
-                    targetUrl: `/profile/${post.creatorUid}`,
+                    targetUrl: `/profile/${post.creatorUid}`, // Or a dedicated post page later
                     targetId: postId,
                 });
             }
@@ -567,7 +606,7 @@ export function AppContextProvider({ children }: { children: React.ReactNode }) 
                         actorName: user.name,
                         actorPhotoURL: user.photoURL,
                         type: 'new_reply',
-                        targetUrl: `/profile/${post.creatorUid}`,
+                        targetUrl: `/profile/${post.creatorUid}`, // Or a dedicated post page later
                         targetId: postId,
                     });
                 }
@@ -597,7 +636,7 @@ export function AppContextProvider({ children }: { children: React.ReactNode }) 
                         actorName: user.name,
                         actorPhotoURL: user.photoURL,
                         type: 'comment_like',
-                        targetUrl: `/profile/${post.creatorUid}`,
+                        targetUrl: `/profile/${post.creatorUid}`, // Or a dedicated post page later
                         targetId: postId,
                     });
                 }
@@ -714,6 +753,30 @@ export function AppContextProvider({ children }: { children: React.ReactNode }) 
         return false;
     }
   };
+  
+    const editMessage = async (groupId: string, messageId: string, newContent: string): Promise<boolean> => {
+        if (!user) return false;
+        try {
+            const messageRef = ref(db, `groups/${groupId}/messages/${messageId}`);
+            await update(messageRef, { content: newContent, isEdited: true });
+            return true;
+        } catch (e) {
+            console.error("Error editing message:", e);
+            return false;
+        }
+    };
+
+    const deleteMessage = async (groupId: string, messageId: string): Promise<boolean> => {
+        if (!user) return false;
+        try {
+            const messageRef = ref(db, `groups/${groupId}/messages/${messageId}`);
+            await remove(messageRef);
+            return true;
+        } catch (e) {
+            console.error("Error deleting message:", e);
+            return false;
+        }
+    };
 
   const startConversation = async (otherUserId: string): Promise<string | null> => {
     if (!user || user.uid === otherUserId) return null;
@@ -824,6 +887,30 @@ export function AppContextProvider({ children }: { children: React.ReactNode }) 
         return false;
     }
   };
+  
+    const editDirectMessage = async (conversationId: string, messageId: string, newContent: string): Promise<boolean> => {
+        if (!user) return false;
+        try {
+            const messageRef = ref(db, `conversations/${conversationId}/messages/${messageId}`);
+            await update(messageRef, { content: newContent, isEdited: true });
+            return true;
+        } catch (e) {
+            console.error("Error editing direct message:", e);
+            return false;
+        }
+    };
+
+    const deleteDirectMessage = async (conversationId: string, messageId: string): Promise<boolean> => {
+        if (!user) return false;
+        try {
+            const messageRef = ref(db, `conversations/${conversationId}/messages/${messageId}`);
+            await remove(messageRef);
+            return true;
+        } catch (e) {
+            console.error("Error deleting direct message:", e);
+            return false;
+        }
+    };
 
   const getConversationById = (conversationId: string) => {
     return conversations.find(c => c.id === conversationId);
@@ -871,14 +958,20 @@ export function AppContextProvider({ children }: { children: React.ReactNode }) 
     followUser,
     unfollowUser,
     addPost,
+    updatePost,
+    deletePost,
     likePost,
     addComment,
     likeComment,
     createGroup,
     joinGroup,
     sendMessage,
+    editMessage,
+    deleteMessage,
     startConversation,
     sendDirectMessage,
+    editDirectMessage,
+    deleteDirectMessage,
     getConversationById,
     markNotificationsAsRead,
     loading,
