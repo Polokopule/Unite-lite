@@ -274,8 +274,9 @@ function FeedContent() {
 
         // Sort by timestamp descending
         feed.sort((a, b) => (b.timestamp || 0) - (a.timestamp || 0));
-
-        return feed;
+        
+        // Add a unique key for rendering
+        return feed.map((item, index) => ({ ...item, uniqueId: `${item.id}-${index}` }));
 
     }, [posts, ads]);
     
@@ -294,11 +295,13 @@ function FeedContent() {
      return (
          <div className="bg-card">
             {feedItems.length > 0 ? (
-                feedItems.map((item) => 
-                    item.itemType === 'post' 
-                        ? <PostCard key={`post-${item.id}`} post={item} />
-                        : <AdCard key={`ad-${item.id}`} ad={item} />
-                )
+                feedItems.map((item) => {
+                    if (item.itemType === 'post') {
+                        return <PostCard key={item.id} post={item} />
+                    }
+                    // The uniqueId is used here to avoid key collision for ads
+                    return <AdCard key={(item as any).uniqueId} ad={item as Ad} />
+                })
             ) : (
                 <div className="container mx-auto">
                     <div className="text-center text-muted-foreground py-12 border-2 border-dashed rounded-lg my-4">
@@ -629,7 +632,7 @@ export default function HomePage() {
                     </div>
                 </div>
                  <TabsContent value="home" className="mt-0">
-                    {user && <CreatePostForm />}
+                    <CreatePostForm />
                     <FeedContent />
                 </TabsContent>
                 <TabsContent value="courses" className="mt-0">
