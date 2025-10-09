@@ -22,8 +22,8 @@ import { useRouter, usePathname } from "next/navigation";
 import { Separator } from "@/components/ui/separator";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
-import { MentionsInput, Mention } from 'react-mentions';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
+import { Textarea } from "@/components/ui/textarea";
 
 
 function SharePostDialog({ post, children }: { post: PostType, children: React.ReactNode }) {
@@ -113,7 +113,7 @@ function SharePostDialog({ post, children }: { post: PostType, children: React.R
 }
 
 function CommentForm({ postId, parentId = null, onCommentPosted }: { postId: string; parentId?: string | null, onCommentPosted?: () => void }) {
-    const { user, addComment, allUsers } = useAppContext();
+    const { user, addComment } = useAppContext();
     const [comment, setComment] = useState("");
     const [isCommenting, setIsCommenting] = useState(false);
     const { toast } = useToast();
@@ -132,8 +132,6 @@ function CommentForm({ postId, parentId = null, onCommentPosted }: { postId: str
         }
     };
     
-    const usersForMentions = allUsers.map(u => ({ id: u.uid, display: u.name }));
-
     return (
         <form onSubmit={handleSubmit} className="flex items-start gap-2 pt-2">
              <Avatar className="h-8 w-8">
@@ -141,27 +139,13 @@ function CommentForm({ postId, parentId = null, onCommentPosted }: { postId: str
                 <AvatarFallback>{user?.name?.substring(0, 2)}</AvatarFallback>
             </Avatar>
             <div className="flex-1">
-                 <MentionsInput
+                 <Textarea
                     value={comment}
                     onChange={(e) => setComment(e.target.value)}
                     placeholder="Write a reply..."
-                    className="mentions"
-                    classNames={{
-                      control: "mentions__control",
-                      input: "mentions__input",
-                      suggestions: "mentions__suggestions",
-                      item: "mentions__item",
-                      itemFocused: "mentions__item--focused",
-                    }}
+                    className="min-h-[40px]"
                     disabled={isCommenting}
-                >
-                    <Mention
-                        trigger="@"
-                        data={usersForMentions}
-                        className="mentions__mention"
-                        style={{}}
-                    />
-                </MentionsInput>
+                />
             </div>
             <Button type="submit" size="icon" variant="ghost" disabled={isCommenting || !comment.trim()}>
                 {isCommenting ? <Loader2 className="h-4 w-4 animate-spin" /> : <Send className="h-4 w-4" />}

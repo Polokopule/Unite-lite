@@ -11,7 +11,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, Dialog
 import { generateLinkPreview } from "@/services/link-preview";
 import { LinkPreview as LinkPreviewType } from "@/lib/types";
 import Image from "next/image";
-import { MentionsInput, Mention } from 'react-mentions';
+import { Textarea } from "./ui/textarea";
 
 
 // A simple debounce hook
@@ -100,7 +100,7 @@ function FilePreview({ file, onRemove }: { file: File, onRemove: () => void }) {
 
 
 function PostForm({ onPostSuccess }: { onPostSuccess: () => void }) {
-    const { user, addPost, allUsers } = useAppContext();
+    const { user, addPost } = useAppContext();
     const [content, setContent] = useState("");
     const [file, setFile] = useState<File | null>(null);
     const [linkPreview, setLinkPreview] = useState<LinkPreviewType | null>(null);
@@ -162,33 +162,17 @@ function PostForm({ onPostSuccess }: { onPostSuccess: () => void }) {
             toast({ variant: "destructive", title: "Failed to create post." });
         }
     };
-
-    const usersForMentions = allUsers.map(u => ({ id: u.uid, display: u.name }));
-
+    
     return (
         <form onSubmit={handleSubmit}>
             <div className="grid gap-4 py-4">
-                <MentionsInput
+                <Textarea
                     value={content}
                     onChange={(e) => setContent(e.target.value)}
                     placeholder={`What's on your mind, ${user.name}?`}
-                    className="mentions"
-                    classNames={{
-                      control: "mentions__control",
-                      input: "mentions__input",
-                      suggestions: "mentions__suggestions",
-                      item: "mentions__item",
-                      itemFocused: "mentions__item--focused",
-                    }}
+                    className="min-h-[120px]"
                     autoFocus
-                >
-                    <Mention
-                        trigger="@"
-                        data={usersForMentions}
-                        className="mentions__mention"
-                        style={{}}
-                    />
-                </MentionsInput>
+                />
                 {file && <FilePreview file={file} onRemove={() => setFile(null)} />}
                 {isFetchingPreview && !linkPreview && <div className="text-sm text-muted-foreground">Fetching link preview...</div>}
                 {linkPreview && <LinkPreviewCard preview={linkPreview} onRemove={() => setLinkPreview(null)} />}
