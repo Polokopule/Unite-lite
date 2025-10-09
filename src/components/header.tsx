@@ -14,7 +14,7 @@ import {
   DropdownMenuTrigger,
 } from "./ui/dropdown-menu";
 import { Avatar, AvatarFallback, AvatarImage } from "./ui/avatar";
-import { Briefcase, ChevronDown, LogOut, User as UserIcon, Wallet, Users, Home } from "lucide-react";
+import { Briefcase, ChevronDown, LogOut, User as UserIcon, Wallet, Users, Home, MessageSquare } from "lucide-react";
 import { usePathname } from "next/navigation";
 
 export function Header() {
@@ -42,6 +42,7 @@ export function Header() {
             <Link href="/#courses" className="transition-colors hover:text-primary">Courses</Link>
             <Link href="/#groups" className="transition-colors hover:text-primary">Groups</Link>
             <Link href="/#community" className="transition-colors hover:text-primary">Community</Link>
+            <Link href="/#messages" className="transition-colors hover:text-primary">Messages</Link>
             {user?.type === 'user' && (
               <Link href="/watch-ads" className="transition-colors hover:text-primary">Earn Points</Link>
             )}

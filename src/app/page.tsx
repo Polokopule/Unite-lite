@@ -3,9 +3,9 @@
 "use client";
 
 import { useAppContext } from "@/contexts/app-context";
-import { Ad, Post as PostType, FeedItem, Comment as CommentType, Course, Group, User as UserType, Notification, LinkPreview } from "@/lib/types";
+import { Ad, Post as PostType, FeedItem, Comment as CommentType, Course, Group, User as UserType, Notification, LinkPreview, Conversation } from "@/lib/types";
 import { Button } from "@/components/ui/button";
-import { Loader2, MessageCircle, Heart, Send, ShoppingBag, Wallet, CheckCircle, PlusCircle, Home as HomeIcon, Bell, Users, Lock, User as UserIconLucide, Reply, File as FileIcon } from "lucide-react";
+import { Loader2, MessageCircle, Heart, Send, ShoppingBag, Wallet, CheckCircle, PlusCircle, Home as HomeIcon, Bell, Users, Lock, User as UserIconLucide, Reply, File as FileIcon, Search, MessageSquare } from "lucide-react";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { formatDistanceToNow } from "date-fns";
 import { Input } from "@/components/ui/input";
@@ -18,6 +18,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { CreatePostForm } from "@/components/create-post-form";
 import { Card, CardHeader, CardTitle, CardContent, CardDescription, CardFooter } from "@/components/ui/card";
 import { getAuth } from "firebase/auth";
+import { useRouter } from "next/navigation";
 
 
 // --- Comment Form ---
@@ -536,6 +537,121 @@ function CommunityContent() {
     );
 }
 
+function MessagesContent() {
+    const { user, allUsers, conversations, startConversation, loading } = useAppContext();
+    const router = useRouter();
+    const [searchTerm, setSearchTerm] = useState("");
+    const [searchResults, setSearchResults] = useState<UserType[]>([]);
+    const [isSearching, setIsSearching] = useState(false);
+
+    useEffect(() => {
+        if (searchTerm.trim() === "") {
+            setSearchResults([]);
+            return;
+        }
+
+        setIsSearching(true);
+        const filteredUsers = allUsers.filter(u =>
+            u.uid !== user?.uid &&
+            u.name.toLowerCase().includes(searchTerm.toLowerCase())
+        );
+        setSearchResults(filteredUsers);
+        setIsSearching(false);
+    }, [searchTerm, allUsers, user]);
+
+    const handleStartConversation = async (otherUser: UserType) => {
+        const conversationId = await startConversation(otherUser.uid);
+        if (conversationId) {
+            router.push(`/messages/${conversationId}`);
+        }
+    };
+    
+    const getInitials = (name: string) => {
+        if (!name) return '??';
+        const names = name.split(' ');
+        if (names.length > 1) {
+            return (names[0][0] || '') + (names[names.length - 1][0] || '');
+        }
+        return name.substring(0, 2).toUpperCase();
+    };
+
+    const getOtherParticipant = (convo: Conversation) => {
+        if (!user) return null;
+        const otherUid = convo.participantUids.find(uid => uid !== user.uid);
+        return convo.participants[otherUid!];
+    }
+    
+    return (
+        <div className="container mx-auto py-8">
+            <h1 className="text-3xl font-bold font-headline mb-4">Messages</h1>
+            <div className="relative mb-6">
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground" />
+                <Input
+                    placeholder="Search for people to message"
+                    className="pl-10"
+                    value={searchTerm}
+                    onChange={(e) => setSearchTerm(e.target.value)}
+                />
+                {searchResults.length > 0 && (
+                    <Card className="absolute top-full mt-2 w-full z-10 max-h-60 overflow-y-auto">
+                        <CardContent className="p-2">
+                           {searchResults.map(foundUser => (
+                               <div key={foundUser.uid} onClick={() => handleStartConversation(foundUser)} className="flex items-center gap-3 p-2 rounded-md hover:bg-muted cursor-pointer">
+                                   <Avatar className="h-8 w-8">
+                                        <AvatarImage src={foundUser.photoURL} alt={foundUser.name} />
+                                        <AvatarFallback>{getInitials(foundUser.name)}</AvatarFallback>
+                                   </Avatar>
+                                   <span>{foundUser.name}</span>
+                               </div>
+                           ))}
+                        </CardContent>
+                    </Card>
+                )}
+            </div>
+            
+            <Card>
+                <CardHeader>
+                    <CardTitle>Recent Conversations</CardTitle>
+                </CardHeader>
+                <CardContent>
+                    {loading && <p>Loading conversations...</p>}
+                    {!loading && conversations.length === 0 ? (
+                        <div className="text-center text-muted-foreground py-12">
+                            <MessageSquare className="mx-auto h-12 w-12 mb-4" />
+                            <h3 className="text-xl font-semibold">No conversations yet</h3>
+                            <p>Use the search bar to find someone to talk to.</p>
+                        </div>
+                    ) : (
+                        <ul className="space-y-1">
+                            {conversations.map(convo => {
+                                const otherParticipant = getOtherParticipant(convo);
+                                if (!otherParticipant) return null;
+                                return (
+                                    <li key={convo.id}>
+                                         <Link href={`/messages/${convo.id}`} className="flex items-center gap-4 p-3 rounded-lg hover:bg-muted transition-colors">
+                                            <Avatar className="h-10 w-10">
+                                                <AvatarImage src={otherParticipant.photoURL} alt={otherParticipant.name} />
+                                                <AvatarFallback>{getInitials(otherParticipant.name)}</AvatarFallback>
+                                            </Avatar>
+                                            <div className="flex-1 overflow-hidden">
+                                                <p className="font-semibold truncate">{otherParticipant.name}</p>
+                                                <p className="text-sm text-muted-foreground truncate">{convo.lastMessage?.content || 'No messages yet'}</p>
+                                            </div>
+                                             {convo.lastMessage && (
+                                                <p className="text-xs text-muted-foreground">{formatDistanceToNow(new Date(convo.lastMessage.timestamp), { addSuffix: true })}</p>
+                                             )}
+                                         </Link>
+                                    </li>
+                                )
+                            })}
+                        </ul>
+                    )}
+                </CardContent>
+            </Card>
+
+        </div>
+    );
+}
 
 function NotificationsContent() {
     const { notifications, loading } = useAppContext();
@@ -553,7 +669,9 @@ function NotificationsContent() {
             case 'new_reply':
                 return <>replied to your comment.</>;
             case 'new_group_message':
-                return <span className="text-muted-foreground">{n.message}</span>
+                return <span className="text-muted-foreground">{n.message}</span>;
+            case 'new_direct_message':
+                 return <span className="text-muted-foreground">{n.message}</span>
             default:
                 return null;
         }
@@ -609,7 +727,7 @@ export default function HomePage() {
     useEffect(() => {
         if (window.location.hash) {
             const tab = window.location.hash.substring(1);
-            if (['home', 'courses', 'groups', 'community', 'notifications'].includes(tab)) {
+            if (['home', 'courses', 'groups', 'community', 'messages', 'notifications'].includes(tab)) {
                 setActiveTab(tab);
             }
         }
@@ -631,11 +749,12 @@ export default function HomePage() {
             <Tabs defaultValue="home" value={activeTab} onValueChange={setActiveTab} className="w-full">
                 <div className="sticky top-16 z-40 bg-background border-b">
                     <div className="container mx-auto">
-                        <TabsList className="grid w-full grid-cols-5 max-w-lg mx-auto">
+                        <TabsList className="grid w-full grid-cols-6 max-w-2xl mx-auto">
                             <TabsTrigger value="home"><HomeIcon className="h-5 w-5" /></TabsTrigger>
                             <TabsTrigger value="courses"><ShoppingBag className="h-5 w-5" /></TabsTrigger>
                             <TabsTrigger value="groups"><Users className="h-5 w-5" /></TabsTrigger>
                             <TabsTrigger value="community"><UserIconLucide className="h-5 w-5" /></TabsTrigger>
+                            <TabsTrigger value="messages"><MessageSquare className="h-5 w-5" /></TabsTrigger>
                              <TabsTrigger value="notifications" className="relative">
                                 <Bell className="h-5 w-5" />
                                 {hasUnreadNotifications && <span className="absolute top-1 right-1 h-2 w-2 rounded-full bg-red-500" />}
@@ -655,6 +774,9 @@ export default function HomePage() {
                 </TabsContent>
                 <TabsContent value="community" className="mt-0">
                     <CommunityContent />
+                </TabsContent>
+                <TabsContent value="messages" className="mt-0">
+                    <MessagesContent />
                 </TabsContent>
                 <TabsContent value="notifications" className="mt-0">
                     <NotificationsContent />

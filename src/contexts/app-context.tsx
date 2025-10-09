@@ -3,11 +3,11 @@
 "use client";
 
 import { PlaceHolderImages } from "@/lib/placeholder-images";
-import type { Course, Ad, User, PurchasedCourse, Post, Group, Comment, Message, Notification, LinkPreview } from "@/lib/types";
+import type { Course, Ad, User, PurchasedCourse, Post, Group, Comment, Message, Notification, LinkPreview, Conversation } from "@/lib/types";
 import { useRouter } from "next/navigation";
 import React, { createContext, useContext, useEffect, useState } from "react";
 import { db, auth, storage } from "@/lib/firebase";
-import { ref, onValue, set, get, update, remove, push, serverTimestamp } from "firebase/database";
+import { ref, onValue, set, get, update, remove, push, serverTimestamp, query, orderByChild, equalTo } from "firebase/database";
 import { onAuthStateChanged, signOut, User as FirebaseUser } from "firebase/auth";
 import { ref as storageRef, uploadBytes, getDownloadURL } from "firebase/storage";
 
@@ -20,6 +20,7 @@ interface AppContextType {
   ads: Ad[];
   posts: Post[];
   groups: Group[];
+  conversations: Conversation[];
   purchasedCourses: PurchasedCourse[];
   notifications: Notification[];
   login: (email: string, type: 'user' | 'business') => Promise<void>;
@@ -41,6 +42,9 @@ interface AppContextType {
   createGroup: (groupData: { name: string; description: string; pin?: string }) => Promise<boolean>;
   joinGroup: (groupId: string, pin?: string) => Promise<boolean>;
   sendMessage: (groupId: string, messageData: { content: string; type: 'text' } | { file: File; type: 'image' | 'audio' | 'video' | 'file' }) => Promise<boolean>;
+  startConversation: (otherUserId: string) => Promise<string | null>;
+  sendDirectMessage: (conversationId: string, messageData: { content: string; type: 'text' } | { file: File; type: 'image' | 'audio' | 'video' | 'file' }) => Promise<boolean>;
+  getConversationById: (conversationId: string) => Conversation | undefined;
   markNotificationsAsRead: () => Promise<void>;
   loading: boolean;
 }
@@ -56,6 +60,7 @@ export function AppContextProvider({ children }: { children: React.ReactNode }) 
   const [ads, setAds] = useState<Ad[]>([]);
   const [posts, setPosts] = useState<Post[]>([]);
   const [groups, setGroups] = useState<Group[]>([]);
+  const [conversations, setConversations] = useState<Conversation[]>([]);
   const [purchasedCourses, setPurchasedCourses] = useState<PurchasedCourse[]>([]);
   const [notifications, setNotifications] = useState<Notification[]>([]);
   const [loading, setLoading] = useState(true);
@@ -156,6 +161,7 @@ export function AppContextProvider({ children }: { children: React.ReactNode }) 
   useEffect(() => {
     let purchasedListener: () => void;
     let notificationsListener: () => void;
+    let conversationsListener: () => void;
     
     if (user) {
       // Load purchased courses when user logs in
@@ -175,14 +181,35 @@ export function AppContextProvider({ children }: { children: React.ReactNode }) 
           setNotifications(notificationList.sort((a,b) => b.timestamp - a.timestamp));
       });
 
+      const userConversationsRef = ref(db, `users/${user.uid}/conversationIds`);
+      onValue(userConversationsRef, (snapshot) => {
+          const convoIds = snapshot.val();
+          if (convoIds) {
+              const convoRef = ref(db, 'conversations');
+              onValue(convoRef, (convoSnapshot) => {
+                  const allConvos = convoSnapshot.val() || {};
+                  const userConvos = Object.keys(convoIds)
+                    .map(id => allConvos[id])
+                    .filter(Boolean)
+                    .map(c => ({...c, messages: c.messages ? Object.values(c.messages) : [] }))
+                    .sort((a, b) => b.timestamp - a.timestamp);
+                  setConversations(userConvos);
+              })
+          } else {
+              setConversations([]);
+          }
+      });
+
     } else {
       setPurchasedCourses([]);
       setNotifications([]);
+      setConversations([]);
     }
     
     return () => {
         if (purchasedListener) purchasedListener();
         if (notificationsListener) notificationsListener();
+        if (conversationsListener) conversationsListener();
     }
   }, [user]);
 
@@ -688,6 +715,121 @@ export function AppContextProvider({ children }: { children: React.ReactNode }) 
     }
   };
 
+  const startConversation = async (otherUserId: string): Promise<string | null> => {
+    if (!user || user.uid === otherUserId) return null;
+    
+    // Generate a consistent conversation ID
+    const conversationId = user.uid > otherUserId 
+        ? `${otherUserId}_${user.uid}` 
+        : `${user.uid}_${otherUserId}`;
+
+    const conversationRef = ref(db, `conversations/${conversationId}`);
+    const conversationSnapshot = await get(conversationRef);
+
+    if (conversationSnapshot.exists()) {
+        return conversationId;
+    } else {
+        const otherUser = allUsers.find(u => u.uid === otherUserId);
+        if (!otherUser) return null;
+
+        const newConversation: Conversation = {
+            id: conversationId,
+            participantUids: [user.uid, otherUserId],
+            participants: {
+                [user.uid]: { name: user.name, photoURL: user.photoURL || '' },
+                [otherUserId]: { name: otherUser.name, photoURL: otherUser.photoURL || '' },
+            },
+            lastMessage: null,
+            timestamp: serverTimestamp() as any,
+        };
+
+        try {
+            await set(conversationRef, newConversation);
+            // Add conversation ID to both users
+            await set(ref(db, `users/${user.uid}/conversationIds/${conversationId}`), true);
+            await set(ref(db, `users/${otherUserId}/conversationIds/${conversationId}`), true);
+            return conversationId;
+        } catch (error) {
+            console.error("Error starting conversation:", error);
+            return null;
+        }
+    }
+  };
+
+  const sendDirectMessage = async (conversationId: string, messageData: { content: string; type: 'text' } | { file: File; type: 'image' | 'audio' | 'video' | 'file' }): Promise<boolean> => {
+    if (!user) return false;
+    
+    const conversation = conversations.find(c => c.id === conversationId);
+    if (!conversation) return false;
+
+    try {
+        const messagesRef = ref(db, `conversations/${conversationId}/messages`);
+        const newMessageRef = push(messagesRef);
+
+        let messagePayload: Message = {
+            id: newMessageRef.key!,
+            creatorUid: user.uid,
+            creatorName: user.name,
+            creatorPhotoURL: user.photoURL || '',
+            timestamp: serverTimestamp() as any,
+            content: '',
+            type: 'text' // default
+        };
+
+        if (messageData.type === 'text') {
+            messagePayload = {
+                ...messagePayload,
+                content: messageData.content,
+                type: 'text',
+            };
+        } else {
+            const file = messageData.file;
+            const fileRef = storageRef(storage, `direct-messages/${conversationId}/${Date.now()}_${file.name}`);
+            const snapshot = await uploadBytes(fileRef, file);
+            const downloadURL = await getDownloadURL(snapshot.ref);
+            
+            messagePayload = {
+                ...messagePayload,
+                type: getFileType(file),
+                fileUrl: downloadURL,
+                fileName: file.name,
+            };
+        }
+
+        await set(newMessageRef, messagePayload);
+        // Update last message and timestamp for the conversation
+        await update(ref(db, `conversations/${conversationId}`), {
+            lastMessage: messagePayload,
+            timestamp: serverTimestamp()
+        });
+
+        // Notify the other participant
+        const otherUserId = conversation.participantUids.find(uid => uid !== user.uid);
+        if (otherUserId) {
+            await createNotification({
+                recipientUid: otherUserId,
+                actorUid: user.uid,
+                actorName: user.name,
+                actorPhotoURL: user.photoURL,
+                type: 'new_direct_message',
+                targetUrl: `/messages/${conversationId}`,
+                targetId: conversationId,
+                message: "sent you a new message.",
+            });
+        }
+        
+        return true;
+    } catch (e) {
+        console.error("Error sending direct message:", e);
+        return false;
+    }
+  };
+
+  const getConversationById = (conversationId: string) => {
+    return conversations.find(c => c.id === conversationId);
+  };
+
+
   const markNotificationsAsRead = async () => {
       if (!user || notifications.length === 0) return;
       const unreadNotifs = notifications.filter(n => !n.isRead);
@@ -713,6 +855,7 @@ export function AppContextProvider({ children }: { children: React.ReactNode }) 
     ads,
     posts,
     groups,
+    conversations,
     purchasedCourses,
     notifications,
     login,
@@ -734,6 +877,9 @@ export function AppContextProvider({ children }: { children: React.ReactNode }) 
     createGroup,
     joinGroup,
     sendMessage,
+    startConversation,
+    sendDirectMessage,
+    getConversationById,
     markNotificationsAsRead,
     loading,
   };

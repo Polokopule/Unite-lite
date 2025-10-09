@@ -32,6 +32,7 @@ export type User = {
   following?: string[];
   followers?: string[];
   photoURL?: string;
+  conversationIds?: string[];
 };
 
 export type PurchasedCourse = {
@@ -45,7 +46,7 @@ export type Notification = {
     actorUid: string;
     actorName: string;
     actorPhotoURL?: string;
-    type: 'new_follower' | 'new_comment' | 'new_reply' | 'post_like' | 'comment_like' | 'new_group_message';
+    type: 'new_follower' | 'new_comment' | 'new_reply' | 'post_like' | 'comment_like' | 'new_group_message' | 'new_direct_message';
     targetUrl: string; // e.g., /posts/post-123#comment-456
     targetId: string; // e.g., post-123
     isRead: boolean;
@@ -85,7 +86,7 @@ export type Post = {
     fileUrl?: string;
     fileName?: string;
     fileType?: 'image' | 'audio' | 'video' | 'file';
-    linkPreview?: LinkPreview;
+    linkPreview?: LinkPreview | null;
 };
 
 // Represents a message within a group chat
@@ -113,6 +114,16 @@ export type Group = {
     hasPin: boolean;
     pin: string | null;
 }
+
+export type Conversation = {
+    id: string;
+    participantUids: string[];
+    participants: { [uid: string]: { name: string; photoURL: string } };
+    lastMessage: Message | null;
+    timestamp: number;
+    messages?: Message[];
+};
+
 
 // Represents either a Post or an Ad in a feed
 export type FeedItem = Post | Ad;
