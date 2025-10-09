@@ -100,19 +100,17 @@ function FilePreview({ file, onRemove }: { file: File, onRemove: () => void }) {
 }
 
 
-export function CreatePostForm() {
+function PostForm({ onPostSuccess }: { onPostSuccess: () => void }) {
     const { user, addPost, allUsers } = useAppContext();
     const [content, setContent] = useState("");
     const [file, setFile] = useState<File | null>(null);
     const [linkPreview, setLinkPreview] = useState<LinkPreviewType | null>(null);
     const [isFetchingPreview, setIsFetchingPreview] = useState(false);
     const [isPosting, setIsPosting] = useState(false);
-    const [isDialogOpen, setIsDialogOpen] = useState(false);
     const fileInputRef = useRef<HTMLInputElement>(null);
     const { toast } = useToast();
 
     const debouncedContent = useDebounce(content, 500);
-
     const urlRegex = /(https?:\/\/[^\s]+)/;
 
     useEffect(() => {
@@ -133,30 +131,19 @@ export function CreatePostForm() {
                 }
             }
         };
-
         fetchPreview();
     }, [debouncedContent, linkPreview, file]);
 
-    if (!user) {
-        return null;
-    }
-
-    const resetForm = () => {
-        setContent("");
-        setFile(null);
-        setLinkPreview(null);
-        setIsPosting(false);
-        setIsDialogOpen(false);
-    };
+    if (!user) return null;
 
     const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
         const selectedFile = e.target.files?.[0];
         if (selectedFile) {
             setFile(selectedFile);
-            setLinkPreview(null); // Remove link preview if a file is attached
+            setLinkPreview(null);
         }
     };
-    
+
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
         if (!content.trim() && !file) return;
@@ -170,7 +157,7 @@ export function CreatePostForm() {
         setIsPosting(false);
 
         if (success) {
-            resetForm();
+            onPostSuccess();
             toast({ title: "Post created!" });
         } else {
             toast({ variant: "destructive", title: "Failed to create post." });
@@ -178,7 +165,69 @@ export function CreatePostForm() {
     };
 
     const usersForMentions = allUsers.map(u => ({ id: u.uid, display: u.name }));
+
+    return (
+        <form onSubmit={handleSubmit}>
+            <div className="grid gap-4 py-4">
+                <MentionsInput
+                    value={content}
+                    onChange={(e) => setContent(e.target.value)}
+                    placeholder={`What's on your mind, ${user.name}?`}
+                    className="mentions"
+                    classNames={{
+                      control: "mentions__control",
+                      input: "mentions__input",
+                      suggestions: "mentions__suggestions",
+                      item: "mentions__item",
+                      itemFocused: "mentions__item--focused",
+                    }}
+                    autoFocus
+                >
+                    <Mention
+                        trigger="@"
+                        data={usersForMentions}
+                        className="mentions__mention"
+                    />
+                </MentionsInput>
+                {file && <FilePreview file={file} onRemove={() => setFile(null)} />}
+                {isFetchingPreview && !linkPreview && <div className="text-sm text-muted-foreground">Fetching link preview...</div>}
+                {linkPreview && <LinkPreviewCard preview={linkPreview} onRemove={() => setLinkPreview(null)} />}
+            </div>
+            <DialogFooter className="flex-col sm:flex-row sm:justify-between items-center border-t pt-2">
+                <div className="flex items-center gap-2">
+                    <input
+                        type="file"
+                        ref={fileInputRef}
+                        onChange={handleFileChange}
+                        className="hidden"
+                        accept="image/*,video/*,audio/*,application/pdf,.doc,.docx,.xls,.xlsx,.ppt,.pptx"
+                    />
+                    <Button type="button" variant="ghost" size="icon" onClick={() => fileInputRef.current?.click()} title="Attach file">
+                        <Paperclip className="h-5 w-5" />
+                    </Button>
+                </div>
+                <Button type="submit" disabled={isPosting || (!content.trim() && !file)} className="w-full sm:w-auto">
+                    {isPosting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                    Post
+                </Button>
+            </DialogFooter>
+        </form>
+    );
+}
+
+
+export function CreatePostForm() {
+    const { user } = useAppContext();
+    const [isDialogOpen, setIsDialogOpen] = useState(false);
     
+    if (!user) {
+        return null;
+    }
+
+    const handlePostSuccess = () => {
+        setIsDialogOpen(false);
+    };
+
     return (
         <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
             <div className="bg-card border-b p-4">
@@ -207,53 +256,7 @@ export function CreatePostForm() {
                  <DialogHeader>
                     <DialogTitle>Create Post</DialogTitle>
                 </DialogHeader>
-                <form onSubmit={handleSubmit}>
-                    <div className="grid gap-4 py-4">
-                        {user?.name && typeof content === 'string' && (
-                            <MentionsInput
-                                value={content}
-                                onChange={(e) => setContent(e.target.value || '')}
-                                placeholder={`What's on your mind, ${user.name}?`}
-                                className="mentions"
-                                classNames={{
-                                control: "mentions__control",
-                                input: "mentions__input",
-                                suggestions: "mentions__suggestions",
-                                item: "mentions__item",
-                                itemFocused: "mentions__item--focused",
-                                }}
-                                autoFocus
-                            >
-                                <Mention
-                                    trigger="@"
-                                    data={usersForMentions}
-                                    className="mentions__mention"
-                                />
-                            </MentionsInput>
-                        )}
-                         {file && <FilePreview file={file} onRemove={() => setFile(null)} />}
-                         {isFetchingPreview && !linkPreview && <div className="text-sm text-muted-foreground">Fetching link preview...</div>}
-                         {linkPreview && <LinkPreviewCard preview={linkPreview} onRemove={() => setLinkPreview(null)} />}
-                    </div>
-                     <DialogFooter className="flex-col sm:flex-row sm:justify-between items-center border-t pt-2">
-                        <div className="flex items-center gap-2">
-                           <input
-                                type="file"
-                                ref={fileInputRef}
-                                onChange={handleFileChange}
-                                className="hidden"
-                                accept="image/*,video/*,audio/*,application/pdf,.doc,.docx,.xls,.xlsx,.ppt,.pptx"
-                            />
-                            <Button type="button" variant="ghost" size="icon" onClick={() => fileInputRef.current?.click()} title="Attach file">
-                                <Paperclip className="h-5 w-5" />
-                            </Button>
-                        </div>
-                        <Button type="submit" disabled={isPosting || (!content.trim() && !file)} className="w-full sm:w-auto">
-                            {isPosting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                            Post
-                        </Button>
-                    </DialogFooter>
-                </form>
+                <PostForm onPostSuccess={handlePostSuccess} />
             </DialogContent>
         </Dialog>
     );
