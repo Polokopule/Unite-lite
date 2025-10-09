@@ -126,18 +126,18 @@ function UserSheet() {
                      </div>
                     <Separator />
                      <div className="flex flex-col gap-2">
-                        <Button asChild variant="outline" onClick={handleLinkClick}>
+                        <Button asChild variant="ghost" className="justify-start" onClick={handleLinkClick}>
                             <Link href="/dashboard"><UserIcon className="mr-2 h-4 w-4" />Dashboard</Link>
                         </Button>
-                        <Button asChild variant="outline" onClick={handleLinkClick}>
+                        <Button asChild variant="ghost" className="justify-start" onClick={handleLinkClick}>
                            <Link href={`/profile/${user.uid}`}><UserIcon className="mr-2 h-4 w-4" />My Profile</Link>
                         </Button>
-                        <Button asChild variant="outline" onClick={handleLinkClick}>
+                        <Button asChild variant="ghost" className="justify-start" onClick={handleLinkClick}>
                            <Link href="/profile/edit"><Edit className="mr-2 h-4 w-4" />Edit Profile</Link>
                         </Button>
                     </div>
                     <Separator />
-                    <Button variant="ghost" onClick={() => { handleLinkClick(); logout(); }}>
+                    <Button variant="ghost" className="justify-start" onClick={() => { handleLinkClick(); logout(); }}>
                       <LogOut className="mr-2 h-4 w-4" />
                       Log out
                     </Button>
