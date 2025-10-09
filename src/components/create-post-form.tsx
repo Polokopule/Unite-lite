@@ -209,7 +209,7 @@ export function CreatePostForm() {
                 </DialogHeader>
                 <form onSubmit={handleSubmit}>
                     <div className="grid gap-4 py-4">
-                        {user?.name && (
+                        {user?.name && typeof content === 'string' && (
                             <MentionsInput
                                 value={content}
                                 onChange={(e) => setContent(e.target.value)}
