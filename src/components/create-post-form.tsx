@@ -183,7 +183,7 @@ function PostForm({ onPostSuccess, initialFile }: { onPostSuccess: () => void, i
                 {isFetchingPreview && !linkPreview && <div className="text-sm text-muted-foreground">Fetching link preview...</div>}
                 {linkPreview && <LinkPreviewCard preview={linkPreview} onRemove={() => setLinkPreview(null)} />}
             </div>
-            <DialogFooter>
+            <DialogFooter className="justify-between">
                  <input
                     type="file"
                     ref={fileInputRef}
@@ -191,6 +191,9 @@ function PostForm({ onPostSuccess, initialFile }: { onPostSuccess: () => void, i
                     className="hidden"
                     accept="image/*,video/*,audio/*,application/pdf,.doc,.docx,.xls,.xlsx,.ppt,.pptx"
                 />
+                <Button type="button" variant="ghost" size="icon" onClick={() => fileInputRef.current?.click()} disabled={!!file}>
+                    <Paperclip className="text-blue-500" />
+                </Button>
                 <Button type="submit" disabled={isPosting || (!content.trim() && !file)} className="w-full sm:w-auto">
                     {isPosting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
                     Post
@@ -229,7 +232,11 @@ export function CreatePostForm() {
     return (
         <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
             <div className="bg-card border-b p-4">
-                 <div className="container mx-auto flex items-center gap-2">
+                 <div className="container mx-auto flex items-center gap-4">
+                    <Avatar className="h-9 w-9 hidden sm:flex">
+                        <AvatarImage src={user.photoURL} alt={user.name} />
+                        <AvatarFallback>{user.name.substring(0, 2)}</AvatarFallback>
+                    </Avatar>
                     <DialogTrigger asChild>
                         <div className="flex-1 h-10 rounded-full border border-input bg-background px-4 py-2 text-sm text-muted-foreground hover:bg-accent cursor-text flex items-center min-w-0">
                             <span className="truncate">{`What's on your mind, ${user.name}?`}</span>
@@ -239,10 +246,8 @@ export function CreatePostForm() {
                     <input type="file" ref={fileInputRef} onChange={handleFileChange} className="hidden" />
 
                     <Button variant="ghost" size="icon" className="rounded-full" onClick={() => fileInputRef.current?.click()}>
-                        <Paperclip className="text-blue-500" />
+                        <ImageIcon className="text-blue-500" />
                     </Button>
-                    
-                    <Button onClick={() => setIsDialogOpen(true)} className="rounded-full">Post</Button>
                  </div>
             </div>
             <DialogContent className="sm:max-w-md">
