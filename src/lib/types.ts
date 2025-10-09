@@ -64,6 +64,7 @@ export type Comment = {
     likes: string[]; // Array of user UIDs who liked the comment
     parentId: string | null; // ID of the parent comment if it's a reply
     postId: string; // ID of the post it belongs to
+    linkPreview?: LinkPreview | null;
 };
 
 export type LinkPreview = {
@@ -101,6 +102,7 @@ export type Message = {
     fileUrl?: string;
     fileName?: string;
     isEdited?: boolean;
+    linkPreview?: LinkPreview | null;
 }
 
 // Represents a user-created group

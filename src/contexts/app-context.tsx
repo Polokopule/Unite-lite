@@ -10,6 +10,7 @@ import { db, auth, storage } from "@/lib/firebase";
 import { ref, onValue, set, get, update, remove, push, serverTimestamp, query, orderByChild, equalTo } from "firebase/database";
 import { onAuthStateChanged, signOut, User as FirebaseUser, updateProfile as updateFirebaseProfile } from "firebase/auth";
 import { ref as storageRef, uploadBytes, getDownloadURL } from "firebase/storage";
+import { generateLinkPreview } from "@/services/link-preview";
 
 // --- CONTEXT TYPE ---
 interface AppContextType {
@@ -72,6 +73,8 @@ export function AppContextProvider({ children }: { children: React.ReactNode }) 
   const [notifications, setNotifications] = useState<Notification[]>([]);
   const [loading, setLoading] = useState(true);
   const router = useRouter();
+
+  const urlRegex = /(https?:\/\/[^\s]+)/;
 
   useEffect(() => {
     // Firebase auth state listener
@@ -640,7 +643,7 @@ export function AppContextProvider({ children }: { children: React.ReactNode }) 
             const newCommentRef = push(commentsRef);
             const commentId = newCommentRef.key!;
 
-            const newComment: Omit<Comment, 'id' | 'likes'> = {
+            let newComment: Omit<Comment, 'id' | 'likes'> = {
                 id: commentId,
                 creatorUid: user.uid,
                 creatorName: user.name,
@@ -650,6 +653,15 @@ export function AppContextProvider({ children }: { children: React.ReactNode }) 
                 parentId: parentId,
                 postId: postId
             };
+
+            const urlMatch = content.match(urlRegex);
+            if (urlMatch) {
+                const preview = await generateLinkPreview({ url: urlMatch[0] });
+                if (preview.title) {
+                    newComment.linkPreview = preview;
+                }
+            }
+
             await set(newCommentRef, newComment);
 
             await handleMentions(content, postId, commentId);
@@ -784,6 +796,13 @@ export function AppContextProvider({ children }: { children: React.ReactNode }) 
                 content: messageData.content,
                 type: 'text',
             };
+            const urlMatch = messageData.content.match(urlRegex);
+            if (urlMatch) {
+                const preview = await generateLinkPreview({ url: urlMatch[0] });
+                if (preview.title) {
+                    messagePayload.linkPreview = preview;
+                }
+            }
         } else {
             // Upload file to Firebase Storage
             const file = messageData.file;
@@ -828,7 +847,17 @@ export function AppContextProvider({ children }: { children: React.ReactNode }) 
         if (!user) return false;
         try {
             const messageRef = ref(db, `groups/${groupId}/messages/${messageId}`);
-            await update(messageRef, { content: newContent, isEdited: true });
+            const updateData: any = { content: newContent, isEdited: true };
+
+            const urlMatch = newContent.match(urlRegex);
+            if (urlMatch) {
+                const preview = await generateLinkPreview({ url: urlMatch[0] });
+                updateData.linkPreview = preview.title ? preview : null;
+            } else {
+                updateData.linkPreview = null;
+            }
+            
+            await update(messageRef, updateData);
             return true;
         } catch (e) {
             console.error("Error editing message:", e);
@@ -915,6 +944,13 @@ export function AppContextProvider({ children }: { children: React.ReactNode }) 
                 content: messageData.content,
                 type: 'text',
             };
+            const urlMatch = messageData.content.match(urlRegex);
+            if (urlMatch) {
+                const preview = await generateLinkPreview({ url: urlMatch[0] });
+                if (preview.title) {
+                    messagePayload.linkPreview = preview;
+                }
+            }
         } else {
             const file = messageData.file;
             const fileRef = storageRef(storage, `direct-messages/${conversationId}/${Date.now()}_${file.name}`);
@@ -962,7 +998,17 @@ export function AppContextProvider({ children }: { children: React.ReactNode }) 
         if (!user) return false;
         try {
             const messageRef = ref(db, `conversations/${conversationId}/messages/${messageId}`);
-            await update(messageRef, { content: newContent, isEdited: true });
+             const updateData: any = { content: newContent, isEdited: true };
+
+            const urlMatch = newContent.match(urlRegex);
+            if (urlMatch) {
+                const preview = await generateLinkPreview({ url: urlMatch[0] });
+                updateData.linkPreview = preview.title ? preview : null;
+            } else {
+                updateData.linkPreview = null;
+            }
+
+            await update(messageRef, updateData);
             return true;
         } catch (e) {
             console.error("Error editing direct message:", e);
@@ -1063,5 +1109,3 @@ export function useAppContext() {
   }
   return context;
 }
-
-    

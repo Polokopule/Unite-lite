@@ -10,7 +10,7 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { formatDistanceToNow } from "date-fns";
 import { Input } from "@/components/ui/input";
 import Link from "next/link";
-import { useMemo, useState, useEffect } from "react";
+import { useMemo, useState, useEffect, useRef } from "react";
 import { useToast } from "@/hooks/use-toast";
 import Image from "next/image";
 import { Badge } from "@/components/ui/badge";
@@ -24,6 +24,83 @@ import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigge
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
 import { Textarea } from "@/components/ui/textarea";
+
+// Reusable MentionTextarea component
+function MentionTextarea({
+  value,
+  onChange,
+  placeholder,
+  allUsers,
+  onMention,
+}: {
+  value: string;
+  onChange: (value: string) => void;
+  placeholder: string;
+  allUsers: UserType[];
+  onMention: (id: string, display: string) => void;
+}) {
+  const [mentionQuery, setMentionQuery] = useState('');
+  const [showMentions, setShowMentions] = useState(false);
+  const textareaRef = useRef<HTMLTextAreaElement>(null);
+
+  const mentionResults = useMemo(() => {
+    if (!mentionQuery) return [];
+    return allUsers.filter(u =>
+      u.name.toLowerCase().includes(mentionQuery.toLowerCase())
+    );
+  }, [mentionQuery, allUsers]);
+
+  const handleTextChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
+    const text = e.target.value;
+    onChange(text);
+
+    const mentionMatch = text.match(/@(\w+)$/);
+    if (mentionMatch) {
+      setMentionQuery(mentionMatch[1]);
+      setShowMentions(true);
+    } else {
+      setShowMentions(false);
+    }
+  };
+
+  const handleMentionSelect = (user: UserType) => {
+    const newContent = value.replace(/@(\w+)$/, `@[${user.name}](${user.uid}) `);
+    onChange(newContent);
+    setShowMentions(false);
+    textareaRef.current?.focus();
+  };
+
+  return (
+    <div className="relative">
+      <Textarea
+        ref={textareaRef}
+        value={value}
+        onChange={handleTextChange}
+        placeholder={placeholder}
+        className="min-h-[120px]"
+      />
+      {showMentions && mentionResults.length > 0 && (
+        <Card className="absolute z-10 mt-1 w-full max-h-48 overflow-y-auto">
+          <CardContent className="p-2">
+            {mentionResults.map(user => (
+              <div
+                key={user.uid}
+                onClick={() => handleMentionSelect(user)}
+                className="flex items-center gap-2 p-2 rounded-md hover:bg-muted cursor-pointer"
+              >
+                <Avatar className="h-8 w-8">
+                  <AvatarImage src={user.photoURL} alt={user.name} />
+                  <AvatarFallback>{user.name.substring(0, 2)}</AvatarFallback>
+                </Avatar>
+                <span>{user.name}</span>
+              </div>
+            ))}
+          </CardContent>
+        </Card>
+      )}
+    </div>
+  );
+}
 
 
 function SharePostDialog({ post, children }: { post: PostType, children: React.ReactNode }) {
@@ -113,7 +190,7 @@ function SharePostDialog({ post, children }: { post: PostType, children: React.R
 }
 
 function CommentForm({ postId, parentId = null, onCommentPosted }: { postId: string; parentId?: string | null, onCommentPosted?: () => void }) {
-    const { user, addComment } = useAppContext();
+    const { user, addComment, allUsers } = useAppContext();
     const [comment, setComment] = useState("");
     const [isCommenting, setIsCommenting] = useState(false);
     const { toast } = useToast();
@@ -132,6 +209,8 @@ function CommentForm({ postId, parentId = null, onCommentPosted }: { postId: str
         }
     };
     
+    if (!user) return null;
+
     return (
         <form onSubmit={handleSubmit} className="flex items-start gap-2 pt-2">
              <Avatar className="h-8 w-8">
@@ -139,12 +218,12 @@ function CommentForm({ postId, parentId = null, onCommentPosted }: { postId: str
                 <AvatarFallback>{user?.name?.substring(0, 2)}</AvatarFallback>
             </Avatar>
             <div className="flex-1">
-                 <Textarea
+                 <MentionTextarea
                     value={comment}
-                    onChange={(e) => setComment(e.target.value)}
+                    onChange={setComment}
                     placeholder="Write a reply..."
-                    className="min-h-[40px]"
-                    disabled={isCommenting}
+                    allUsers={allUsers}
+                    onMention={() => {}}
                 />
             </div>
             <Button type="submit" size="icon" variant="ghost" disabled={isCommenting || !comment.trim()}>
@@ -152,6 +231,24 @@ function CommentForm({ postId, parentId = null, onCommentPosted }: { postId: str
             </Button>
         </form>
     );
+}
+
+function LinkPreviewCard({ preview }: { preview: LinkPreview }) {
+    if (!preview.title) return null;
+    return (
+        <a href={preview.url} target="_blank" rel="noopener noreferrer" className="mt-2 border rounded-lg overflow-hidden block hover:bg-muted/50 transition-colors">
+            {preview.imageUrl && (
+                <div className="relative aspect-video">
+                     <Image src={preview.imageUrl} alt={preview.title} fill className="object-cover" />
+                </div>
+            )}
+            <div className="p-3">
+                <p className="font-semibold text-sm truncate">{preview.title}</p>
+                <p className="text-xs text-muted-foreground line-clamp-2">{preview.description}</p>
+                 <p className="text-xs text-muted-foreground truncate mt-1 break-all">{preview.url}</p>
+            </div>
+        </a>
+    )
 }
 
 // --- Comment ---
@@ -196,6 +293,7 @@ function CommentItem({ comment, postId }: { comment: CommentType; postId: string
                  <div className="bg-muted rounded-lg p-2 px-3 text-sm w-full">
                     <Link href={`/profile/${comment.creatorUid}`} className="font-semibold hover:underline">{comment.creatorName}</Link>
                     <p className="whitespace-pre-wrap break-words">{renderContentWithMentions(comment.content)}</p>
+                    {comment.linkPreview && <LinkPreviewCard preview={comment.linkPreview} />}
                 </div>
                 <div className="flex items-center gap-2 text-xs text-muted-foreground px-2 pt-1">
                     <span>{formatDistanceToNow(new Date(comment.timestamp), { addSuffix: true })}</span>
@@ -245,24 +343,6 @@ function CommentList({ comments, postId }: { comments: CommentType[]; postId: st
             ))}
         </div>
     );
-}
-
-function LinkPreviewCard({ preview }: { preview: LinkPreview }) {
-    if (!preview.title) return null;
-    return (
-        <a href={preview.url} target="_blank" rel="noopener noreferrer" className="mt-2 border rounded-lg overflow-hidden block hover:bg-muted/50 transition-colors">
-            {preview.imageUrl && (
-                <div className="relative aspect-video">
-                     <Image src={preview.imageUrl} alt={preview.title} fill className="object-cover" />
-                </div>
-            )}
-            <div className="p-3">
-                <p className="font-semibold text-sm truncate">{preview.title}</p>
-                <p className="text-xs text-muted-foreground line-clamp-2">{preview.description}</p>
-                 <p className="text-xs text-muted-foreground truncate mt-1 break-all">{preview.url}</p>
-            </div>
-        </a>
-    )
 }
 
 function PostAttachment({ post }: { post: PostType }) {

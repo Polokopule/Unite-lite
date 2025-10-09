@@ -4,7 +4,7 @@
 
 import { useParams } from "next/navigation";
 import { useAppContext } from "@/contexts/app-context";
-import { Group, Message, User as UserType } from "@/lib/types";
+import { Group, Message, User as UserType, LinkPreview } from "@/lib/types";
 import { useEffect, useState, useRef } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -16,6 +16,24 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import Image from "next/image";
 import Link from "next/link";
 import { formatDistanceToNow } from "date-fns";
+
+function LinkPreviewCard({ preview }: { preview: LinkPreview }) {
+    if (!preview.title) return null;
+    return (
+        <a href={preview.url} target="_blank" rel="noopener noreferrer" className="mt-2 border rounded-lg overflow-hidden block bg-background hover:bg-muted/50 transition-colors">
+            {preview.imageUrl && (
+                <div className="relative aspect-video">
+                     <Image src={preview.imageUrl} alt={preview.title} fill className="object-cover" />
+                </div>
+            )}
+            <div className="p-3">
+                <p className="font-semibold text-sm truncate">{preview.title}</p>
+                <p className="text-xs text-muted-foreground line-clamp-2">{preview.description}</p>
+                 <p className="text-xs text-muted-foreground truncate mt-1 break-all">{preview.url}</p>
+            </div>
+        </a>
+    )
+}
 
 function MessageBubble({ message, isOwnMessage }: { message: Message; isOwnMessage: boolean }) {
     const renderContent = () => {
@@ -46,7 +64,12 @@ function MessageBubble({ message, isOwnMessage }: { message: Message; isOwnMessa
                 );
             case 'text':
             default:
-                return <p className="whitespace-pre-wrap break-words">{message.content}</p>;
+                return (
+                    <div>
+                        <p className="whitespace-pre-wrap break-words">{message.content}</p>
+                        {message.linkPreview && <LinkPreviewCard preview={message.linkPreview} />}
+                    </div>
+                );
         }
     };
 
@@ -282,5 +305,3 @@ export default function GroupPage() {
         </div>
     );
 }
-
-    
