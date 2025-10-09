@@ -20,44 +20,10 @@ import { Card, CardHeader, CardTitle, CardContent, CardDescription, CardFooter }
 import { getAuth } from "firebase/auth";
 import { useRouter, usePathname } from "next/navigation";
 import { Separator } from "@/components/ui/separator";
-import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger, DropdownMenuSub, DropdownMenuSubTrigger, DropdownMenuSubContent } from "@/components/ui/dropdown-menu";
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger, DropdownMenuSub, DropdownMenuSubTrigger, DropdownMenuSubContent, DropdownMenuSeparator } from "@/components/ui/dropdown-menu";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogDescription } from "@/components/ui/dialog";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
 import { Textarea } from "@/components/ui/textarea";
-
-function LikersDialog({ likerUids }: { likerUids: string[] }) {
-    const { allUsers } = useAppContext();
-    const likers = useMemo(() => {
-        return allUsers.filter(user => likerUids.includes(user.uid));
-    }, [allUsers, likerUids]);
-
-    return (
-        <DialogContent>
-            <DialogHeader>
-                <DialogTitle>Liked by</DialogTitle>
-            </DialogHeader>
-            <div className="max-h-[400px] overflow-y-auto space-y-4 py-4">
-                {likers.length > 0 ? (
-                    likers.map(user => (
-                        <div key={user.uid} className="flex items-center gap-3">
-                            <Link href={`/profile/${user.uid}`}>
-                                <Avatar className="h-10 w-10">
-                                    <AvatarImage src={user.photoURL} alt={user.name} />
-                                    <AvatarFallback>{user.name.substring(0, 2)}</AvatarFallback>
-                                </Avatar>
-                            </Link>
-                             <Link href={`/profile/${user.uid}`}>
-                                <p className="font-semibold hover:underline">{user.name}</p>
-                             </Link>
-                        </div>
-                    ))
-                ) : (
-                    <p className="text-muted-foreground text-center">No likes yet.</p>
-                )}
-            </div>
-        </DialogContent>
-    );
-}
 
 // Reusable MentionTextarea component
 function MentionTextarea({
@@ -426,11 +392,15 @@ function PostAttachment({ post }: { post: PostType }) {
 
 // --- Post Card ---
 function PostCard({ post }: { post: PostType }) {
-    const { user, likePost, loading, deletePost, addPost } = useAppContext();
+    const { user, allUsers, likePost, loading, deletePost, addPost } = useAppContext();
     const [isLiked, setIsLiked] = useState(false);
     const [showComments, setShowComments] = useState(false);
     const { toast } = useToast();
     const [deletingId, setDeletingId] = useState<string|null>(null);
+
+    const likers = useMemo(() => {
+        return allUsers.filter(user => post.likes?.includes(user.uid));
+    }, [allUsers, post.likes]);
 
     useEffect(() => {
         if(user) {
@@ -498,137 +468,151 @@ function PostCard({ post }: { post: PostType }) {
     }
 
     return (
-        <Dialog>
-            <div className="w-full bg-card border-b py-4">
-                <div className="container mx-auto">
-                    {post.repostedFrom && (
-                        <div className="text-sm text-muted-foreground flex items-center gap-2 mb-2">
-                            <Repeat className="h-4 w-4" />
-                            Reposted from <Link href={`/profile/${post.repostedFrom.creatorUid}`} className="font-semibold hover:underline">{post.repostedFrom.creatorName}</Link>
-                        </div>
-                    )}
-                    <div className="flex items-start justify-between">
-                        <div className="flex items-center gap-4 mb-4">
-                            <Link href={`/profile/${post.creatorUid}`}>
-                                <Avatar className="h-10 w-10">
-                                    {post.creatorPhotoURL && <AvatarImage src={post.creatorPhotoURL} alt={post.creatorName} />}
-                                    <AvatarFallback>{post.creatorName.substring(0, 2)}</AvatarFallback>
-                                </Avatar>
-                            </Link>
-                            <div>
-                                <Link href={`/profile/${post.creatorUid}`} className="font-semibold hover:underline">{post.creatorName}</Link>
-                                <p className="text-xs text-muted-foreground">
-                                    {formatDistanceToNow(new Date(post.timestamp), { addSuffix: true })}
-                                </p>
-                            </div>
-                        </div>
-                        {user?.uid === post.creatorUid && (
-                            <DropdownMenu>
-                                <DropdownMenuTrigger asChild>
-                                    <Button variant="ghost" size="icon" className="h-8 w-8">
-                                        <span className="sr-only">More options</span>
-                                        ...
-                                    </Button>
-                                </DropdownMenuTrigger>
-                                <DropdownMenuContent align="end">
-                                    <DropdownMenuItem asChild>
-                                        <Link href={`/posts/edit/${post.id}`}><Pencil className="mr-2 h-4 w-4" />Edit</Link>
-                                    </DropdownMenuItem>
-                                    <AlertDialog>
-                                        <AlertDialogTrigger asChild>
-                                            <DropdownMenuItem onSelect={(e) => e.preventDefault()} className="text-destructive focus:text-destructive">
-                                                <Trash className="mr-2 h-4 w-4" />Delete
-                                            </DropdownMenuItem>
-                                        </AlertDialogTrigger>
-                                        <AlertDialogContent>
-                                            <AlertDialogHeader>
-                                                <AlertDialogTitle>Are you sure?</AlertDialogTitle>
-                                                <AlertDialogDescription>
-                                                    This will permanently delete your post. This action cannot be undone.
-                                                </AlertDialogDescription>
-                                            </AlertDialogHeader>
-                                            <AlertDialogFooter>
-                                                <AlertDialogCancel>Cancel</AlertDialogCancel>
-                                                <AlertDialogAction onClick={() => handleDeletePost(post.id)} className="bg-destructive hover:bg-destructive/90">Delete</AlertDialogAction>
-                                            </AlertDialogFooter>
-                                        </AlertDialogContent>
-                                    </AlertDialog>
-                                </DropdownMenuContent>
-                            </DropdownMenu>
-                        )}
+        <div className="w-full bg-card border-b py-4">
+            <div className="container mx-auto">
+                {post.repostedFrom && (
+                    <div className="text-sm text-muted-foreground flex items-center gap-2 mb-2">
+                        <Repeat className="h-4 w-4" />
+                        Reposted from <Link href={`/profile/${post.repostedFrom.creatorUid}`} className="font-semibold hover:underline">{post.repostedFrom.creatorName}</Link>
                     </div>
-                    {post.content && <p className="whitespace-pre-wrap mb-2 break-words">{renderContentWithMentions(post.content)}</p>}
-                    
-                    {post.linkPreview && <LinkPreviewCard preview={post.linkPreview} />}
-                    
-                    <PostAttachment post={post} />
+                )}
+                <div className="flex items-start justify-between">
+                    <div className="flex items-center gap-4 mb-4">
+                        <Link href={`/profile/${post.creatorUid}`}>
+                            <Avatar className="h-10 w-10">
+                                {post.creatorPhotoURL && <AvatarImage src={post.creatorPhotoURL} alt={post.creatorName} />}
+                                <AvatarFallback>{post.creatorName.substring(0, 2)}</AvatarFallback>
+                            </Avatar>
+                        </Link>
+                        <div>
+                            <Link href={`/profile/${post.creatorUid}`} className="font-semibold hover:underline">{post.creatorName}</Link>
+                            <p className="text-xs text-muted-foreground">
+                                {formatDistanceToNow(new Date(post.timestamp), { addSuffix: true })}
+                            </p>
+                        </div>
+                    </div>
+                    {user?.uid === post.creatorUid && (
+                        <DropdownMenu>
+                            <DropdownMenuTrigger asChild>
+                                <Button variant="ghost" size="icon" className="h-8 w-8">
+                                    <span className="sr-only">More options</span>
+                                    ...
+                                </Button>
+                            </DropdownMenuTrigger>
+                            <DropdownMenuContent align="end">
+                                <DropdownMenuItem asChild>
+                                    <Link href={`/posts/edit/${post.id}`}><Pencil className="mr-2 h-4 w-4" />Edit</Link>
+                                </DropdownMenuItem>
+                                <AlertDialog>
+                                    <AlertDialogTrigger asChild>
+                                        <DropdownMenuItem onSelect={(e) => e.preventDefault()} className="text-destructive focus:text-destructive">
+                                            <Trash className="mr-2 h-4 w-4" />Delete
+                                        </DropdownMenuItem>
+                                    </AlertDialogTrigger>
+                                    <AlertDialogContent>
+                                        <AlertDialogHeader>
+                                            <AlertDialogTitle>Are you sure?</AlertDialogTitle>
+                                            <AlertDialogDescription>
+                                                This will permanently delete your post. This action cannot be undone.
+                                            </AlertDialogDescription>
+                                        </AlertDialogHeader>
+                                        <AlertDialogFooter>
+                                            <AlertDialogCancel>Cancel</AlertDialogCancel>
+                                            <AlertDialogAction onClick={() => handleDeletePost(post.id)} className="bg-destructive hover:bg-destructive/90">Delete</AlertDialogAction>
+                                        </AlertDialogFooter>
+                                    </AlertDialogContent>
+                                </AlertDialog>
+                            </DropdownMenuContent>
+                        </DropdownMenu>
+                    )}
+                </div>
+                {post.content && <p className="whitespace-pre-wrap mb-2 break-words">{renderContentWithMentions(post.content)}</p>}
+                
+                {post.linkPreview && <LinkPreviewCard preview={post.linkPreview} />}
+                
+                <PostAttachment post={post} />
 
-                    <div className="pt-4 mt-4 border-t">
-                        <div className="flex items-center gap-4 text-muted-foreground">
-                            <Button variant="ghost" size="sm" onClick={handleLike} disabled={!user} className="flex items-center gap-2">
-                                <Heart className={`h-4 w-4 ${isLiked ? 'fill-red-500 text-red-500' : ''}`} />
-                            </Button>
-                            
-                            <DialogTrigger asChild>
+                <div className="pt-4 mt-4 border-t">
+                    <div className="flex items-center gap-4 text-muted-foreground">
+                        <Button variant="ghost" size="sm" onClick={handleLike} disabled={!user} className="flex items-center gap-2">
+                            <Heart className={`h-4 w-4 ${isLiked ? 'fill-red-500 text-red-500' : ''}`} />
+                        </Button>
+                        
+                        <DropdownMenu>
+                            <DropdownMenuTrigger asChild>
                                 <Button variant="link" className="p-0 h-auto text-muted-foreground hover:underline" disabled={(post.likes?.length || 0) === 0}>
                                     <span>{post.likes?.length || 0} likes</span>
                                 </Button>
-                            </DialogTrigger>
-
-                            <Button variant="ghost" size="sm" className="flex items-center gap-2" onClick={() => setShowComments(!showComments)}>
-                                <MessageCircle className="h-4 w-4" />
-                                <span>{post.comments?.length || 0}</span>
-                            </Button>
-                            <DropdownMenu>
-                                <DropdownMenuTrigger asChild>
-                                    <Button variant="ghost" size="sm" className="flex items-center gap-2">
-                                        <Share2 className="h-4 w-4" />
-                                        <span>Share</span>
-                                    </Button>
-                                </DropdownMenuTrigger>
-                                <DropdownMenuContent>
-                                    <DropdownMenuItem onClick={handleCopyLink}>
-                                        <Link2 className="mr-2 h-4 w-4" /> Copy Link
-                                    </DropdownMenuItem>
-                                    <SharePostDialog post={post}>
-                                        <DropdownMenuItem onSelect={(e) => e.preventDefault()}>
-                                            <SendToBack className="mr-2 h-4 w-4" /> Share to a friend
+                            </DropdownMenuTrigger>
+                            <DropdownMenuContent>
+                                <div className="max-h-60 overflow-y-auto">
+                                    {likers.length > 0 ? likers.map(liker => (
+                                        <DropdownMenuItem key={liker.uid} asChild>
+                                            <Link href={`/profile/${liker.uid}`} className="flex items-center gap-2">
+                                                <Avatar className="h-6 w-6">
+                                                    <AvatarImage src={liker.photoURL} alt={liker.name}/>
+                                                    <AvatarFallback>{liker.name.substring(0,2)}</AvatarFallback>
+                                                </Avatar>
+                                                <span>{liker.name}</span>
+                                            </Link>
                                         </DropdownMenuItem>
-                                    </SharePostDialog>
-                                    <AlertDialog>
-                                        <AlertDialogTrigger asChild>
-                                            <DropdownMenuItem onSelect={(e) => e.preventDefault()}>
-                                                <Repeat className="mr-2 h-4 w-4" /> Share as new post
-                                            </DropdownMenuItem>
-                                        </AlertDialogTrigger>
-                                        <AlertDialogContent>
-                                            <AlertDialogHeader>
-                                                <AlertDialogTitle>Share this post to your feed?</AlertDialogTitle>
-                                                <AlertDialogDescription>
-                                                    This will create a new post on your profile containing the content and media of the original post.
-                                                </AlertDialogDescription>
-                                            </AlertDialogHeader>
-                                            <AlertDialogFooter>
-                                                <AlertDialogCancel>Cancel</AlertDialogCancel>
-                                                <AlertDialogAction onClick={handleShareAsPost}>Yes, share</AlertDialogAction>
-                                            </AlertDialogFooter>
-                                        </AlertDialogContent>
-                                    </AlertDialog>
-                                </DropdownMenuContent>
-                            </DropdownMenu>
+                                    )) : <DropdownMenuItem disabled>No likes yet.</DropdownMenuItem>}
+                                </div>
+                            </DropdownMenuContent>
+                        </DropdownMenu>
 
-                        </div>
-                        {showComments && (
-                            <div className="w-full pt-2">
-                                <CommentList comments={post.comments || []} postId={post.id} />
-                                {user && <CommentForm postId={post.id} />}
-                            </div>
-                        )}
+                        <Button variant="ghost" size="sm" className="flex items-center gap-2" onClick={() => setShowComments(!showComments)}>
+                            <MessageCircle className="h-4 w-4" />
+                            <span>{post.comments?.length || 0}</span>
+                        </Button>
+                        <DropdownMenu>
+                            <DropdownMenuTrigger asChild>
+                                <Button variant="ghost" size="sm" className="flex items-center gap-2">
+                                    <Share2 className="h-4 w-4" />
+                                    <span>Share</span>
+                                </Button>
+                            </DropdownMenuTrigger>
+                            <DropdownMenuContent>
+                                <DropdownMenuItem onClick={handleCopyLink}>
+                                    <Link2 className="mr-2 h-4 w-4" /> Copy Link
+                                </DropdownMenuItem>
+                                <SharePostDialog post={post}>
+                                    <DropdownMenuItem onSelect={(e) => e.preventDefault()}>
+                                        <SendToBack className="mr-2 h-4 w-4" /> Share to a friend
+                                    </DropdownMenuItem>
+                                </SharePostDialog>
+                                <AlertDialog>
+                                    <AlertDialogTrigger asChild>
+                                        <DropdownMenuItem onSelect={(e) => e.preventDefault()}>
+                                            <Repeat className="mr-2 h-4 w-4" /> Share as new post
+                                        </DropdownMenuItem>
+                                    </AlertDialogTrigger>
+                                    <AlertDialogContent>
+                                        <AlertDialogHeader>
+                                            <AlertDialogTitle>Share this post to your feed?</AlertDialogTitle>
+                                            <AlertDialogDescription>
+                                                This will create a new post on your profile containing the content and media of the original post.
+                                            </AlertDialogDescription>
+                                        </AlertDialogHeader>
+                                        <AlertDialogFooter>
+                                            <AlertDialogCancel>Cancel</AlertDialogCancel>
+                                            <AlertDialogAction onClick={handleShareAsPost}>Yes, share</AlertDialogAction>
+                                        </AlertDialogFooter>
+                                    </AlertDialogContent>
+                                </AlertDialog>
+                            </DropdownMenuContent>
+                        </DropdownMenu>
+
                     </div>
+                    {showComments && (
+                        <div className="w-full pt-2">
+                            <CommentList comments={post.comments || []} postId={post.id} />
+                            {user && <CommentForm postId={post.id} />}
+                        </div>
+                    )}
                 </div>
             </div>
-            <LikersDialog likerUids={post.likes || []} />
-        </Dialog>
+        </div>
     );
 }
 
