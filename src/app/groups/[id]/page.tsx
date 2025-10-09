@@ -10,7 +10,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
-import { Loader2, Lock, Users, Send, Paperclip, Image as ImageIcon, Download, File, Music, Video, Menu } from "lucide-react";
+import { Loader2, Lock, Users, Send, Paperclip, Image as ImageIcon, Download, File, Music, Video, Menu, Mic, Square } from "lucide-react";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import Image from "next/image";
 import Link from "next/link";
@@ -103,6 +103,9 @@ function ChatArea({ groupId, messages, groupName }: { groupId: string; messages:
     const [isSending, setIsSending] = useState(false);
     const fileInputRef = useRef<HTMLInputElement>(null);
     const messagesEndRef = useRef<HTMLDivElement>(null);
+    const [isRecording, setIsRecording] = useState(false);
+    const mediaRecorderRef = useRef<MediaRecorder | null>(null);
+    const audioChunksRef = useRef<Blob[]>([]);
 
     useEffect(() => {
         messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
@@ -134,6 +137,43 @@ function ChatArea({ groupId, messages, groupName }: { groupId: string; messages:
         if (e.target) e.target.value = '';
     };
 
+    const startRecording = async () => {
+        try {
+            const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+            mediaRecorderRef.current = new MediaRecorder(stream);
+            mediaRecorderRef.current.ondataavailable = (event) => {
+                audioChunksRef.current.push(event.data);
+            };
+            mediaRecorderRef.current.onstop = async () => {
+                const audioBlob = new Blob(audioChunksRef.current, { type: 'audio/webm' });
+                const audioFile = new File([audioBlob], `voice-note-${Date.now()}.webm`, { type: 'audio/webm' });
+                
+                setIsSending(true);
+                toast({ title: 'Uploading...', description: 'Sending voice note' });
+                const success = await sendMessage(groupId, { file: audioFile, type: 'audio' });
+                if (!success) {
+                    toast({ variant: 'destructive', title: 'Failed to send voice note' });
+                }
+                setIsSending(false);
+
+                // Clean up
+                audioChunksRef.current = [];
+                stream.getTracks().forEach(track => track.stop());
+            };
+            mediaRecorderRef.current.start();
+            setIsRecording(true);
+        } catch (error) {
+            toast({ variant: 'destructive', title: 'Microphone access denied', description: 'Please allow microphone access in your browser settings.' });
+        }
+    };
+
+    const stopRecording = () => {
+        if (mediaRecorderRef.current && isRecording) {
+            mediaRecorderRef.current.stop();
+            setIsRecording(false);
+        }
+    };
+
     return (
         <Card className="flex flex-col h-full border-0 sm:border rounded-none sm:rounded-lg">
             <CardHeader className="flex flex-row items-center justify-between">
@@ -153,13 +193,20 @@ function ChatArea({ groupId, messages, groupName }: { groupId: string; messages:
             </CardContent>
             <CardFooter className="border-t p-4">
                 <div className="flex items-center gap-2 w-full">
-                    <Input
-                        placeholder="Type a message..."
-                        value={text}
-                        onChange={(e) => setText(e.target.value)}
-                        onKeyDown={(e) => e.key === 'Enter' && !isSending && handleSendText()}
-                        disabled={isSending}
-                    />
+                    {isRecording ? (
+                        <div className="flex-1 flex items-center gap-2 bg-muted p-2 rounded-lg">
+                            <Mic className="h-5 w-5 text-destructive animate-pulse" />
+                            <p className="text-sm text-muted-foreground">Recording...</p>
+                        </div>
+                    ) : (
+                        <Input
+                            placeholder="Type a message..."
+                            value={text}
+                            onChange={(e) => setText(e.target.value)}
+                            onKeyDown={(e) => e.key === 'Enter' && !isSending && handleSendText()}
+                            disabled={isSending}
+                        />
+                    )}
                     <input 
                         type="file" 
                         ref={fileInputRef} 
@@ -167,11 +214,19 @@ function ChatArea({ groupId, messages, groupName }: { groupId: string; messages:
                         accept="image/*,video/*,audio/*,application/pdf,.doc,.docx,.xls,.xlsx,.ppt,.pptx" 
                         className="hidden" 
                     />
-                    <Button size="icon" variant="outline" onClick={() => fileInputRef.current?.click()} disabled={isSending}>
+                    <Button size="icon" variant="outline" onClick={() => fileInputRef.current?.click()} disabled={isSending || isRecording}>
                         <Paperclip className="h-4 w-4" />
                     </Button>
-                    <Button size="icon" onClick={handleSendText} disabled={isSending || !text.trim()}>
-                        {isSending ? <Loader2 className="h-4 w-4 animate-spin" /> : <Send className="h-4 w-4" />}
+                    <Button
+                        size="icon"
+                        variant={isRecording ? "destructive" : "default"}
+                        onMouseDown={startRecording}
+                        onMouseUp={stopRecording}
+                        onTouchStart={startRecording}
+                        onTouchEnd={stopRecording}
+                        disabled={isSending}
+                    >
+                        {isRecording ? <Square className="h-4 w-4" /> : (text.trim() ? <Send className="h-4 w-4" /> : <Mic className="h-4 w-4" />)}
                     </Button>
                 </div>
             </CardFooter>
@@ -329,6 +384,5 @@ export default function GroupPage() {
         </div>
     );
 }
-
 
     
