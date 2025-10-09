@@ -215,21 +215,21 @@ export function CreatePostForm() {
     return (
         <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
             <div className="bg-card border-b p-4">
-                 <div className="container mx-auto flex items-center gap-4">
+                 <div className="container mx-auto flex items-center flex-wrap gap-4">
                     <Avatar className="h-10 w-10">
                         <AvatarImage src={user?.photoURL} alt={user?.name} />
                         <AvatarFallback>{user?.name?.substring(0, 2)}</AvatarFallback>
                     </Avatar>
                     <DialogTrigger asChild>
-                        <div className="flex-1 h-10 rounded-full border border-input bg-background px-4 py-2 text-sm text-muted-foreground hover:bg-accent cursor-text flex items-center">
-                            {`What's on your mind, ${user.name}?`}
+                        <div className="flex-1 h-10 rounded-full border border-input bg-background px-4 py-2 text-sm text-muted-foreground hover:bg-accent cursor-text flex items-center min-w-0">
+                            <span className="truncate">{`What's on your mind, ${user.name}?`}</span>
                         </div>
                     </DialogTrigger>
                     <div className="flex items-center gap-2">
-                         <Button variant="ghost" size="icon" className="rounded-full" onClick={() => setIsDialogOpen(true)}>
+                         <Button variant="ghost" size="icon" className="rounded-full hidden sm:inline-flex" onClick={() => setIsDialogOpen(true)}>
                             <ImageIcon className="text-green-500"/>
                         </Button>
-                         <Button variant="ghost" size="icon" className="rounded-full" onClick={() => setIsDialogOpen(true)}>
+                         <Button variant="ghost" size="icon" className="rounded-full hidden sm:inline-flex" onClick={() => setIsDialogOpen(true)}>
                             <Paperclip className="text-blue-500" />
                         </Button>
                          <Button onClick={() => setIsDialogOpen(true)} className="rounded-full">Post</Button>
