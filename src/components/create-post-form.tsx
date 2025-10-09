@@ -169,26 +169,29 @@ function PostForm({ onPostSuccess }: { onPostSuccess: () => void }) {
     return (
         <form onSubmit={handleSubmit}>
             <div className="grid gap-4 py-4">
-                <MentionsInput
-                    value={content}
-                    onChange={(e) => setContent(e.target.value)}
-                    placeholder={`What's on your mind, ${user.name}?`}
-                    className="mentions"
-                    classNames={{
-                      control: "mentions__control",
-                      input: "mentions__input",
-                      suggestions: "mentions__suggestions",
-                      item: "mentions__item",
-                      itemFocused: "mentions__item--focused",
-                    }}
-                    autoFocus
-                >
-                    <Mention
-                        trigger="@"
-                        data={usersForMentions}
-                        className="mentions__mention"
-                    />
-                </MentionsInput>
+                {user?.name && typeof content === 'string' && (
+                    <MentionsInput
+                        value={content}
+                        onChange={(e) => setContent(e.target.value || '')}
+                        placeholder={`What's on your mind, ${user.name}?`}
+                        className="mentions"
+                        classNames={{
+                            control: "mentions__control",
+                            input: "mentions__input",
+                            suggestions: "mentions__suggestions",
+                            item: "mentions__item",
+                            itemFocused: "mentions__item--focused",
+                        }}
+                        autoFocus
+                    >
+                        <Mention
+                            trigger="@"
+                            data={usersForMentions}
+                            className="mentions__mention"
+                            style={{}}
+                        />
+                    </MentionsInput>
+                )}
                 {file && <FilePreview file={file} onRemove={() => setFile(null)} />}
                 {isFetchingPreview && !linkPreview && <div className="text-sm text-muted-foreground">Fetching link preview...</div>}
                 {linkPreview && <LinkPreviewCard preview={linkPreview} onRemove={() => setLinkPreview(null)} />}

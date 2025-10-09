@@ -5,7 +5,7 @@
 import { useAppContext } from "@/contexts/app-context";
 import { Ad, Post as PostType, FeedItem, Comment as CommentType, Course, Group, User as UserType, Notification, LinkPreview, Conversation } from "@/lib/types";
 import { Button } from "@/components/ui/button";
-import { Loader2, MessageCircle, Heart, Send, ShoppingBag, Wallet, CheckCircle, PlusCircle, Home as HomeIcon, Bell, Users, Lock, User as UserIconLucide, Reply, File as FileIcon, Search, MessageSquare, Share2, Link2, SendToBack } from "lucide-react";
+import { Loader2, MessageCircle, Heart, Send, ShoppingBag, Wallet, CheckCircle, PlusCircle, Home as HomeIcon, Bell, Users, Lock, User as UserIconLucide, Reply, File as FileIcon, Search, MessageSquare, Share2, Link2, SendToBack, Trash, Pencil } from "lucide-react";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { formatDistanceToNow } from "date-fns";
 import { Input } from "@/components/ui/input";
@@ -23,6 +23,7 @@ import { Separator } from "@/components/ui/separator";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { MentionsInput, Mention } from 'react-mentions';
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
 
 
 function SharePostDialog({ post, children }: { post: PostType, children: React.ReactNode }) {
@@ -158,6 +159,7 @@ function CommentForm({ postId, parentId = null, onCommentPosted }: { postId: str
                         trigger="@"
                         data={usersForMentions}
                         className="mentions__mention"
+                        style={{}}
                     />
                 </MentionsInput>
             </div>
@@ -315,10 +317,11 @@ function PostAttachment({ post }: { post: PostType }) {
 
 // --- Post Card ---
 function PostCard({ post }: { post: PostType }) {
-    const { user, likePost, loading } = useAppContext();
+    const { user, likePost, loading, deletePost } = useAppContext();
     const [isLiked, setIsLiked] = useState(false);
     const [showComments, setShowComments] = useState(false);
     const { toast } = useToast();
+    const [deletingId, setDeletingId] = useState<string|null>(null);
 
     useEffect(() => {
         if(user) {
@@ -358,23 +361,70 @@ function PostCard({ post }: { post: PostType }) {
             return part; // This is regular text
         });
     };
+    
+    const handleDeletePost = async (postId: string) => {
+        setDeletingId(postId);
+        const success = await deletePost(postId);
+        setDeletingId(null);
+        if (success) {
+            toast({ title: "Post Deleted", description: "Your post has been removed." });
+        } else {
+            toast({ variant: 'destructive', title: "Error", description: "Failed to delete the post." });
+        }
+    }
 
     return (
         <div className="w-full bg-card border-b py-4">
             <div className="container mx-auto">
-                <div className="flex items-center gap-4 mb-4">
-                    <Link href={`/profile/${post.creatorUid}`}>
-                        <Avatar className="h-10 w-10">
-                            {post.creatorPhotoURL && <AvatarImage src={post.creatorPhotoURL} alt={post.creatorName} />}
-                            <AvatarFallback>{post.creatorName.substring(0, 2)}</AvatarFallback>
-                        </Avatar>
-                    </Link>
-                    <div>
-                        <Link href={`/profile/${post.creatorUid}`} className="font-semibold hover:underline">{post.creatorName}</Link>
-                        <p className="text-xs text-muted-foreground">
-                            {formatDistanceToNow(new Date(post.timestamp), { addSuffix: true })}
-                        </p>
+                <div className="flex items-start justify-between">
+                    <div className="flex items-center gap-4 mb-4">
+                        <Link href={`/profile/${post.creatorUid}`}>
+                            <Avatar className="h-10 w-10">
+                                {post.creatorPhotoURL && <AvatarImage src={post.creatorPhotoURL} alt={post.creatorName} />}
+                                <AvatarFallback>{post.creatorName.substring(0, 2)}</AvatarFallback>
+                            </Avatar>
+                        </Link>
+                        <div>
+                            <Link href={`/profile/${post.creatorUid}`} className="font-semibold hover:underline">{post.creatorName}</Link>
+                            <p className="text-xs text-muted-foreground">
+                                {formatDistanceToNow(new Date(post.timestamp), { addSuffix: true })}
+                            </p>
+                        </div>
                     </div>
+                    {user?.uid === post.creatorUid && (
+                        <DropdownMenu>
+                            <DropdownMenuTrigger asChild>
+                                <Button variant="ghost" size="icon" className="h-8 w-8">
+                                    <span className="sr-only">More options</span>
+                                    ...
+                                </Button>
+                            </DropdownMenuTrigger>
+                            <DropdownMenuContent align="end">
+                                <DropdownMenuItem asChild>
+                                    <Link href={`/posts/edit/${post.id}`}><Pencil className="mr-2 h-4 w-4" />Edit</Link>
+                                </DropdownMenuItem>
+                                <AlertDialog>
+                                    <AlertDialogTrigger asChild>
+                                        <DropdownMenuItem onSelect={(e) => e.preventDefault()} className="text-destructive focus:text-destructive">
+                                             <Trash className="mr-2 h-4 w-4" />Delete
+                                        </DropdownMenuItem>
+                                    </AlertDialogTrigger>
+                                    <AlertDialogContent>
+                                        <AlertDialogHeader>
+                                            <AlertDialogTitle>Are you sure?</AlertDialogTitle>
+                                            <AlertDialogDescription>
+                                                This will permanently delete your post. This action cannot be undone.
+                                            </AlertDialogDescription>
+                                        </AlertDialogHeader>
+                                        <AlertDialogFooter>
+                                            <AlertDialogCancel>Cancel</AlertDialogCancel>
+                                            <AlertDialogAction onClick={() => handleDeletePost(post.id)} className="bg-destructive hover:bg-destructive/90">Delete</AlertDialogAction>
+                                        </AlertDialogFooter>
+                                    </AlertDialogContent>
+                                </AlertDialog>
+                            </DropdownMenuContent>
+                        </DropdownMenu>
+                    )}
                 </div>
                 {post.content && <p className="whitespace-pre-wrap mb-2 break-words">{renderContentWithMentions(post.content)}</p>}
                 
@@ -930,7 +980,7 @@ export default function HomePage() {
 
     // Don't show tabs on profile pages
     if (pathname.startsWith('/profile/')) {
-        return null; // Or some other layout
+        return null;
     }
 
     return (
@@ -974,7 +1024,3 @@ export default function HomePage() {
         </div>
     );
 }
-
-    
-
-    

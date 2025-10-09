@@ -119,6 +119,7 @@ export default function EditPostPage() {
                         trigger="@"
                         data={usersForMentions}
                         className="mentions__mention"
+                        style={{}}
                     />
                 </MentionsInput>
             </div>
