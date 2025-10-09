@@ -103,7 +103,7 @@ export default function EditPostPage() {
             <div className="space-y-2">
               <Label htmlFor="content">Post Content</Label>
                <MentionsInput
-                    value={content || ''}
+                    value={content}
                     onChange={(e) => setContent(e.target.value)}
                     placeholder={`What's on your mind, ${user?.name}?`}
                     className="mentions"

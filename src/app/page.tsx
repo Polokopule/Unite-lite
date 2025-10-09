@@ -141,7 +141,7 @@ function CommentForm({ postId, parentId = null, onCommentPosted }: { postId: str
             </Avatar>
             <div className="flex-1">
                  <MentionsInput
-                    value={comment || ''}
+                    value={comment}
                     onChange={(e) => setComment(e.target.value)}
                     placeholder="Write a reply..."
                     className="mentions"
@@ -978,4 +978,5 @@ export default function HomePage() {
     
 
     
+
 
