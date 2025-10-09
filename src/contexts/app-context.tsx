@@ -444,8 +444,11 @@ export function AppContextProvider({ children }: { children: React.ReactNode }) 
             creatorPhotoURL: user.photoURL || '',
             content: content,
             timestamp: serverTimestamp() as any, // This will be converted by firebase
-            linkPreview: linkPreview || undefined,
         };
+
+        if (linkPreview) {
+          newPost.linkPreview = linkPreview;
+        }
 
         if (file) {
             const fileStorageRef = storageRef(storage, `post-files/${newPostRef.key}/${file.name}`);
