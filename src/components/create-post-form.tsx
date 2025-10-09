@@ -210,7 +210,7 @@ export function CreatePostForm() {
                 <form onSubmit={handleSubmit}>
                     <div className="grid gap-4 py-4">
                          <MentionsInput
-                            value={content}
+                            value={content || ''}
                             onChange={(e) => setContent(e.target.value)}
                             placeholder={`What's on your mind, ${user.name}?`}
                             className="mentions"
