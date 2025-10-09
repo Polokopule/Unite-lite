@@ -12,6 +12,17 @@ import { onAuthStateChanged, signOut, User as FirebaseUser, updateProfile as upd
 import { ref as storageRef, uploadBytes, getDownloadURL } from "firebase/storage";
 import { generateLinkPreview } from "@/services/link-preview";
 
+type AddPostData = {
+    content: string;
+    repostedFrom?: { creatorUid: string; creatorName: string } | null;
+    linkPreview?: LinkPreview | null;
+    file?: File | null; // For new file uploads
+    fileUrl?: string; // For reposting existing media
+    fileName?: string;
+    fileType?: 'image' | 'audio' | 'video' | 'file';
+};
+
+
 // --- CONTEXT TYPE ---
 interface AppContextType {
   user: User | null;
@@ -37,7 +48,7 @@ interface AppContextType {
   deleteAd: (adId: string) => Promise<boolean>;
   followUser: (targetUserId: string) => Promise<void>;
   unfollowUser: (targetUserId: string) => Promise<void>;
-  addPost: (postData: { content: string; file: File | null; linkPreview: LinkPreview | null, repostedFrom?: { creatorUid: string, creatorName: string } | null }) => Promise<boolean>;
+  addPost: (postData: AddPostData) => Promise<boolean>;
   updatePost: (postId: string, postData: { content: string }) => Promise<boolean>;
   deletePost: (postId: string) => Promise<boolean>;
   likePost: (postId: string) => Promise<void>;
@@ -535,10 +546,10 @@ export function AppContextProvider({ children }: { children: React.ReactNode }) 
         }
     };
 
-  const addPost = async (postData: { content: string; file: File | null; linkPreview: LinkPreview | null, repostedFrom?: { creatorUid: string, creatorName: string } | null }): Promise<boolean> => {
+  const addPost = async (postData: AddPostData): Promise<boolean> => {
       if (!user) return false;
-      const { content, file, linkPreview, repostedFrom } = postData;
-      if (!content.trim() && !file) return false;
+      const { content, file, repostedFrom, fileUrl, fileName, fileType, linkPreview } = postData;
+      if (!content?.trim() && !file && !fileUrl) return false;
       
       try {
         const postsRef = ref(db, 'posts');
@@ -550,7 +561,7 @@ export function AppContextProvider({ children }: { children: React.ReactNode }) 
             creatorUid: user.uid,
             creatorName: user.name,
             creatorPhotoURL: user.photoURL || '',
-            content: content,
+            content: content || '',
             timestamp: serverTimestamp() as any, // This will be converted by firebase
             repostedFrom: repostedFrom || null,
         };
@@ -558,7 +569,7 @@ export function AppContextProvider({ children }: { children: React.ReactNode }) 
         if (linkPreview) {
           newPost.linkPreview = linkPreview;
         }
-
+        
         if (file) {
             const fileStorageRef = storageRef(storage, `post-files/${postId}/${file.name}`);
             const snapshot = await uploadBytes(fileStorageRef, file);
@@ -567,10 +578,18 @@ export function AppContextProvider({ children }: { children: React.ReactNode }) 
             newPost.fileUrl = downloadURL;
             newPost.fileName = file.name;
             newPost.fileType = getFileType(file);
+        } else if (fileUrl && fileName && fileType) {
+            // This is a repost with media
+            newPost.fileUrl = fileUrl;
+            newPost.fileName = fileName;
+            newPost.fileType = fileType;
         }
 
+
         await set(newPostRef, newPost);
-        await handleMentions(content, postId);
+        if (content) {
+            await handleMentions(content, postId);
+        }
         
         if (repostedFrom && repostedFrom.creatorUid !== user.uid) {
             await createNotification({

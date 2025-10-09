@@ -20,7 +20,7 @@ import { Card, CardHeader, CardTitle, CardContent, CardDescription, CardFooter }
 import { getAuth } from "firebase/auth";
 import { useRouter, usePathname } from "next/navigation";
 import { Separator } from "@/components/ui/separator";
-import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger, DropdownMenuSub, DropdownMenuSubTrigger, DropdownMenuSubContent } from "@/components/ui/dropdown-menu";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
 import { Textarea } from "@/components/ui/textarea";
@@ -104,24 +104,22 @@ function MentionTextarea({
 
 
 function SharePostDialog({ post, children }: { post: PostType, children: React.ReactNode }) {
-    const { user, allUsers, startConversation, sendDirectMessage, addPost } = useAppContext();
+    const { user, allUsers, startConversation, sendDirectMessage } = useAppContext();
     const { toast } = useToast();
     const [open, setOpen] = useState(false);
-    const [view, setView] = useState<'options' | 'share_friend'>('options');
     const [searchTerm, setSearchTerm] = useState("");
     const [selectedUser, setSelectedUser] = useState<UserType | null>(null);
     const [isSharing, setIsSharing] = useState(false);
 
     const searchResults = useMemo(() => {
-        if (!searchTerm) return [];
+        if (!searchTerm || !user) return [];
         return allUsers.filter(u =>
-            u.uid !== user?.uid &&
+            u.uid !== user.uid &&
             u.name.toLowerCase().includes(searchTerm.toLowerCase())
         );
     }, [searchTerm, allUsers, user]);
     
     const resetState = () => {
-        setView('options');
         setSearchTerm("");
         setSelectedUser(null);
         setIsSharing(false);
@@ -152,97 +150,51 @@ function SharePostDialog({ post, children }: { post: PostType, children: React.R
         handleOpenChange(false);
     };
 
-    const handleShareAsPost = async () => {
-        setIsSharing(true);
-        await addPost({
-            content: post.content,
-            file: null, // Files are not re-shared
-            linkPreview: post.linkPreview || null,
-            repostedFrom: {
-                creatorUid: post.creatorUid,
-                creatorName: post.creatorName,
-            }
-        });
-        toast({ title: "Post Shared!", description: "You have shared this post to your feed." });
-        setIsSharing(false);
-        handleOpenChange(false);
-    }
-
     return (
         <Dialog open={open} onOpenChange={handleOpenChange}>
             <DialogTrigger asChild>{children}</DialogTrigger>
             <DialogContent>
                 <DialogHeader>
-                    <DialogTitle>Share Post</DialogTitle>
+                    <DialogTitle>Share to a friend</DialogTitle>
                 </DialogHeader>
-                {view === 'options' && (
-                    <div className="py-4 grid grid-cols-1 sm:grid-cols-2 gap-4">
-                       <Button variant="outline" className="h-20" onClick={() => setView('share_friend')}>
-                           <SendToBack className="mr-2 h-5 w-5"/>
-                           Share to a friend
-                       </Button>
-                       <AlertDialog>
-                            <AlertDialogTrigger asChild>
-                                <Button variant="outline" className="h-20">
-                                   <Repeat className="mr-2 h-5 w-5"/>
-                                   Share as a new post
-                                </Button>
-                            </AlertDialogTrigger>
-                            <AlertDialogContent>
-                                <AlertDialogHeader>
-                                    <AlertDialogTitle>Share this post to your feed?</AlertDialogTitle>
-                                    <AlertDialogDescription>
-                                        This will create a new post on your profile containing the content of the original post.
-                                    </AlertDialogDescription>
-                                </AlertDialogHeader>
-                                <AlertDialogFooter>
-                                    <AlertDialogCancel>Cancel</AlertDialogCancel>
-                                    <AlertDialogAction onClick={handleShareAsPost}>Yes, share</AlertDialogAction>
-                                </AlertDialogFooter>
-                            </AlertDialogContent>
-                       </AlertDialog>
-                    </div>
-                )}
-                {view === 'share_friend' && (
-                    <div className="py-4 space-y-4">
-                        {selectedUser ? (
-                            <div className="flex items-center justify-between p-2 bg-muted rounded-md">
-                                <div className="flex items-center gap-2">
-                                    <Avatar className="h-8 w-8">
-                                        <AvatarImage src={selectedUser.photoURL} alt={selectedUser.name} />
-                                        <AvatarFallback>{selectedUser.name.substring(0, 2)}</AvatarFallback>
-                                    </Avatar>
-                                    <span>{selectedUser.name}</span>
+                <div className="py-4 space-y-4">
+                    {selectedUser ? (
+                        <div className="flex items-center justify-between p-2 bg-muted rounded-md">
+                            <div className="flex items-center gap-2">
+                                <Avatar className="h-8 w-8">
+                                    <AvatarImage src={selectedUser.photoURL} alt={selectedUser.name} />
+                                    <AvatarFallback>{selectedUser.name.substring(0, 2)}</AvatarFallback>
+                                </Avatar>
+                                <span>{selectedUser.name}</span>
+                            </div>
+                            <Button variant="ghost" size="sm" onClick={() => setSelectedUser(null)}>Change</Button>
+                        </div>
+                    ) : (
+                        <div>
+                            <Input
+                                placeholder="Search for a user..."
+                                value={searchTerm}
+                                onChange={(e) => setSearchTerm(e.target.value)}
+                            />
+                            {searchResults.length > 0 && (
+                                <div className="mt-2 border rounded-md max-h-40 overflow-y-auto">
+                                    {searchResults.map(u => (
+                                        <div key={u.uid} onClick={() => setSelectedUser(u)} className="flex items-center gap-2 p-2 hover:bg-muted cursor-pointer">
+                                            <Avatar className="h-8 w-8">
+                                                <AvatarImage src={u.photoURL} alt={u.name} />
+                                                <AvatarFallback>{u.name.substring(0, 2)}</AvatarFallback>
+                                            </Avatar>
+                                            <span>{u.name}</span>
+                                        </div>
+                                    ))}
                                 </div>
-                                <Button variant="ghost" size="sm" onClick={() => setSelectedUser(null)}>Change</Button>
-                            </div>
-                        ) : (
-                            <div>
-                                <Input
-                                    placeholder="Search for a user..."
-                                    value={searchTerm}
-                                    onChange={(e) => setSearchTerm(e.target.value)}
-                                />
-                                {searchResults.length > 0 && (
-                                    <div className="mt-2 border rounded-md max-h-40 overflow-y-auto">
-                                        {searchResults.map(u => (
-                                            <div key={u.uid} onClick={() => setSelectedUser(u)} className="flex items-center gap-2 p-2 hover:bg-muted cursor-pointer">
-                                                <Avatar className="h-8 w-8">
-                                                    <AvatarImage src={u.photoURL} alt={u.name} />
-                                                    <AvatarFallback>{u.name.substring(0, 2)}</AvatarFallback>
-                                                </Avatar>
-                                                <span>{u.name}</span>
-                                            </div>
-                                        ))}
-                                    </div>
-                                )}
-                            </div>
-                        )}
-                        <Button onClick={handleShareToFriend} disabled={!selectedUser || isSharing} className="w-full">
-                            {isSharing ? <Loader2 className="animate-spin" /> : `Share with ${selectedUser?.name || '...'}`}
-                        </Button>
-                    </div>
-                )}
+                            )}
+                        </div>
+                    )}
+                    <Button onClick={handleShareToFriend} disabled={!selectedUser || isSharing} className="w-full">
+                        {isSharing ? <Loader2 className="animate-spin" /> : `Share with ${selectedUser?.name || '...'}`}
+                    </Button>
+                </div>
             </DialogContent>
         </Dialog>
     )
@@ -440,7 +392,7 @@ function PostAttachment({ post }: { post: PostType }) {
 
 // --- Post Card ---
 function PostCard({ post }: { post: PostType }) {
-    const { user, likePost, loading, deletePost } = useAppContext();
+    const { user, likePost, loading, deletePost, addPost } = useAppContext();
     const [isLiked, setIsLiked] = useState(false);
     const [showComments, setShowComments] = useState(false);
     const { toast } = useToast();
@@ -465,6 +417,21 @@ function PostCard({ post }: { post: PostType }) {
         navigator.clipboard.writeText(postUrl);
         toast({ title: "Link Copied!", description: "The post link has been copied to your clipboard." });
     };
+
+    const handleShareAsPost = async () => {
+        await addPost({
+            content: post.content,
+            repostedFrom: {
+                creatorUid: post.creatorUid,
+                creatorName: post.creatorName,
+            },
+            fileUrl: post.fileUrl,
+            fileName: post.fileName,
+            fileType: post.fileType,
+            linkPreview: post.linkPreview,
+        });
+        toast({ title: "Post Shared!", description: "You have shared this post to your feed." });
+    }
 
     const renderContentWithMentions = (content: string) => {
         const mentionRegex = /@\[(.+?)\]\((.+?)\)/g;
@@ -571,12 +538,44 @@ function PostCard({ post }: { post: PostType }) {
                             <MessageCircle className="h-4 w-4" />
                             <span>{post.comments?.length || 0}</span>
                         </Button>
-                        <SharePostDialog post={post}>
-                            <Button variant="ghost" size="sm" className="flex items-center gap-2">
-                                <Share2 className="h-4 w-4" />
-                                <span>Share</span>
-                            </Button>
-                        </SharePostDialog>
+                        <DropdownMenu>
+                            <DropdownMenuTrigger asChild>
+                                <Button variant="ghost" size="sm" className="flex items-center gap-2">
+                                    <Share2 className="h-4 w-4" />
+                                    <span>Share</span>
+                                </Button>
+                            </DropdownMenuTrigger>
+                            <DropdownMenuContent>
+                                <DropdownMenuItem onClick={handleCopyLink}>
+                                    <Link2 className="mr-2 h-4 w-4" /> Copy Link
+                                </DropdownMenuItem>
+                                <SharePostDialog post={post}>
+                                     <DropdownMenuItem onSelect={(e) => e.preventDefault()}>
+                                        <SendToBack className="mr-2 h-4 w-4" /> Share to a friend
+                                    </DropdownMenuItem>
+                                </SharePostDialog>
+                                <AlertDialog>
+                                    <AlertDialogTrigger asChild>
+                                        <DropdownMenuItem onSelect={(e) => e.preventDefault()}>
+                                            <Repeat className="mr-2 h-4 w-4" /> Share as new post
+                                        </DropdownMenuItem>
+                                    </AlertDialogTrigger>
+                                    <AlertDialogContent>
+                                        <AlertDialogHeader>
+                                            <AlertDialogTitle>Share this post to your feed?</AlertDialogTitle>
+                                            <AlertDialogDescription>
+                                                This will create a new post on your profile containing the content and media of the original post.
+                                            </AlertDialogDescription>
+                                        </AlertDialogHeader>
+                                        <AlertDialogFooter>
+                                            <AlertDialogCancel>Cancel</AlertDialogCancel>
+                                            <AlertDialogAction onClick={handleShareAsPost}>Yes, share</AlertDialogAction>
+                                        </AlertDialogFooter>
+                                    </AlertDialogContent>
+                                </AlertDialog>
+                            </DropdownMenuContent>
+                        </DropdownMenu>
+
                     </div>
                     {showComments && (
                         <div className="w-full pt-2">
@@ -1035,7 +1034,7 @@ function NotificationsContent() {
                         <ul className="divide-y">
                            {notifications.map(n => (
                                <li key={n.id} className={`transition-colors ${!n.isRead ? 'bg-primary/5' : 'bg-transparent'}`}>
-                                   <div className="container mx-auto p-4 flex items-center gap-4">
+                                   <div className="mx-auto p-4 flex items-center gap-4">
                                        <Link href={`/profile/${n.actorUid}`}>
                                             <Avatar className="h-10 w-10">
                                                 <AvatarImage src={n.actorPhotoURL} alt={n.actorName} />
@@ -1143,5 +1142,3 @@ export default function HomePage() {
         </div>
     );
 }
-
-    
