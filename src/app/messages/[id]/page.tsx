@@ -51,7 +51,7 @@ function MessageBubble({ message, isOwnMessage, participant }: { message: Messag
                     <a href={message.fileUrl!} target="_blank" rel="noopener noreferrer" className="flex items-center gap-2 bg-secondary/50 p-3 rounded-lg hover:bg-secondary transition-colors">
                         <FileIcon className="h-6 w-6 text-primary" />
                         <div>
-                            <p className="font-semibold text-sm">{message.fileName}</p>
+                            <p className="font-semibold text-sm break-all">{message.fileName}</p>
                             <p className="text-xs text-muted-foreground">Click to download</p>
                         </div>
                     </a>
@@ -59,8 +59,8 @@ function MessageBubble({ message, isOwnMessage, participant }: { message: Messag
             case 'text':
             default:
                  return (
-                    <div>
-                        <p className="whitespace-pre-wrap break-words">{message.content}</p>
+                    <div className="break-words">
+                        <p className="whitespace-pre-wrap">{message.content}</p>
                         {message.linkPreview && <LinkPreviewCard preview={message.linkPreview} />}
                     </div>
                 );
@@ -154,7 +154,7 @@ export default function ConversationPage() {
     
     if (loading || !conversation) {
         return (
-            <div className="container mx-auto py-8 h-screen flex items-center justify-center">
+            <div className="h-[calc(100vh-4rem-1px)] flex items-center justify-center">
                 <Loader2 className="animate-spin h-8 w-8" />
             </div>
         );
@@ -163,9 +163,9 @@ export default function ConversationPage() {
     const otherParticipant = getOtherParticipant();
 
     return (
-        <div className="container mx-auto py-4 h-[calc(100vh-4rem-1px)]">
-             <Card className="flex flex-col h-full">
-                <CardHeader className="flex-row items-center border-b">
+        <div className="h-[calc(100vh-4rem-1px)]">
+             <Card className="flex flex-col h-full border-0 sm:border rounded-none sm:rounded-lg">
+                <CardHeader className="flex-row items-center border-b p-4">
                     <Button variant="ghost" size="icon" className="mr-2" onClick={() => router.back()}>
                         <ArrowLeft className="h-5 w-5" />
                     </Button>
@@ -196,7 +196,7 @@ export default function ConversationPage() {
                     )}
                     <div ref={messagesEndRef} />
                 </CardContent>
-                <CardFooter className="border-t pt-4">
+                <CardFooter className="border-t p-4">
                     <div className="flex items-center gap-2 w-full">
                         <Input
                             placeholder="Type a message..."
@@ -224,3 +224,5 @@ export default function ConversationPage() {
         </div>
     );
 }
+
+    

@@ -1,5 +1,4 @@
 
-
 "use client";
 
 import { useParams } from "next/navigation";
@@ -11,11 +10,12 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
-import { Loader2, Lock, Users, Send, Paperclip, Image as ImageIcon, Download, File, Music, Video } from "lucide-react";
+import { Loader2, Lock, Users, Send, Paperclip, Image as ImageIcon, Download, File, Music, Video, Menu } from "lucide-react";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import Image from "next/image";
 import Link from "next/link";
 import { formatDistanceToNow } from "date-fns";
+import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from "@/components/ui/sheet";
 
 function LinkPreviewCard({ preview }: { preview: LinkPreview }) {
     if (!preview.title) return null;
@@ -57,7 +57,7 @@ function MessageBubble({ message, isOwnMessage }: { message: Message; isOwnMessa
                     <a href={message.fileUrl!} target="_blank" rel="noopener noreferrer" className="flex items-center gap-2 bg-secondary/50 p-3 rounded-lg hover:bg-secondary transition-colors">
                         <File className="h-6 w-6 text-primary" />
                         <div>
-                            <p className="font-semibold text-sm">{message.fileName}</p>
+                            <p className="font-semibold text-sm break-all">{message.fileName}</p>
                             <p className="text-xs text-muted-foreground">Click to download</p>
                         </div>
                     </a>
@@ -65,8 +65,8 @@ function MessageBubble({ message, isOwnMessage }: { message: Message; isOwnMessa
             case 'text':
             default:
                 return (
-                    <div>
-                        <p className="whitespace-pre-wrap break-words">{message.content}</p>
+                    <div className="break-words">
+                        <p className="whitespace-pre-wrap">{message.content}</p>
                         {message.linkPreview && <LinkPreviewCard preview={message.linkPreview} />}
                     </div>
                 );
@@ -96,7 +96,7 @@ function MessageBubble({ message, isOwnMessage }: { message: Message; isOwnMessa
     );
 }
 
-function ChatArea({ groupId, messages }: { groupId: string; messages: Message[] }) {
+function ChatArea({ groupId, messages, groupName }: { groupId: string; messages: Message[], groupName: string }) {
     const { user, sendMessage } = useAppContext();
     const { toast } = useToast();
     const [text, setText] = useState("");
@@ -126,19 +126,18 @@ function ChatArea({ groupId, messages }: { groupId: string; messages: Message[] 
 
         setIsSending(true);
         toast({ title: 'Uploading...', description: `Sending ${file.name}`});
-        const success = await sendMessage(groupId, { file, type: 'file' }); // Type is generic here, backend determines specific type
+        const success = await sendMessage(groupId, { file, type: 'file' });
         if (!success) {
             toast({ variant: 'destructive', title: `Failed to upload file` });
         }
         setIsSending(false);
-        // Reset file input
         if (e.target) e.target.value = '';
     };
 
     return (
-        <Card className="flex flex-col h-[70vh]">
-            <CardHeader>
-                <CardTitle>Group Chat</CardTitle>
+        <Card className="flex flex-col h-full border-0 sm:border rounded-none sm:rounded-lg">
+            <CardHeader className="flex flex-row items-center justify-between">
+                <CardTitle>{groupName}</CardTitle>
             </CardHeader>
             <CardContent className="flex-1 overflow-y-auto p-4 space-y-4">
                 {messages && messages.length > 0 ? (
@@ -152,7 +151,7 @@ function ChatArea({ groupId, messages }: { groupId: string; messages: Message[] 
                 )}
                  <div ref={messagesEndRef} />
             </CardContent>
-            <CardFooter className="border-t pt-4">
+            <CardFooter className="border-t p-4">
                 <div className="flex items-center gap-2 w-full">
                     <Input
                         placeholder="Type a message..."
@@ -177,6 +176,33 @@ function ChatArea({ groupId, messages }: { groupId: string; messages: Message[] 
                 </div>
             </CardFooter>
         </Card>
+    );
+}
+
+const getInitials = (name: string) => {
+    if (!name) return '??';
+    const names = name.split(' ');
+    if (names.length > 1) {
+        return (names[0][0] || '') + (names[names.length - 1][0] || '');
+    }
+    return name.substring(0, 2).toUpperCase();
+};
+
+function MembersList({ members }: { members: UserType[] }) {
+    return (
+        <ul className="space-y-4 max-h-[calc(100vh-8rem)] overflow-y-auto">
+            {members.map(member => (
+                <li key={member.uid}>
+                    <Link href={`/profile/${member.uid}`} className="flex items-center gap-3 p-2 rounded-md hover:bg-muted transition-colors">
+                        <Avatar className="h-8 w-8">
+                            {member.photoURL && <AvatarImage src={member.photoURL} alt={member.name} />}
+                            <AvatarFallback>{getInitials(member.name)}</AvatarFallback>
+                        </Avatar>
+                        <span>{member.name}</span>
+                    </Link>
+                </li>
+            ))}
+        </ul>
     );
 }
 
@@ -217,30 +243,21 @@ export default function GroupPage() {
         }
     };
     
-    const getInitials = (name: string) => {
-        if (!name) return '??';
-        const names = name.split(' ');
-        if (names.length > 1) {
-            return (names[0][0] || '') + (names[names.length - 1][0] || '');
-        }
-        return name.substring(0, 2).toUpperCase();
-    };
-    
     const membersDetails = group?.members?.map(memberId => allUsers.find(u => u.uid === memberId)).filter(Boolean) as UserType[] || [];
 
     if (loading || !group) {
-        return <div className="container mx-auto py-8"><Loader2 className="animate-spin" /> Loading group...</div>;
+        return <div className="container mx-auto py-8 flex items-center justify-center h-[calc(100vh-4rem)]"><Loader2 className="animate-spin h-8 w-8" /></div>;
     }
 
-    return (
-        <div className="container mx-auto py-8 max-w-6xl">
-            <Card className="mb-8">
-                <CardHeader>
-                    <CardTitle className="text-3xl font-headline flex items-center gap-3">{group.name} {group.hasPin && <Lock className="h-6 w-6 text-muted-foreground" />}</CardTitle>
-                    <CardDescription>{group.description}</CardDescription>
-                    <p className="text-sm text-muted-foreground pt-2">Created by {group.creatorName}</p>
-                </CardHeader>
-                {!isMember && (
+    if (!isMember) {
+        return (
+            <div className="container mx-auto py-8">
+                <Card className="max-w-2xl mx-auto">
+                    <CardHeader>
+                        <CardTitle className="text-3xl font-headline flex items-center gap-3">{group.name} {group.hasPin && <Lock className="h-6 w-6 text-muted-foreground" />}</CardTitle>
+                        <CardDescription>{group.description}</CardDescription>
+                        <p className="text-sm text-muted-foreground pt-2">Created by {group.creatorName}</p>
+                    </CardHeader>
                     <CardContent>
                         <div className="p-6 border-2 border-dashed rounded-lg flex flex-col items-center gap-4 text-center">
                             <h3 className="text-xl font-semibold">You are not a member of this group.</h3>
@@ -270,38 +287,48 @@ export default function GroupPage() {
                             )}
                         </div>
                     </CardContent>
-                )}
-            </Card>
+                </Card>
+            </div>
+        );
+    }
 
-            {isMember && (
-                 <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-                    <div className="lg:col-span-2">
-                         <ChatArea groupId={group.id} messages={group.messages || []}/>
-                    </div>
-                    <div>
-                        <Card>
-                            <CardHeader>
-                                <CardTitle className="flex items-center gap-2"><Users className="h-5 w-5"/> Members ({membersDetails.length})</CardTitle>
-                            </CardHeader>
-                            <CardContent>
-                                <ul className="space-y-4 max-h-[60vh] overflow-y-auto">
-                                    {membersDetails.map(member => (
-                                        <li key={member.uid}>
-                                            <Link href={`/profile/${member.uid}`} className="flex items-center gap-3 p-2 rounded-md hover:bg-muted transition-colors">
-                                                <Avatar className="h-8 w-8">
-                                                    {member.photoURL && <AvatarImage src={member.photoURL} alt={member.name} />}
-                                                    <AvatarFallback>{getInitials(member.name)}</AvatarFallback>
-                                                </Avatar>
-                                                <span>{member.name}</span>
-                                            </Link>
-                                        </li>
-                                    ))}
-                                </ul>
-                            </CardContent>
-                        </Card>
-                    </div>
-                </div>
-            )}
+    return (
+        <div className="h-[calc(100vh-4rem-1px)] flex">
+            <div className="flex-1 h-full">
+                 <ChatArea groupId={group.id} messages={group.messages || []} groupName={group.name}/>
+            </div>
+            <div className="hidden lg:block w-72 border-l h-full">
+                <Card className="h-full border-0 rounded-none">
+                    <CardHeader>
+                        <CardTitle className="flex items-center gap-2"><Users className="h-5 w-5"/> Members ({membersDetails.length})</CardTitle>
+                    </CardHeader>
+                    <CardContent>
+                        <MembersList members={membersDetails} />
+                    </CardContent>
+                </Card>
+            </div>
+             <div className="lg:hidden absolute top-4 right-4">
+                 <Sheet>
+                    <SheetTrigger asChild>
+                        <Button size="icon" variant="outline">
+                            <Users className="h-5 w-5"/>
+                        </Button>
+                    </SheetTrigger>
+                    <SheetContent>
+                        <SheetHeader>
+                            <SheetTitle className="flex items-center gap-2">
+                                <Users className="h-5 w-5"/> Members ({membersDetails.length})
+                            </SheetTitle>
+                        </SheetHeader>
+                        <div className="py-4">
+                           <MembersList members={membersDetails} />
+                        </div>
+                    </SheetContent>
+                </Sheet>
+            </div>
         </div>
     );
 }
+
+
+    
