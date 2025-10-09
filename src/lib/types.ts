@@ -65,6 +65,13 @@ export type Comment = {
     postId: string; // ID of the post it belongs to
 };
 
+export type LinkPreview = {
+    url: string;
+    title: string;
+    description: string;
+    imageUrl: string;
+};
+
 export type Post = {
     id: string;
     creatorUid: string;
@@ -75,6 +82,10 @@ export type Post = {
     likes: string[]; // Array of user UIDs
     comments?: Comment[];
     itemType?: 'post';
+    fileUrl?: string;
+    fileName?: string;
+    fileType?: 'image' | 'file';
+    linkPreview?: LinkPreview;
 };
 
 // Represents a message within a group chat

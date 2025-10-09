@@ -1,43 +1,171 @@
 
 "use client";
 
-import { useState } from "react";
+import { useState, useRef, useEffect } from "react";
 import { useAppContext } from "@/contexts/app-context";
 import { Textarea } from "@/components/ui/textarea";
 import { Button } from "@/components/ui/button";
-import { Loader2 } from "lucide-react";
+import { Loader2, Paperclip, X, Image as ImageIcon, File as FileIcon } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { Avatar, AvatarFallback, AvatarImage } from "./ui/avatar";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogFooter } from "@/components/ui/dialog";
+import { generateLinkPreview } from "@/services/link-preview";
+import { LinkPreview as LinkPreviewType } from "@/lib/types";
+import Image from "next/image";
+
+// A simple debounce hook
+function useDebounce(value: string, delay: number) {
+    const [debouncedValue, setDebouncedValue] = useState(value);
+
+    useEffect(() => {
+        const handler = setTimeout(() => {
+            setDebouncedValue(value);
+        }, delay);
+
+        return () => {
+            clearTimeout(handler);
+        };
+    }, [value, delay]);
+
+    return debouncedValue;
+}
+
+function LinkPreviewCard({ preview, onRemove }: { preview: LinkPreviewType, onRemove: () => void }) {
+    if (!preview.title) return null;
+    return (
+        <div className="relative mt-2 border rounded-lg overflow-hidden">
+             <Button
+                variant="ghost"
+                size="icon"
+                className="absolute top-1 right-1 h-6 w-6 bg-black/50 hover:bg-black/70 text-white hover:text-white rounded-full z-10"
+                onClick={onRemove}
+            >
+                <X className="h-4 w-4" />
+            </Button>
+            {preview.imageUrl && (
+                <div className="relative aspect-video">
+                     <Image src={preview.imageUrl} alt={preview.title} fill className="object-cover" />
+                </div>
+            )}
+            <div className="p-3 bg-muted/50">
+                <a href={preview.url} target="_blank" rel="noopener noreferrer" className="hover:underline">
+                    <p className="font-semibold text-sm truncate">{preview.title}</p>
+                </a>
+                <p className="text-xs text-muted-foreground line-clamp-2">{preview.description}</p>
+            </div>
+        </div>
+    )
+}
+
+function FilePreview({ file, onRemove }: { file: File, onRemove: () => void }) {
+     const isImage = file.type.startsWith('image/');
+     const objectUrl = URL.createObjectURL(file);
+
+     return (
+        <div className="relative mt-2 border rounded-lg overflow-hidden max-w-sm">
+             <Button
+                variant="ghost"
+                size="icon"
+                className="absolute top-1 right-1 h-6 w-6 bg-black/50 hover:bg-black/70 text-white hover:text-white rounded-full z-10"
+                onClick={onRemove}
+            >
+                <X className="h-4 w-4" />
+            </Button>
+            {isImage ? (
+                <div className="relative aspect-video">
+                    <Image src={objectUrl} alt={file.name} fill className="object-cover" />
+                </div>
+            ) : (
+                <div className="p-3 bg-muted/50 flex items-center gap-3">
+                    <FileIcon className="h-8 w-8 text-muted-foreground" />
+                    <div>
+                        <p className="font-semibold text-sm truncate">{file.name}</p>
+                        <p className="text-xs text-muted-foreground">{(file.size / 1024).toFixed(2)} KB</p>
+                    </div>
+                </div>
+            )}
+        </div>
+     )
+}
+
 
 export function CreatePostForm() {
     const { user, addPost } = useAppContext();
     const [content, setContent] = useState("");
+    const [file, setFile] = useState<File | null>(null);
+    const [linkPreview, setLinkPreview] = useState<LinkPreviewType | null>(null);
+    const [isFetchingPreview, setIsFetchingPreview] = useState(false);
     const [isPosting, setIsPosting] = useState(false);
     const [isDialogOpen, setIsDialogOpen] = useState(false);
+    const fileInputRef = useRef<HTMLInputElement>(null);
     const { toast } = useToast();
+
+    const debouncedContent = useDebounce(content, 500);
+
+    const urlRegex = /(https?:\/\/[^\s]+)/;
+
+    useEffect(() => {
+        const fetchPreview = async () => {
+            const match = debouncedContent.match(urlRegex);
+            if (match && !linkPreview && !file) {
+                const url = match[0];
+                setIsFetchingPreview(true);
+                try {
+                    const preview = await generateLinkPreview({ url });
+                    if (preview.title) {
+                        setLinkPreview(preview);
+                    }
+                } catch (error) {
+                    console.error("Failed to generate link preview", error);
+                } finally {
+                    setIsFetchingPreview(false);
+                }
+            }
+        };
+
+        fetchPreview();
+    }, [debouncedContent, linkPreview, file]);
 
     if (!user) {
         return null;
     }
 
+    const resetForm = () => {
+        setContent("");
+        setFile(null);
+        setLinkPreview(null);
+        setIsPosting(false);
+        setIsDialogOpen(false);
+    };
+
+    const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+        const selectedFile = e.target.files?.[0];
+        if (selectedFile) {
+            setFile(selectedFile);
+            setLinkPreview(null); // Remove link preview if a file is attached
+        }
+    };
+    
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
-        if (!content.trim()) return;
+        if (!content.trim() && !file) return;
 
         setIsPosting(true);
-        const success = await addPost(content);
+        const success = await addPost({
+            content,
+            file,
+            linkPreview: linkPreview
+        });
         setIsPosting(false);
 
         if (success) {
-            setContent("");
-            setIsDialogOpen(false); // Close dialog on success
+            resetForm();
             toast({ title: "Post created!" });
         } else {
             toast({ variant: "destructive", title: "Failed to create post." });
         }
     };
-
+    
     return (
         <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
             <div className="bg-card border-b p-4">
@@ -51,6 +179,15 @@ export function CreatePostForm() {
                             {`What's on your mind, ${user.name}?`}
                         </div>
                     </DialogTrigger>
+                    <div className="flex items-center gap-2">
+                         <Button variant="ghost" size="icon" className="rounded-full" onClick={() => setIsDialogOpen(true)}>
+                            <ImageIcon className="text-green-500"/>
+                        </Button>
+                         <Button variant="ghost" size="icon" className="rounded-full" onClick={() => setIsDialogOpen(true)}>
+                            <Paperclip className="text-blue-500" />
+                        </Button>
+                         <Button onClick={() => setIsDialogOpen(true)} className="rounded-full">Post</Button>
+                    </div>
                  </div>
             </div>
             <DialogContent className="sm:max-w-md">
@@ -66,9 +203,23 @@ export function CreatePostForm() {
                             rows={5}
                             autoFocus
                         />
+                         {file && <FilePreview file={file} onRemove={() => setFile(null)} />}
+                         {isFetchingPreview && !linkPreview && <div className="text-sm text-muted-foreground">Fetching link preview...</div>}
+                         {linkPreview && <LinkPreviewCard preview={linkPreview} onRemove={() => setLinkPreview(null)} />}
                     </div>
-                     <DialogFooter>
-                        <Button type="submit" disabled={isPosting || !content.trim()} className="w-full">
+                     <DialogFooter className="flex-col sm:flex-row sm:justify-between items-center border-t pt-2">
+                        <div className="flex items-center gap-2">
+                           <input
+                                type="file"
+                                ref={fileInputRef}
+                                onChange={handleFileChange}
+                                className="hidden"
+                            />
+                            <Button type="button" variant="ghost" size="icon" onClick={() => fileInputRef.current?.click()} title="Attach file">
+                                <Paperclip className="h-5 w-5" />
+                            </Button>
+                        </div>
+                        <Button type="submit" disabled={isPosting || (!content.trim() && !file)} className="w-full sm:w-auto">
                             {isPosting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
                             Post
                         </Button>

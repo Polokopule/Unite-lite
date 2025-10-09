@@ -3,9 +3,9 @@
 "use client";
 
 import { useAppContext } from "@/contexts/app-context";
-import { Ad, Post as PostType, FeedItem, Comment as CommentType, Course, Group, User as UserType, Notification } from "@/lib/types";
+import { Ad, Post as PostType, FeedItem, Comment as CommentType, Course, Group, User as UserType, Notification, LinkPreview } from "@/lib/types";
 import { Button } from "@/components/ui/button";
-import { Loader2, MessageCircle, Heart, Send, ShoppingBag, Wallet, CheckCircle, PlusCircle, Home as HomeIcon, Bell, Users, Lock, User as UserIconLucide, Reply } from "lucide-react";
+import { Loader2, MessageCircle, Heart, Send, ShoppingBag, Wallet, CheckCircle, PlusCircle, Home as HomeIcon, Bell, Users, Lock, User as UserIconLucide, Reply, File as FileIcon } from "lucide-react";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { formatDistanceToNow } from "date-fns";
 import { Input } from "@/components/ui/input";
@@ -134,6 +134,45 @@ function CommentList({ comments, postId }: { comments: CommentType[]; postId: st
     );
 }
 
+function LinkPreviewCard({ preview }: { preview: LinkPreview }) {
+    if (!preview.title) return null;
+    return (
+        <a href={preview.url} target="_blank" rel="noopener noreferrer" className="mt-2 border rounded-lg overflow-hidden block hover:bg-muted/50 transition-colors">
+            {preview.imageUrl && (
+                <div className="relative aspect-video">
+                     <Image src={preview.imageUrl} alt={preview.title} fill className="object-cover" />
+                </div>
+            )}
+            <div className="p-3">
+                <p className="font-semibold text-sm truncate">{preview.title}</p>
+                <p className="text-xs text-muted-foreground line-clamp-2">{preview.description}</p>
+            </div>
+        </a>
+    )
+}
+
+function PostAttachment({ post }: { post: PostType }) {
+    if (!post.fileUrl || !post.fileType) return null;
+
+    if (post.fileType === 'image') {
+        return (
+            <div className="relative aspect-video mt-2 rounded-lg overflow-hidden border">
+                <Image src={post.fileUrl} alt={post.fileName || "Uploaded image"} fill className="object-cover" />
+            </div>
+        )
+    }
+    
+    return (
+        <a href={post.fileUrl} target="_blank" rel="noopener noreferrer" className="mt-2 flex items-center gap-3 bg-muted p-3 rounded-lg border hover:bg-muted/50 transition-colors">
+            <FileIcon className="h-8 w-8 text-muted-foreground" />
+            <div>
+                <p className="font-semibold">{post.fileName || "Attached File"}</p>
+                <p className="text-sm text-muted-foreground">Click to download</p>
+            </div>
+        </a>
+    )
+}
+
 // --- Post Card ---
 function PostCard({ post }: { post: PostType }) {
     const { user, likePost, loading } = useAppContext();
@@ -171,7 +210,12 @@ function PostCard({ post }: { post: PostType }) {
                         </p>
                     </div>
                 </div>
-                <p className="whitespace-pre-wrap mb-4">{post.content}</p>
+                {post.content && <p className="whitespace-pre-wrap mb-2">{post.content}</p>}
+                
+                {post.linkPreview && <LinkPreviewCard preview={post.linkPreview} />}
+                
+                <PostAttachment post={post} />
+
                 <div className="pb-3 pt-3 flex-col items-start">
                     <div className="flex items-center gap-4 text-muted-foreground">
                         <Button variant="ghost" size="sm" onClick={handleLike} disabled={!user} className="flex items-center gap-2">

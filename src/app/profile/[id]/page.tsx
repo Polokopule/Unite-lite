@@ -8,13 +8,14 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from "@/components/ui/card";
 import { useEffect, useState, useMemo } from "react";
-import { User as UserType, Post as PostType, Comment as CommentType } from "@/lib/types";
-import { Loader2, UserPlus, UserMinus, MessageCircle, Heart, Send } from "lucide-react";
+import { User as UserType, Post as PostType, Comment as CommentType, LinkPreview } from "@/lib/types";
+import { Loader2, UserPlus, UserMinus, MessageCircle, Heart, Send, File as FileIcon } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import Link from "next/link";
 import { formatDistanceToNow } from "date-fns";
 import { Input } from "@/components/ui/input";
 import { CreatePostForm } from "@/components/create-post-form";
+import Image from "next/image";
 
 // --- Comment Form ---
 function CommentForm({ postId, parentId = null, onCommentPosted }: { postId: string; parentId?: string | null, onCommentPosted?: () => void }) {
@@ -130,6 +131,46 @@ function CommentList({ comments, postId }: { comments: CommentType[]; postId: st
     );
 }
 
+function LinkPreviewCard({ preview }: { preview: LinkPreview }) {
+    if (!preview.title) return null;
+    return (
+        <a href={preview.url} target="_blank" rel="noopener noreferrer" className="mt-2 border rounded-lg overflow-hidden block hover:bg-muted/50 transition-colors">
+            {preview.imageUrl && (
+                <div className="relative aspect-video">
+                     <Image src={preview.imageUrl} alt={preview.title} fill className="object-cover" />
+                </div>
+            )}
+            <div className="p-3">
+                <p className="font-semibold text-sm truncate">{preview.title}</p>
+                <p className="text-xs text-muted-foreground line-clamp-2">{preview.description}</p>
+            </div>
+        </a>
+    )
+}
+
+function PostAttachment({ post }: { post: PostType }) {
+    if (!post.fileUrl || !post.fileType) return null;
+
+    if (post.fileType === 'image') {
+        return (
+            <div className="relative aspect-video mt-2 rounded-lg overflow-hidden border">
+                <Image src={post.fileUrl} alt={post.fileName || "Uploaded image"} fill className="object-cover" />
+            </div>
+        )
+    }
+    
+    return (
+        <a href={post.fileUrl} target="_blank" rel="noopener noreferrer" className="mt-2 flex items-center gap-3 bg-muted p-3 rounded-lg border hover:bg-muted/50 transition-colors">
+            <FileIcon className="h-8 w-8 text-muted-foreground" />
+            <div>
+                <p className="font-semibold">{post.fileName || "Attached File"}</p>
+                <p className="text-sm text-muted-foreground">Click to download</p>
+            </div>
+        </a>
+    )
+}
+
+
 // --- Post Card ---
 function PostCard({ post }: { post: PostType }) {
     const { user, likePost } = useAppContext();
@@ -165,7 +206,11 @@ function PostCard({ post }: { post: PostType }) {
                 </div>
             </CardHeader>
             <CardContent>
-                <p className="whitespace-pre-wrap">{post.content}</p>
+                {post.content && <p className="whitespace-pre-wrap mb-2">{post.content}</p>}
+                
+                {post.linkPreview && <LinkPreviewCard preview={post.linkPreview} />}
+                
+                <PostAttachment post={post} />
             </CardContent>
             <CardFooter className="pb-3 pt-3 flex-col items-start">
                  <div className="flex items-center gap-4 text-muted-foreground">

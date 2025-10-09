@@ -3,7 +3,7 @@
 "use client";
 
 import { PlaceHolderImages } from "@/lib/placeholder-images";
-import type { Course, Ad, User, PurchasedCourse, Post, Group, Comment, Message, Notification } from "@/lib/types";
+import type { Course, Ad, User, PurchasedCourse, Post, Group, Comment, Message, Notification, LinkPreview } from "@/lib/types";
 import { useRouter } from "next/navigation";
 import React, { createContext, useContext, useEffect, useState } from "react";
 import { db, auth, storage } from "@/lib/firebase";
@@ -34,7 +34,7 @@ interface AppContextType {
   deleteAd: (adId: string) => Promise<boolean>;
   followUser: (targetUserId: string) => Promise<void>;
   unfollowUser: (targetUserId: string) => Promise<void>;
-  addPost: (content: string) => Promise<boolean>;
+  addPost: (postData: { content: string; file: File | null; linkPreview: LinkPreview | null }) => Promise<boolean>;
   likePost: (postId: string) => Promise<void>;
   addComment: (postId: string, content: string, parentId?: string | null) => Promise<boolean>;
   likeComment: (postId: string, commentId: string) => Promise<void>;
@@ -429,22 +429,41 @@ export function AppContextProvider({ children }: { children: React.ReactNode }) 
     }
   };
 
-  const addPost = async (content: string): Promise<boolean> => {
-      if (!user || !content.trim()) return false;
+  const addPost = async (postData: { content: string; file: File | null; linkPreview: LinkPreview | null }): Promise<boolean> => {
+      if (!user) return false;
+      const { content, file, linkPreview } = postData;
+      if (!content.trim() && !file) return false;
       
       try {
         const postsRef = ref(db, 'posts');
         const newPostRef = push(postsRef);
-        const newPost: Omit<Post, 'id' | 'likes' | 'comments'> = {
+        
+        let newPost: Omit<Post, 'id' | 'likes' | 'comments'> = {
             creatorUid: user.uid,
             creatorName: user.name,
             creatorPhotoURL: user.photoURL || '',
             content: content,
             timestamp: serverTimestamp() as any, // This will be converted by firebase
+            linkPreview: linkPreview || undefined,
         };
+
+        if (file) {
+            const fileStorageRef = storageRef(storage, `post-files/${newPostRef.key}/${file.name}`);
+            const snapshot = await uploadBytes(fileStorageRef, file);
+            const downloadURL = await getDownloadURL(snapshot.ref);
+
+            newPost = {
+                ...newPost,
+                fileUrl: downloadURL,
+                fileName: file.name,
+                fileType: file.type.startsWith('image/') ? 'image' : 'file',
+            }
+        }
+
         await set(newPostRef, newPost);
         return true;
       } catch (e) {
+        console.error("Error adding post:", e);
         return false;
       }
   };
