@@ -1,5 +1,4 @@
 
-
 "use client";
 
 import { useAppContext } from "@/contexts/app-context";
@@ -969,9 +968,9 @@ function NotificationsContent() {
     return (
         <div className="container mx-auto py-8">
             <h2 className="text-3xl font-bold font-headline mb-4">Notifications</h2>
-             <Card>
-                <CardContent className="pt-6">
-                    {loading && <p>Loading notifications...</p>}
+             <div className="bg-card border rounded-lg">
+                <div className="p-0">
+                    {loading && <p className="p-6">Loading notifications...</p>}
                     {!loading && notifications.length === 0 ? (
                         <div className="text-center text-muted-foreground py-12">
                             <Bell className="mx-auto h-12 w-12 mb-4" />
@@ -979,9 +978,9 @@ function NotificationsContent() {
                             <p>Check back later to see updates.</p>
                         </div>
                     ) : (
-                        <ul className="space-y-2">
+                        <ul className="divide-y">
                            {notifications.map(n => (
-                               <li key={n.id} className={`p-4 rounded-lg flex items-center gap-4 transition-colors ${!n.isRead ? 'bg-primary/10' : 'bg-transparent'}`}>
+                               <li key={n.id} className={`p-4 flex items-center gap-4 transition-colors ${!n.isRead ? 'bg-primary/5' : 'bg-transparent'}`}>
                                    <Link href={`/profile/${n.actorUid}`}>
                                         <Avatar className="h-10 w-10">
                                             <AvatarImage src={n.actorPhotoURL} alt={n.actorName} />
@@ -1003,8 +1002,8 @@ function NotificationsContent() {
                            ))}
                         </ul>
                     )}
-                </CardContent>
-            </Card>
+                </div>
+            </div>
         </div>
     )
 }
@@ -1088,3 +1087,5 @@ export default function HomePage() {
         </div>
     );
 }
+
+    
