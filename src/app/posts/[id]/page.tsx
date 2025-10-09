@@ -1,4 +1,5 @@
 
+
 import { get, ref } from "firebase/database";
 import { db } from "@/lib/firebase";
 import type { Post } from "@/lib/types";
@@ -36,6 +37,17 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
 
   const excerpt = post.content ? post.content.substring(0, 150) + '...' : "Check out this post on Unite.";
   const postUrl = `https://unite-app.dev/posts/${post.id}`;
+  
+  let imageUrls = [];
+  if (post.fileUrl) {
+      if (post.fileType === 'image') {
+          imageUrls.push(post.fileUrl);
+      } else if (post.fileType === 'video') {
+          // Use a generic video placeholder image as a thumbnail for videos
+          imageUrls.push('https://raw.githubusercontent.com/Polokopule/UM/main/video_placeholder.png');
+      }
+  }
+
 
   return {
     title: `${post.creatorName}: "${excerpt}" | Unite`,
@@ -44,21 +56,19 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
       title: `${post.creatorName} on Unite`,
       description: excerpt,
       url: postUrl,
-      images: post.fileUrl && post.fileType === 'image' ? [
-        {
-          url: post.fileUrl,
+      images: imageUrls.length > 0 ? imageUrls.map(url => ({
+          url,
           width: 1200,
           height: 630,
-          alt: post.content || 'Post image',
-        },
-      ] : [],
+          alt: post.content || 'Post media',
+      })) : [],
       type: 'article',
     },
     twitter: {
       card: 'summary_large_image',
       title: `${post.creatorName} on Unite`,
       description: excerpt,
-      images: post.fileUrl && post.fileType === 'image' ? [post.fileUrl] : [],
+      images: imageUrls,
     },
   }
 }
@@ -66,3 +76,4 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
 export default function SinglePostPage({ params }: Props) {
     return <PostViewer postId={params.id} />;
 }
+
