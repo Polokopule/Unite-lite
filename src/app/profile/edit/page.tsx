@@ -11,7 +11,6 @@ import { useRouter } from "next/navigation";
 import { useEffect, useState, useRef } from "react";
 import { Loader2, Save, User as UserIcon, Upload } from "lucide-react";
 import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
-import Image from "next/image";
 
 export default function EditProfilePage() {
     const { user, updateUserProfile, loading } = useAppContext();
@@ -129,3 +128,5 @@ export default function EditProfilePage() {
         </div>
     );
 }
+
+    

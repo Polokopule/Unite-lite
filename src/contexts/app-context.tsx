@@ -281,7 +281,9 @@ export function AppContextProvider({ children }: { children: React.ReactNode }) 
             }
 
             // Update Firebase Auth profile
-            await updateFirebaseProfile(firebaseUser, updates);
+            if (Object.keys(updates).length > 0) {
+              await updateFirebaseProfile(firebaseUser, updates);
+            }
 
             // Update RTDB profile
             const userDbRef = ref(db, `users/${firebaseUser.uid}`);
@@ -1027,3 +1029,5 @@ export function useAppContext() {
   }
   return context;
 }
+
+    

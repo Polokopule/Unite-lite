@@ -14,7 +14,6 @@ import { useToast } from "@/hooks/use-toast";
 import Link from "next/link";
 import { formatDistanceToNow } from "date-fns";
 import { Input } from "@/components/ui/input";
-import { CreatePostForm } from "@/components/create-post-form";
 import Image from "next/image";
 
 // --- Comment Form ---
@@ -225,16 +224,18 @@ function PostCard({ post }: { post: PostType }) {
                 <PostAttachment post={post} />
             </CardContent>
             <CardFooter className="pb-3 pt-3 flex-col items-start">
-                 <div className="flex items-center gap-4 text-muted-foreground">
-                     <Button variant="ghost" size="sm" onClick={handleLike} className="flex items-center gap-2">
-                        <Heart className={`h-4 w-4 ${isLiked ? 'fill-red-500 text-red-500' : ''}`} />
-                        <span>{post.likes?.length || 0}</span>
-                    </Button>
-                     <Button variant="ghost" size="sm" className="flex items-center gap-2" onClick={() => setShowComments(!showComments)}>
-                        <MessageCircle className="h-4 w-4" />
-                        <span>{post.comments?.length || 0}</span>
-                    </Button>
-                </div>
+                 <div className="pt-4 mt-4 border-t w-full">
+                    <div className="flex items-center gap-4 text-muted-foreground">
+                        <Button variant="ghost" size="sm" onClick={handleLike} className="flex items-center gap-2">
+                            <Heart className={`h-4 w-4 ${isLiked ? 'fill-red-500 text-red-500' : ''}`} />
+                            <span>{post.likes?.length || 0}</span>
+                        </Button>
+                        <Button variant="ghost" size="sm" className="flex items-center gap-2" onClick={() => setShowComments(!showComments)}>
+                            <MessageCircle className="h-4 w-4" />
+                            <span>{post.comments?.length || 0}</span>
+                        </Button>
+                    </div>
+                 </div>
                 {showComments && (
                     <div className="w-full pt-2">
                         <CommentList comments={post.comments || []} postId={post.id} />
@@ -351,7 +352,7 @@ export default function ProfilePage() {
                 
                 {userPosts.length > 0 ? (
                     <div className="space-y-6">
-                        {userPosts.map((post) => <PostCard key={post.id} post={post} />)}
+                        {userPosts.sort((a,b) => b.timestamp - a.timestamp).map((post) => <PostCard key={post.id} post={post} />)}
                     </div>
                 ) : (
                     <div className="text-center text-muted-foreground py-12 border-2 border-dashed rounded-lg">
@@ -362,3 +363,5 @@ export default function ProfilePage() {
         </div>
     );
 }
+
+    
