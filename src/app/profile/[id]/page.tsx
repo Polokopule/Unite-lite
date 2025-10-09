@@ -9,7 +9,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from "@/components/ui/card";
 import { useEffect, useState, useMemo } from "react";
 import { User as UserType, Post as PostType, Comment as CommentType, LinkPreview } from "@/lib/types";
-import { Loader2, UserPlus, UserMinus, MessageCircle, Heart, Send, File as FileIcon, Share2, Link2, SendToBack } from "lucide-react";
+import { Loader2, UserPlus, UserMinus, MessageCircle, Heart, Send, File as FileIcon, Share2, Link2, SendToBack, Repeat } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import Link from "next/link";
 import { formatDistanceToNow } from "date-fns";
@@ -210,6 +210,12 @@ function PostCard({ post }: { post: PostType }) {
     return (
         <Card className="w-full">
             <CardHeader>
+                {post.repostedFrom && (
+                    <div className="text-sm text-muted-foreground flex items-center gap-2 mb-2">
+                        <Repeat className="h-4 w-4" />
+                        Reposted from <Link href={`/profile/${post.repostedFrom.creatorUid}`} className="font-semibold hover:underline">{post.repostedFrom.creatorName}</Link>
+                    </div>
+                )}
                 <div className="flex items-center gap-4">
                      <Link href={`/profile/${post.creatorUid}`}>
                         <Avatar className="h-10 w-10">

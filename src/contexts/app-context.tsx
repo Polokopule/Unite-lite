@@ -37,7 +37,7 @@ interface AppContextType {
   deleteAd: (adId: string) => Promise<boolean>;
   followUser: (targetUserId: string) => Promise<void>;
   unfollowUser: (targetUserId: string) => Promise<void>;
-  addPost: (postData: { content: string; file: File | null; linkPreview: LinkPreview | null }) => Promise<boolean>;
+  addPost: (postData: { content: string; file: File | null; linkPreview: LinkPreview | null, repostedFrom?: { creatorUid: string, creatorName: string } | null }) => Promise<boolean>;
   updatePost: (postId: string, postData: { content: string }) => Promise<boolean>;
   deletePost: (postId: string) => Promise<boolean>;
   likePost: (postId: string) => Promise<void>;
@@ -535,9 +535,9 @@ export function AppContextProvider({ children }: { children: React.ReactNode }) 
         }
     };
 
-  const addPost = async (postData: { content: string; file: File | null; linkPreview: LinkPreview | null }): Promise<boolean> => {
+  const addPost = async (postData: { content: string; file: File | null; linkPreview: LinkPreview | null, repostedFrom?: { creatorUid: string, creatorName: string } | null }): Promise<boolean> => {
       if (!user) return false;
-      const { content, file, linkPreview } = postData;
+      const { content, file, linkPreview, repostedFrom } = postData;
       if (!content.trim() && !file) return false;
       
       try {
@@ -552,6 +552,7 @@ export function AppContextProvider({ children }: { children: React.ReactNode }) 
             creatorPhotoURL: user.photoURL || '',
             content: content,
             timestamp: serverTimestamp() as any, // This will be converted by firebase
+            repostedFrom: repostedFrom || null,
         };
 
         if (linkPreview) {
@@ -570,6 +571,20 @@ export function AppContextProvider({ children }: { children: React.ReactNode }) 
 
         await set(newPostRef, newPost);
         await handleMentions(content, postId);
+        
+        if (repostedFrom && repostedFrom.creatorUid !== user.uid) {
+            await createNotification({
+                recipientUid: repostedFrom.creatorUid,
+                actorUid: user.uid,
+                actorName: user.name,
+                actorPhotoURL: user.photoURL,
+                type: 'repost',
+                targetUrl: `/posts/${postId}`,
+                targetId: postId,
+                message: "reposted your post.",
+            });
+        }
+        
         return true;
       } catch (e) {
         console.error("Error adding post:", e);
@@ -628,7 +643,7 @@ export function AppContextProvider({ children }: { children: React.ReactNode }) 
                     actorName: user.name,
                     actorPhotoURL: user.photoURL,
                     type: 'post_like',
-                    targetUrl: `/profile/${post.creatorUid}`, // Or a dedicated post page later
+                    targetUrl: `/posts/${post.id}`,
                     targetId: postId,
                 });
             }
@@ -674,7 +689,7 @@ export function AppContextProvider({ children }: { children: React.ReactNode }) 
                     actorName: user.name,
                     actorPhotoURL: user.photoURL,
                     type: parentId ? 'new_reply' : 'new_comment',
-                    targetUrl: `/profile/${post.creatorUid}`, // Or a dedicated post page later
+                    targetUrl: `/posts/${postId}#comment-${commentId}`,
                     targetId: postId,
                 });
             }
@@ -688,7 +703,7 @@ export function AppContextProvider({ children }: { children: React.ReactNode }) 
                         actorName: user.name,
                         actorPhotoURL: user.photoURL,
                         type: 'new_reply',
-                        targetUrl: `/profile/${post.creatorUid}`, // Or a dedicated post page later
+                        targetUrl: `/posts/${postId}#comment-${commentId}`,
                         targetId: postId,
                     });
                 }
@@ -718,7 +733,7 @@ export function AppContextProvider({ children }: { children: React.ReactNode }) 
                         actorName: user.name,
                         actorPhotoURL: user.photoURL,
                         type: 'comment_like',
-                        targetUrl: `/profile/${post.creatorUid}`, // Or a dedicated post page later
+                        targetUrl: `/posts/${postId}#comment-${commentId}`,
                         targetId: postId,
                     });
                 }

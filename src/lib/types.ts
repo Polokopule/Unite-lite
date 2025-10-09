@@ -46,7 +46,7 @@ export type Notification = {
     actorUid: string;
     actorName: string;
     actorPhotoURL?: string;
-    type: 'new_follower' | 'new_comment' | 'new_reply' | 'post_like' | 'comment_like' | 'new_group_message' | 'new_direct_message' | 'mention';
+    type: 'new_follower' | 'new_comment' | 'new_reply' | 'post_like' | 'comment_like' | 'new_group_message' | 'new_direct_message' | 'mention' | 'repost';
     targetUrl: string; // e.g., /posts/post-123#comment-456
     targetId: string; // e.g., post-123
     isRead: boolean;
@@ -88,6 +88,10 @@ export type Post = {
     fileName?: string;
     fileType?: 'image' | 'audio' | 'video' | 'file';
     linkPreview?: LinkPreview | null;
+    repostedFrom?: {
+        creatorName: string;
+        creatorUid: string;
+    } | null;
 };
 
 // Represents a message within a group chat

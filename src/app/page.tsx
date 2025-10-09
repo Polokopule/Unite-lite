@@ -5,7 +5,7 @@
 import { useAppContext } from "@/contexts/app-context";
 import { Ad, Post as PostType, FeedItem, Comment as CommentType, Course, Group, User as UserType, Notification, LinkPreview, Conversation } from "@/lib/types";
 import { Button } from "@/components/ui/button";
-import { Loader2, MessageCircle, Heart, Send, ShoppingBag, Wallet, CheckCircle, PlusCircle, Home as HomeIcon, Bell, Users, Lock, User as UserIconLucide, Reply, File as FileIcon, Search, MessageSquare, Share2, Link2, SendToBack, Trash, Pencil } from "lucide-react";
+import { Loader2, MessageCircle, Heart, Send, ShoppingBag, Wallet, CheckCircle, PlusCircle, Home as HomeIcon, Bell, Users, Lock, User as UserIconLucide, Reply, File as FileIcon, Search, MessageSquare, Share2, Link2, SendToBack, Trash, Pencil, Repeat } from "lucide-react";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { formatDistanceToNow } from "date-fns";
 import { Input } from "@/components/ui/input";
@@ -54,7 +54,7 @@ function MentionTextarea({
     const text = e.target.value;
     onChange(text);
 
-    const mentionMatch = text.match(/@(\w+)$/);
+    const mentionMatch = text.match(/@(\w*)$/);
     if (mentionMatch) {
       setMentionQuery(mentionMatch[1]);
       setShowMentions(true);
@@ -64,7 +64,7 @@ function MentionTextarea({
   };
 
   const handleMentionSelect = (user: UserType) => {
-    const newContent = value.replace(/@(\w+)$/, `@[${user.name}](${user.uid}) `);
+    const newContent = value.replace(/@(\w*)$/, `@[${user.name}](${user.uid}) `);
     onChange(newContent);
     setShowMentions(false);
     textareaRef.current?.focus();
@@ -104,9 +104,10 @@ function MentionTextarea({
 
 
 function SharePostDialog({ post, children }: { post: PostType, children: React.ReactNode }) {
-    const { user, allUsers, startConversation, sendDirectMessage } = useAppContext();
+    const { user, allUsers, startConversation, sendDirectMessage, addPost } = useAppContext();
     const { toast } = useToast();
     const [open, setOpen] = useState(false);
+    const [view, setView] = useState<'options' | 'share_friend'>('options');
     const [searchTerm, setSearchTerm] = useState("");
     const [selectedUser, setSelectedUser] = useState<UserType | null>(null);
     const [isSharing, setIsSharing] = useState(false);
@@ -118,8 +119,22 @@ function SharePostDialog({ post, children }: { post: PostType, children: React.R
             u.name.toLowerCase().includes(searchTerm.toLowerCase())
         );
     }, [searchTerm, allUsers, user]);
+    
+    const resetState = () => {
+        setView('options');
+        setSearchTerm("");
+        setSelectedUser(null);
+        setIsSharing(false);
+    }
+    
+    const handleOpenChange = (isOpen: boolean) => {
+        if (!isOpen) {
+            resetState();
+        }
+        setOpen(isOpen);
+    }
 
-    const handleShare = async () => {
+    const handleShareToFriend = async () => {
         if (!selectedUser) return;
         setIsSharing(true);
         const postUrl = `${window.location.origin}/posts/${post.id}`;
@@ -134,56 +149,100 @@ function SharePostDialog({ post, children }: { post: PostType, children: React.R
             toast({ variant: 'destructive', title: "Failed to share post." });
         }
         setIsSharing(false);
-        setOpen(false);
-        setSelectedUser(null);
-        setSearchTerm("");
+        handleOpenChange(false);
     };
 
+    const handleShareAsPost = async () => {
+        setIsSharing(true);
+        await addPost({
+            content: post.content,
+            file: null, // Files are not re-shared
+            linkPreview: post.linkPreview || null,
+            repostedFrom: {
+                creatorUid: post.creatorUid,
+                creatorName: post.creatorName,
+            }
+        });
+        toast({ title: "Post Shared!", description: "You have shared this post to your feed." });
+        setIsSharing(false);
+        handleOpenChange(false);
+    }
+
     return (
-        <Dialog open={open} onOpenChange={setOpen}>
+        <Dialog open={open} onOpenChange={handleOpenChange}>
             <DialogTrigger asChild>{children}</DialogTrigger>
             <DialogContent>
                 <DialogHeader>
                     <DialogTitle>Share Post</DialogTitle>
                 </DialogHeader>
-                <div className="py-4 space-y-4">
-                    {selectedUser ? (
-                        <div className="flex items-center justify-between p-2 bg-muted rounded-md">
-                            <div className="flex items-center gap-2">
-                                <Avatar className="h-8 w-8">
-                                    <AvatarImage src={selectedUser.photoURL} alt={selectedUser.name} />
-                                    <AvatarFallback>{selectedUser.name.substring(0, 2)}</AvatarFallback>
-                                </Avatar>
-                                <span>{selectedUser.name}</span>
-                            </div>
-                            <Button variant="ghost" size="sm" onClick={() => setSelectedUser(null)}>Change</Button>
-                        </div>
-                    ) : (
-                        <div>
-                            <Input
-                                placeholder="Search for a user..."
-                                value={searchTerm}
-                                onChange={(e) => setSearchTerm(e.target.value)}
-                            />
-                            {searchResults.length > 0 && (
-                                <div className="mt-2 border rounded-md max-h-40 overflow-y-auto">
-                                    {searchResults.map(u => (
-                                        <div key={u.uid} onClick={() => setSelectedUser(u)} className="flex items-center gap-2 p-2 hover:bg-muted cursor-pointer">
-                                            <Avatar className="h-8 w-8">
-                                                <AvatarImage src={u.photoURL} alt={u.name} />
-                                                <AvatarFallback>{u.name.substring(0, 2)}</AvatarFallback>
-                                            </Avatar>
-                                            <span>{u.name}</span>
-                                        </div>
-                                    ))}
+                {view === 'options' && (
+                    <div className="py-4 grid grid-cols-1 sm:grid-cols-2 gap-4">
+                       <Button variant="outline" className="h-20" onClick={() => setView('share_friend')}>
+                           <SendToBack className="mr-2 h-5 w-5"/>
+                           Share to a friend
+                       </Button>
+                       <AlertDialog>
+                            <AlertDialogTrigger asChild>
+                                <Button variant="outline" className="h-20">
+                                   <Repeat className="mr-2 h-5 w-5"/>
+                                   Share as a new post
+                                </Button>
+                            </AlertDialogTrigger>
+                            <AlertDialogContent>
+                                <AlertDialogHeader>
+                                    <AlertDialogTitle>Share this post to your feed?</AlertDialogTitle>
+                                    <AlertDialogDescription>
+                                        This will create a new post on your profile containing the content of the original post.
+                                    </AlertDialogDescription>
+                                </AlertDialogHeader>
+                                <AlertDialogFooter>
+                                    <AlertDialogCancel>Cancel</AlertDialogCancel>
+                                    <AlertDialogAction onClick={handleShareAsPost}>Yes, share</AlertDialogAction>
+                                </AlertDialogFooter>
+                            </AlertDialogContent>
+                       </AlertDialog>
+                    </div>
+                )}
+                {view === 'share_friend' && (
+                    <div className="py-4 space-y-4">
+                        {selectedUser ? (
+                            <div className="flex items-center justify-between p-2 bg-muted rounded-md">
+                                <div className="flex items-center gap-2">
+                                    <Avatar className="h-8 w-8">
+                                        <AvatarImage src={selectedUser.photoURL} alt={selectedUser.name} />
+                                        <AvatarFallback>{selectedUser.name.substring(0, 2)}</AvatarFallback>
+                                    </Avatar>
+                                    <span>{selectedUser.name}</span>
                                 </div>
-                            )}
-                        </div>
-                    )}
-                    <Button onClick={handleShare} disabled={!selectedUser || isSharing} className="w-full">
-                        {isSharing ? <Loader2 className="animate-spin" /> : `Share with ${selectedUser?.name || '...'}`}
-                    </Button>
-                </div>
+                                <Button variant="ghost" size="sm" onClick={() => setSelectedUser(null)}>Change</Button>
+                            </div>
+                        ) : (
+                            <div>
+                                <Input
+                                    placeholder="Search for a user..."
+                                    value={searchTerm}
+                                    onChange={(e) => setSearchTerm(e.target.value)}
+                                />
+                                {searchResults.length > 0 && (
+                                    <div className="mt-2 border rounded-md max-h-40 overflow-y-auto">
+                                        {searchResults.map(u => (
+                                            <div key={u.uid} onClick={() => setSelectedUser(u)} className="flex items-center gap-2 p-2 hover:bg-muted cursor-pointer">
+                                                <Avatar className="h-8 w-8">
+                                                    <AvatarImage src={u.photoURL} alt={u.name} />
+                                                    <AvatarFallback>{u.name.substring(0, 2)}</AvatarFallback>
+                                                </Avatar>
+                                                <span>{u.name}</span>
+                                            </div>
+                                        ))}
+                                    </div>
+                                )}
+                            </div>
+                        )}
+                        <Button onClick={handleShareToFriend} disabled={!selectedUser || isSharing} className="w-full">
+                            {isSharing ? <Loader2 className="animate-spin" /> : `Share with ${selectedUser?.name || '...'}`}
+                        </Button>
+                    </div>
+                )}
             </DialogContent>
         </Dialog>
     )
@@ -440,6 +499,12 @@ function PostCard({ post }: { post: PostType }) {
     return (
         <div className="w-full bg-card border-b py-4">
             <div className="container mx-auto">
+                 {post.repostedFrom && (
+                    <div className="text-sm text-muted-foreground flex items-center gap-2 mb-2">
+                        <Repeat className="h-4 w-4" />
+                        Reposted from <Link href={`/profile/${post.repostedFrom.creatorUid}`} className="font-semibold hover:underline">{post.repostedFrom.creatorName}</Link>
+                    </div>
+                )}
                 <div className="flex items-start justify-between">
                     <div className="flex items-center gap-4 mb-4">
                         <Link href={`/profile/${post.creatorUid}`}>
@@ -506,26 +571,12 @@ function PostCard({ post }: { post: PostType }) {
                             <MessageCircle className="h-4 w-4" />
                             <span>{post.comments?.length || 0}</span>
                         </Button>
-                         <DropdownMenu>
-                            <DropdownMenuTrigger asChild>
-                                <Button variant="ghost" size="sm" className="flex items-center gap-2">
-                                    <Share2 className="h-4 w-4" />
-                                    <span>Share</span>
-                                </Button>
-                            </DropdownMenuTrigger>
-                            <DropdownMenuContent>
-                                <DropdownMenuItem onClick={handleCopyLink}>
-                                    <Link2 className="mr-2 h-4 w-4" />
-                                    <span>Copy Link</span>
-                                </DropdownMenuItem>
-                                <SharePostDialog post={post}>
-                                     <DropdownMenuItem onSelect={(e) => e.preventDefault()}>
-                                         <SendToBack className="mr-2 h-4 w-4" />
-                                         <span>Share in Unite</span>
-                                    </DropdownMenuItem>
-                                </SharePostDialog>
-                            </DropdownMenuContent>
-                        </DropdownMenu>
+                        <SharePostDialog post={post}>
+                            <Button variant="ghost" size="sm" className="flex items-center gap-2">
+                                <Share2 className="h-4 w-4" />
+                                <span>Share</span>
+                            </Button>
+                        </SharePostDialog>
                     </div>
                     {showComments && (
                         <div className="w-full pt-2">
@@ -968,9 +1019,9 @@ function NotificationsContent() {
 
     return (
         <div className="py-8">
-            <div className="container mx-auto">
-                <h2 className="text-3xl font-bold font-headline mb-4">Notifications</h2>
-            </div>
+             <div className="container mx-auto">
+                 <h2 className="text-3xl font-bold font-headline mb-4">Notifications</h2>
+             </div>
              <div className="bg-card border-y">
                 <div className="p-0">
                     {loading && <p className="p-6 container mx-auto">Loading notifications...</p>}
