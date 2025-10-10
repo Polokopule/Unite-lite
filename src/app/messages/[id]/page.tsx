@@ -46,19 +46,7 @@ function MessageBubble({ message, isOwnMessage, participant, conversationId, isL
     const { user, editDirectMessage, deleteDirectMessage, reactToDirectMessage } = useAppContext();
     const [isEditing, setIsEditing] = useState(false);
     const [editedContent, setEditedContent] = useState(message.content);
-    const [menuOpen, setMenuOpen] = useState(false);
-    const longPressTimer = useRef<NodeJS.Timeout>();
     
-    const handlePressStart = () => {
-        longPressTimer.current = setTimeout(() => {
-            setMenuOpen(true);
-        }, 500); // 500ms for a long press
-    };
-
-    const handlePressEnd = () => {
-        clearTimeout(longPressTimer.current);
-    };
-
     const handleCopy = () => {
         navigator.clipboard.writeText(message.content);
         toast({ title: "Copied to clipboard!" });
@@ -168,38 +156,11 @@ function MessageBubble({ message, isOwnMessage, participant, conversationId, isL
                 </Link>
             )}
             <div className={`flex items-center gap-2 ${isOwnMessage ? 'flex-row-reverse' : 'flex-row'}`}>
-                <DropdownMenu open={menuOpen} onOpenChange={setMenuOpen}>
+                <DropdownMenu>
                     <DropdownMenuTrigger asChild>
-                         <div
-                             className={`relative max-w-md rounded-xl p-3 px-4 ${isOwnMessage ? 'bg-primary text-primary-foreground' : 'bg-muted'}`}
-                             onMouseDown={handlePressStart}
-                             onMouseUp={handlePressEnd}
-                             onTouchStart={handlePressStart}
-                             onTouchEnd={handlePressEnd}
-                             onContextMenu={(e) => {
-                                 e.preventDefault();
-                                 setMenuOpen(true);
-                             }}
-                         >
-                            {renderContent()}
-                            <div className={`flex items-center justify-end gap-1.5 text-xs mt-1 ${isOwnMessage ? 'text-primary-foreground/70' : 'text-muted-foreground'}`}>
-                                {message.isEdited && <span>(edited)</span>}
-                                <span>{formatTimeAgo(new Date(message.timestamp).getTime())}</span>
-                                {isOwnMessage && (
-                                  isSeen ? <CheckCheck size={16} /> : <Check size={16} />
-                                )}
-                            </div>
-                            {reactions.length > 0 && (
-                                <div className={`absolute -bottom-3 flex gap-1 ${isOwnMessage ? 'right-2' : 'left-2'}`}>
-                                    {reactions.map(([emoji, uids]) => (
-                                        <div key={emoji} className="bg-background border rounded-full px-1.5 py-0.5 text-xs flex items-center gap-1 shadow-sm">
-                                            <span>{emoji}</span>
-                                            <span>{uids.length}</span>
-                                        </div>
-                                    ))}
-                                </div>
-                            )}
-                        </div>
+                         <Button variant="ghost" size="icon" className="h-8 w-8 opacity-0 group-hover:opacity-100 transition-opacity">
+                            <MoreVertical className="h-4 w-4" />
+                         </Button>
                     </DropdownMenuTrigger>
                     <DropdownMenuContent>
                          <Popover>
@@ -223,12 +184,49 @@ function MessageBubble({ message, isOwnMessage, participant, conversationId, isL
                             </DropdownMenuItem>
                         )}
                          {isOwnMessage && (
-                            <DropdownMenuItem onClick={handleDelete} className="text-destructive">
-                                <Trash2 className="mr-2 h-4 w-4" /> Delete
-                            </DropdownMenuItem>
+                             <AlertDialog>
+                                <AlertDialogTrigger asChild>
+                                    <DropdownMenuItem onSelect={(e) => e.preventDefault()} className="text-destructive">
+                                        <Trash2 className="mr-2 h-4 w-4" /> Delete
+                                    </DropdownMenuItem>
+                                </AlertDialogTrigger>
+                                <AlertDialogContent>
+                                    <AlertDialogHeader>
+                                        <AlertDialogTitle>Are you sure?</AlertDialogTitle>
+                                        <AlertDialogDescription>This will permanently delete this message.</AlertDialogDescription>
+                                    </AlertDialogHeader>
+                                    <AlertDialogFooter>
+                                        <AlertDialogCancel>Cancel</AlertDialogCancel>
+                                        <AlertDialogAction onClick={handleDelete}>Delete</AlertDialogAction>
+                                    </AlertDialogFooter>
+                                </AlertDialogContent>
+                            </AlertDialog>
                         )}
                     </DropdownMenuContent>
                 </DropdownMenu>
+
+                <div
+                    className={`relative max-w-md rounded-xl p-3 px-4 ${isOwnMessage ? 'bg-primary text-primary-foreground' : 'bg-muted'}`}
+                >
+                    {renderContent()}
+                    <div className={`flex items-center justify-end gap-1.5 text-xs mt-1 ${isOwnMessage ? 'text-primary-foreground/70' : 'text-muted-foreground'}`}>
+                        {message.isEdited && <span>(edited)</span>}
+                        <span>{formatTimeAgo(new Date(message.timestamp).getTime())}</span>
+                        {isOwnMessage && (
+                            isSeen ? <CheckCheck size={16} /> : <Check size={16} />
+                        )}
+                    </div>
+                    {reactions.length > 0 && (
+                        <div className={`absolute -bottom-3 flex gap-1 ${isOwnMessage ? 'right-2' : 'left-2'}`}>
+                            {reactions.map(([emoji, uids]) => (
+                                <div key={emoji} className="bg-background border rounded-full px-1.5 py-0.5 text-xs flex items-center gap-1 shadow-sm">
+                                    <span>{emoji}</span>
+                                    <span>{uids.length}</span>
+                                </div>
+                            ))}
+                        </div>
+                    )}
+                </div>
             </div>
         </div>
     );
@@ -614,7 +612,7 @@ export default function ConversationPage() {
     const isOtherUserBlocked = user.blockedUsers?.includes(otherParticipant?.uid || '');
 
     return (
-        <div className="fixed inset-0 bg-background z-50 h-screen sm:h-[85vh]">
+        <div className="fixed inset-0 bg-background z-50 h-[85vh] sm:h-[85vh]">
              <Card className="flex flex-col h-full border-0 sm:border rounded-none sm:rounded-lg">
                 <CardHeader className="flex-row items-center justify-between border-b p-4">
                     <div className="flex items-center gap-3">
