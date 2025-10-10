@@ -10,7 +10,7 @@ import { Card, CardContent, CardHeader, CardTitle, CardFooter } from "@/componen
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { useToast } from "@/hooks/use-toast";
-import { Loader2, Send, Paperclip, ArrowLeft, File as FileIcon, Mic, Square, Smile, Copy, Pencil, Trash2, Check, CheckCheck, MoreVertical, ShieldCheck, ShieldOff, Lock, Unlock, Thumbtack, ThumbtackOff, UserX } from "lucide-react";
+import { Loader2, Send, Paperclip, ArrowLeft, File as FileIcon, Mic, Square, Smile, Copy, Pencil, Trash2, Check, CheckCheck, MoreVertical, ShieldCheck, ShieldOff, Lock, Unlock, Pin, PinOff, UserX } from "lucide-react";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import Image from "next/image";
 import Link from "next/link";
@@ -451,7 +451,7 @@ export default function ConversationPage() {
                                 </SharedGroupsDialog>
                                 <DropdownMenuSeparator />
                                 <DropdownMenuItem disabled>
-                                    <Thumbtack className="mr-2 h-4 w-4" /> Pin to Top
+                                    <Pin className="mr-2 h-4 w-4" /> Pin to Top
                                 </DropdownMenuItem>
                                 <DropdownMenuItem disabled>
                                     <Lock className="mr-2 h-4 w-4" /> Lock Chat
