@@ -46,6 +46,18 @@ function MessageBubble({ message, isOwnMessage, participant, conversationId, isL
     const { user, editDirectMessage, deleteDirectMessage, reactToDirectMessage } = useAppContext();
     const [isEditing, setIsEditing] = useState(false);
     const [editedContent, setEditedContent] = useState(message.content);
+    const [menuOpen, setMenuOpen] = useState(false);
+    const longPressTimer = useRef<NodeJS.Timeout>();
+    
+    const handlePressStart = () => {
+        longPressTimer.current = setTimeout(() => {
+            setMenuOpen(true);
+        }, 500); // 500ms for a long press
+    };
+
+    const handlePressEnd = () => {
+        clearTimeout(longPressTimer.current);
+    };
 
     const handleCopy = () => {
         navigator.clipboard.writeText(message.content);
@@ -146,7 +158,7 @@ function MessageBubble({ message, isOwnMessage, participant, conversationId, isL
     const isSeen = isLastMessage && otherParticipant && message.readBy && message.readBy[otherParticipant.uid];
 
     return (
-        <div className={`group flex items-end gap-2 ${isOwnMessage ? 'justify-end' : ''}`} onContextMenu={(e) => e.preventDefault()}>
+        <div className={`group flex items-end gap-2 ${isOwnMessage ? 'justify-end' : ''}`}>
             {!isOwnMessage && participant && (
                 <Link href={`/profile/${message.creatorUid}`}>
                     <Avatar className="h-8 w-8">
@@ -156,9 +168,19 @@ function MessageBubble({ message, isOwnMessage, participant, conversationId, isL
                 </Link>
             )}
             <div className={`flex items-center gap-2 ${isOwnMessage ? 'flex-row-reverse' : 'flex-row'}`}>
-                <DropdownMenu>
+                <DropdownMenu open={menuOpen} onOpenChange={setMenuOpen}>
                     <DropdownMenuTrigger asChild>
-                         <div className={`relative max-w-md rounded-xl p-3 px-4 ${isOwnMessage ? 'bg-primary text-primary-foreground' : 'bg-muted'}`}>
+                         <div
+                             className={`relative max-w-md rounded-xl p-3 px-4 ${isOwnMessage ? 'bg-primary text-primary-foreground' : 'bg-muted'}`}
+                             onMouseDown={handlePressStart}
+                             onMouseUp={handlePressEnd}
+                             onTouchStart={handlePressStart}
+                             onTouchEnd={handlePressEnd}
+                             onContextMenu={(e) => {
+                                 e.preventDefault();
+                                 setMenuOpen(true);
+                             }}
+                         >
                             {renderContent()}
                             <div className={`flex items-center justify-end gap-1.5 text-xs mt-1 ${isOwnMessage ? 'text-primary-foreground/70' : 'text-muted-foreground'}`}>
                                 {message.isEdited && <span>(edited)</span>}
@@ -592,7 +614,7 @@ export default function ConversationPage() {
     const isOtherUserBlocked = user.blockedUsers?.includes(otherParticipant?.uid || '');
 
     return (
-        <div className="fixed inset-0 bg-background z-50 h-[85vh]">
+        <div className="fixed inset-0 bg-background z-50 h-screen sm:h-[85vh]">
              <Card className="flex flex-col h-full border-0 sm:border rounded-none sm:rounded-lg">
                 <CardHeader className="flex-row items-center justify-between border-b p-4">
                     <div className="flex items-center gap-3">

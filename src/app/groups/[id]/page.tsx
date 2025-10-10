@@ -1,4 +1,5 @@
 
+
 "use client";
 
 import { useParams, useRouter } from "next/navigation";
@@ -58,10 +59,22 @@ function MessageBubble({ message, isOwnMessage, groupId, memberCount }: { messag
     const { user, editMessage, deleteMessage, reactToMessage } = useAppContext();
     const [isEditing, setIsEditing] = useState(false);
     const [editedContent, setEditedContent] = useState(message.content);
+    const [menuOpen, setMenuOpen] = useState(false);
+    const longPressTimer = useRef<NodeJS.Timeout>();
 
     if (message.type === 'system') {
         return <SystemMessage content={message.content} />;
     }
+    
+    const handlePressStart = () => {
+        longPressTimer.current = setTimeout(() => {
+            setMenuOpen(true);
+        }, 500); // 500ms for a long press
+    };
+
+    const handlePressEnd = () => {
+        clearTimeout(longPressTimer.current);
+    };
 
     const handleCopy = () => {
         navigator.clipboard.writeText(message.content);
@@ -166,7 +179,7 @@ function MessageBubble({ message, isOwnMessage, groupId, memberCount }: { messag
     const isSeenByAll = readCount >= memberCount;
 
     return (
-        <div className={`group flex items-end gap-2 ${isOwnMessage ? 'justify-end' : ''}`} onContextMenu={(e) => e.preventDefault()}>
+        <div className={`group flex items-end gap-2 ${isOwnMessage ? 'justify-end' : ''}`}>
             {!isOwnMessage && (
                 <Link href={`/profile/${message.creatorUid}`}>
                     <Avatar className="h-8 w-8">
@@ -176,9 +189,19 @@ function MessageBubble({ message, isOwnMessage, groupId, memberCount }: { messag
                 </Link>
             )}
              <div className={`flex items-center gap-2 ${isOwnMessage ? 'flex-row-reverse' : 'flex-row'}`}>
-                <DropdownMenu>
+                <DropdownMenu open={menuOpen} onOpenChange={setMenuOpen}>
                     <DropdownMenuTrigger asChild>
-                         <div className={`relative max-w-md rounded-xl p-3 px-4 ${isOwnMessage ? 'bg-primary text-primary-foreground' : 'bg-muted'}`}>
+                         <div 
+                             className={`relative max-w-md rounded-xl p-3 px-4 ${isOwnMessage ? 'bg-primary text-primary-foreground' : 'bg-muted'}`}
+                             onMouseDown={handlePressStart}
+                             onMouseUp={handlePressEnd}
+                             onTouchStart={handlePressStart}
+                             onTouchEnd={handlePressEnd}
+                             onContextMenu={(e) => {
+                                 e.preventDefault();
+                                 setMenuOpen(true);
+                             }}
+                         >
                             {!isOwnMessage && (
                                 <p className="text-xs font-bold pb-1">{message.creatorName}</p>
                             )}
@@ -727,7 +750,7 @@ export default function GroupPage() {
     }
 
     return (
-         <div className="fixed inset-0 bg-background z-50 h-[85vh]">
+         <div className="fixed inset-0 bg-background z-50 h-screen sm:h-[85vh]">
              <ChatArea groupId={group.id} messages={group.messages || []} group={group} members={membersDetails} membersDetails={membersDetails} />
         </div>
     );
