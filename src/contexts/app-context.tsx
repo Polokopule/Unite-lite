@@ -208,59 +208,82 @@ export function AppContextProvider({ children }: { children: React.ReactNode }) 
   useEffect(() => {
     let purchasedListener: () => void;
     let notificationsListener: () => void;
-    let conversationsListener: () => void;
-    
-    if (user) {
-      // Load purchased courses when user logs in
-      const purchasedRef = ref(db, `users/${user.uid}/purchasedCourses`);
-      purchasedListener = onValue(purchasedRef, (snapshot) => {
-        if (snapshot.exists()) {
-          setPurchasedCourses(Object.values(snapshot.val()));
-        } else {
-          setPurchasedCourses([]);
-        }
-      });
-      
-      const notificationsRef = ref(db, `notifications/${user.uid}`);
-      notificationsListener = onValue(notificationsRef, (snapshot) => {
-          const data = snapshot.val() || {};
-          const notificationList: Notification[] = Object.values(data);
-          setNotifications(notificationList.sort((a,b) => b.timestamp - a.timestamp));
-      });
+    const conversationListeners: (() => void)[] = [];
 
-      const userConversationsRef = query(ref(db, 'conversations'), orderByChild(`participants/${user.uid}/uid`), equalTo(user.uid));
-      conversationsListener = onValue(userConversationsRef, (snapshot) => {
-          const convosData = snapshot.val() || {};
-          const userConvos = Object.keys(convosData)
-            .map(id => ({ id, ...convosData[id] }))
-            .filter(c => !(user.deletedConversations && user.deletedConversations[c.id]))
-            .map(c => ({
-              ...c, 
-              participantUids: c.participants ? Object.keys(c.participants) : [],
-              messages: c.messages ? Object.values(c.messages).map(msg => ({...msg, reactions: msg.reactions ? Object.entries(msg.reactions).reduce((acc, [emoji, uidsObj]) => ({...acc, [emoji]: Object.keys(uidsObj)}), {}) : {}})) : [] 
-            }))
-            .sort((a, b) => {
-                const aPinned = a.pinnedBy && a.pinnedBy[user.uid];
-                const bPinned = b.pinnedBy && b.pinnedBy[user.uid];
-                if (aPinned && !bPinned) return -1;
-                if (!aPinned && bPinned) return 1;
-                return (b.lastMessage?.timestamp || b.timestamp) - (a.lastMessage?.timestamp || a.timestamp)
+    if (user) {
+        const purchasedRef = ref(db, `users/${user.uid}/purchasedCourses`);
+        purchasedListener = onValue(purchasedRef, (snapshot) => {
+            setPurchasedCourses(snapshot.exists() ? Object.values(snapshot.val()) : []);
+        });
+
+        const notificationsRef = ref(db, `notifications/${user.uid}`);
+        notificationsListener = onValue(notificationsRef, (snapshot) => {
+            const data = snapshot.val() || {};
+            setNotifications(Object.values(data).sort((a: any, b: any) => b.timestamp - a.timestamp));
+        });
+
+        const userConversationsRef = ref(db, `users/${user.uid}/conversationIds`);
+        const conversationIdsListener = onValue(userConversationsRef, (snapshot) => {
+            const conversationIds = snapshot.val() || {};
+            const convos: Conversation[] = [];
+            
+            // Clear existing listeners
+            conversationListeners.forEach(listener => listener());
+            conversationListeners.length = 0;
+
+            if (Object.keys(conversationIds).length === 0) {
+              setConversations([]);
+              return;
+            }
+
+            Object.keys(conversationIds).forEach(convoId => {
+                const convoRef = ref(db, `conversations/${convoId}`);
+                const convoListener = onValue(convoRef, (convoSnapshot) => {
+                    if (convoSnapshot.exists()) {
+                        const convoData = { id: convoId, ...convoSnapshot.val() };
+                        const processedConvo = {
+                            ...convoData,
+                            participantUids: convoData.participants ? Object.keys(convoData.participants) : [],
+                            messages: convoData.messages ? Object.values(convoData.messages).map((msg:any) => ({ ...msg, reactions: msg.reactions ? Object.entries(msg.reactions).reduce((acc: any, [emoji, uidsObj]: any) => ({ ...acc, [emoji]: Object.keys(uidsObj) }), {}) : {} })) : []
+                        };
+                        
+                        // Update or add the conversation in the state
+                        setConversations(prevConvos => {
+                            const existingIndex = prevConvos.findIndex(c => c.id === convoId);
+                            let newConvos = [...prevConvos];
+                            if (existingIndex > -1) {
+                                newConvos[existingIndex] = processedConvo;
+                            } else {
+                                newConvos.push(processedConvo);
+                            }
+                            return newConvos.sort((a, b) => {
+                              const aPinned = a.pinnedBy && a.pinnedBy[user.uid];
+                              const bPinned = b.pinnedBy && b.pinnedBy[user.uid];
+                              if (aPinned && !bPinned) return -1;
+                              if (!aPinned && bPinned) return 1;
+                              return (b.lastMessage?.timestamp || b.timestamp) - (a.lastMessage?.timestamp || a.timestamp);
+                            });
+                        });
+                    }
+                });
+                conversationListeners.push(convoListener);
             });
-          setConversations(userConvos);
-      });
+        });
+        conversationListeners.push(conversationIdsListener);
 
     } else {
-      setPurchasedCourses([]);
-      setNotifications([]);
-      setConversations([]);
+        setPurchasedCourses([]);
+        setNotifications([]);
+        setConversations([]);
     }
-    
+
     return () => {
         if (purchasedListener) purchasedListener();
         if (notificationsListener) notificationsListener();
-        if (conversationsListener) conversationsListener();
-    }
-  }, [user]);
+        conversationListeners.forEach(l => l());
+    };
+}, [user]);
+
 
   const createNotification = async (notification: Omit<Notification, 'id' | 'timestamp' | 'isRead'>) => {
       const notificationRef = ref(db, `notifications/${notification.recipientUid}`);
@@ -1059,15 +1082,21 @@ export function AppContextProvider({ children }: { children: React.ReactNode }) 
     const conversationSnapshot = await get(conversationRef);
 
     if (conversationSnapshot.exists()) {
-        // If user had deleted it, un-delete it
         const userDeleteRef = ref(db, `users/${user.uid}/deletedConversations/${conversationId}`);
         remove(userDeleteRef);
+        
+        // Also add the conversation ID to both users' profiles if it's not there
+        const updates: any = {};
+        updates[`/users/${user.uid}/conversationIds/${conversationId}`] = true;
+        updates[`/users/${otherUserId}/conversationIds/${conversationId}`] = true;
+        await update(ref(db), updates);
+
         return conversationId;
     } else {
         const otherUser = allUsers.find(u => u.uid === otherUserId);
         if (!otherUser) return null;
 
-        const newConversation: Omit<Conversation, 'id' | 'messages'> = {
+        const newConversation: Omit<Conversation, 'id' | 'messages' | 'participantUids'> = {
             participants: {
                 [user.uid]: { name: user.name, photoURL: user.photoURL || '', uid: user.uid },
                 [otherUserId]: { name: otherUser.name, photoURL: otherUser.photoURL || '', uid: otherUser.uid },
@@ -1078,6 +1107,12 @@ export function AppContextProvider({ children }: { children: React.ReactNode }) 
 
         try {
             await set(conversationRef, newConversation);
+            // Add conversation ID to both users' profiles
+            const updates: any = {};
+            updates[`/users/${user.uid}/conversationIds/${conversationId}`] = true;
+            updates[`/users/${otherUserId}/conversationIds/${conversationId}`] = true;
+            await update(ref(db), updates);
+
             return conversationId;
         } catch (error) {
             console.error("Error starting conversation:", error);
