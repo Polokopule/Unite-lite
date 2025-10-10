@@ -525,7 +525,7 @@ export default function ConversationPage() {
 
     return (
         <div className="fixed inset-0 top-0 bg-background z-50 h-screen md:h-auto md:static md:inset-auto md:z-auto md:h-[calc(100vh-4rem-1px)]">
-             <Card className="flex flex-col h-full border-0 sm:border rounded-none sm:rounded-lg pt-16 md:pt-0">
+             <Card className="flex flex-col h-full border-0 sm:border rounded-none sm:rounded-lg md:pt-0">
                 <CardHeader className="flex-row items-center justify-between border-b p-4">
                     <div className="flex items-center gap-3">
                         <Button variant="ghost" size="icon" className="mr-2" onClick={() => router.back()}>
@@ -689,3 +689,5 @@ export default function ConversationPage() {
         </div>
     );
 }
+
+    

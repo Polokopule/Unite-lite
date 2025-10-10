@@ -575,7 +575,7 @@ export default function GroupPage() {
     const [group, setGroup] = useState<Group | null>(null);
     const [isMember, setIsMember] = useState(false);
     const [pin, setPin] = useState("");
-    const [isJoining, setIsJoining] = useState(false);
+    const [isJoining, setIsJoining] = useState(isMember);
     
     useEffect(() => {
         if (loading) return;
@@ -657,9 +657,11 @@ export default function GroupPage() {
 
     return (
          <div className="fixed inset-0 top-0 bg-background z-50 h-screen md:h-auto md:static md:inset-auto md:z-auto md:h-[calc(100vh-4rem-1px)] flex">
-            <div className="flex-1 h-full pt-16 md:pt-0">
+            <div className="flex-1 h-full md:pt-0">
                  <ChatArea groupId={group.id} messages={group.messages || []} group={group} members={membersDetails} membersDetails={membersDetails} />
             </div>
         </div>
     );
 }
+
+    
