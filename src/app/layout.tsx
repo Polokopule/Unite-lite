@@ -4,6 +4,7 @@ import './globals.css';
 import { AppContextProvider } from '@/contexts/app-context';
 import { Header } from '@/components/header';
 import { Toaster } from '@/components/ui/toaster';
+import { UniteAIChat } from '@/components/unite-ai-chat';
 
 export const metadata: Metadata = {
   title: 'Unite - Learn and Earn',
@@ -36,6 +37,7 @@ export default function RootLayout({
         <AppContextProvider>
           <Header />
           <main>{children}</main>
+          <UniteAIChat />
           <Toaster />
         </AppContextProvider>
       </body>
