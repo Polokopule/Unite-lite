@@ -10,34 +10,31 @@ import { uniteAIFlow } from '@/ai/flows/unite-ai-flow';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { useAppContext } from '@/contexts/app-context';
 import { ScrollArea } from '@/components/ui/scroll-area';
-import { Logo } from '@/components/logo';
 import { useRouter } from 'next/navigation';
-
-type ChatMessage = {
-  role: 'user' | 'model';
-  text: string;
-};
+import { AIChatMessage } from '@/lib/types';
 
 export default function AiChatPage() {
-  const { user } = useAppContext();
+  const { user, updateAIChatHistory } = useAppContext();
   const router = useRouter();
-  const [history, setHistory] = useState<ChatMessage[]>([]);
+  const [history, setHistory] = useState<AIChatMessage[]>([]);
   const [question, setQuestion] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const scrollAreaRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
-    setHistory([
-      {
-        role: 'model',
-        text: `Hello! I'm Unite AI. How can I help you understand the Unite platform today?`,
-      },
-    ]);
-    setQuestion('');
-  }, []);
+    if (user?.aiChatHistory && user.aiChatHistory.length > 0) {
+      setHistory(user.aiChatHistory);
+    } else {
+      setHistory([
+        {
+          role: 'model',
+          text: `Hello! I'm Unite AI. How can I help you understand the Unite platform today?`,
+        },
+      ]);
+    }
+  }, [user]);
 
   useEffect(() => {
-    // Scroll to the bottom when history changes
     if (scrollAreaRef.current) {
         const viewport = scrollAreaRef.current.querySelector('[data-radix-scroll-area-viewport]');
         if (viewport) {
@@ -49,13 +46,14 @@ export default function AiChatPage() {
   const handleSend = async () => {
     if (!question.trim()) return;
 
-    const userMessage: ChatMessage = { role: 'user', text: question };
-    setHistory((prev) => [...prev, userMessage]);
+    const userMessage: AIChatMessage = { role: 'user', text: question };
+    const newHistory = [...history, userMessage];
+    setHistory(newHistory);
     setQuestion('');
     setIsLoading(true);
 
     try {
-      const genkitHistory = history.map((msg) => ({
+      const genkitHistory = newHistory.map((msg) => ({
         role: msg.role,
         content: [{ text: msg.text }],
       }));
@@ -65,16 +63,20 @@ export default function AiChatPage() {
         question: question,
       });
       
-      const modelMessage: ChatMessage = { role: 'model', text: response };
-      setHistory((prev) => [...prev, modelMessage]);
+      const modelMessage: AIChatMessage = { role: 'model', text: response };
+      const finalHistory = [...newHistory, modelMessage];
+      setHistory(finalHistory);
+      await updateAIChatHistory(finalHistory);
 
     } catch (error) {
       console.error("AI flow error:", error);
-      const errorMessage: ChatMessage = {
+      const errorMessage: AIChatMessage = {
         role: 'model',
         text: 'Sorry, I encountered an error. Please try again.',
       };
-      setHistory((prev) => [...prev, errorMessage]);
+      const finalHistory = [...newHistory, errorMessage];
+      setHistory(finalHistory);
+      await updateAIChatHistory(finalHistory);
     } finally {
       setIsLoading(false);
     }

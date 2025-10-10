@@ -2,7 +2,7 @@
 "use client";
 
 import { PlaceHolderImages } from "@/lib/placeholder-images";
-import type { Course, Ad, User, PurchasedCourse, Post, Group, Comment, Message, Notification, LinkPreview, Conversation } from "@/lib/types";
+import type { Course, Ad, User, PurchasedCourse, Post, Group, Comment, Message, Notification, LinkPreview, Conversation, AIChatMessage } from "@/lib/types";
 import { useRouter } from "next/navigation";
 import React, { createContext, useContext, useEffect, useState } from "react";
 import { db, auth, storage } from "@/lib/firebase";
@@ -83,6 +83,7 @@ interface AppContextType {
   lockConversation: (conversationId: string, pin: string) => void;
   unlockConversation: (conversationId: string) => void;
   toggleBlockUser: (targetUserId: string) => void;
+  updateAIChatHistory: (history: AIChatMessage[]) => Promise<void>;
   lockedConversations: { [id: string]: string };
   loading: boolean;
 }
@@ -128,6 +129,7 @@ export function AppContextProvider({ children }: { children: React.ReactNode }) 
                     ...userData,
                     photoURL: currentFirebaseUser.photoURL || userData.photoURL || '',
                     blockedUsers: userData.blockedUsers ? Object.keys(userData.blockedUsers) : [],
+                    aiChatHistory: userData.aiChatHistory ? Object.values(userData.aiChatHistory) : [],
                 };
                 setUser(fullUserData);
 
@@ -245,7 +247,7 @@ export function AppContextProvider({ children }: { children: React.ReactNode }) 
                         const processedConvo = {
                             ...convoData,
                             participantUids: convoData.participants ? Object.keys(convoData.participants) : [],
-                            messages: convoData.messages ? Object.values(convoData.messages).map((msg:any) => ({ ...msg, reactions: msg.reactions ? Object.entries(msg.reactions).reduce((acc: any, [emoji, uidsObj]: any) => ({ ...acc, [emoji]: Object.keys(uidsObj) }), {}) : {} })) : []
+                            messages: convoData.messages ? Object.values(convoData.messages).map((msg:any) => ({ ...msg, reactions: msg.reactions ? Object.entries(msg.reactions).reduce((acc: any, [emoji, uidsObj]: any) => ({...acc, [emoji]: Object.keys(uidsObj) }), {}) : {} })) : []
                         };
                         
                         // Update or add the conversation in the state
@@ -1389,6 +1391,12 @@ export function AppContextProvider({ children }: { children: React.ReactNode }) 
         }
     };
 
+    const updateAIChatHistory = async (history: AIChatMessage[]) => {
+        if (!user) return;
+        const historyRef = ref(db, `users/${user.uid}/aiChatHistory`);
+        await set(historyRef, history);
+    }
+
 
   const value = {
     user,
@@ -1443,6 +1451,7 @@ export function AppContextProvider({ children }: { children: React.ReactNode }) 
     lockConversation,
     unlockConversation,
     toggleBlockUser,
+    updateAIChatHistory,
     lockedConversations,
     loading,
   };

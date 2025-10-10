@@ -25,6 +25,11 @@ export type UserPresence = {
     lastChanged: number;
 }
 
+export type AIChatMessage = {
+  role: 'user' | 'model';
+  text: string;
+};
+
 export type User = {
   uid: string;
   email: string;
@@ -43,6 +48,7 @@ export type User = {
   pinnedConversations?: { [id: string]: number };
   lockedConversations?: { [id: string]: string }; // id: pin
   blockedUsers?: string[];
+  aiChatHistory?: AIChatMessage[];
 };
 
 export type PurchasedCourse = {
