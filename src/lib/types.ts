@@ -20,6 +20,11 @@ export type Ad = {
   itemType?: 'ad';
 };
 
+export type UserPresence = {
+    state: 'online' | 'offline';
+    lastChanged: number;
+}
+
 export type User = {
   uid: string;
   email: string;
@@ -33,6 +38,7 @@ export type User = {
   followers?: string[];
   photoURL?: string;
   conversationIds?: string[];
+  presence?: UserPresence;
 };
 
 export type PurchasedCourse = {
@@ -108,6 +114,7 @@ export type Message = {
     isEdited?: boolean;
     linkPreview?: LinkPreview | null;
     reactions?: { [emoji: string]: string[] }; // e.g. { '👍': ['user1', 'user2'] }
+    readBy?: { [uid: string]: number };
 }
 
 // Represents a user-created group
@@ -121,6 +128,7 @@ export type Group = {
     messages?: Message[];
     hasPin: boolean;
     pin: string | null;
+    typing?: { [uid: string]: boolean };
 }
 
 export type Conversation = {
@@ -130,6 +138,7 @@ export type Conversation = {
     lastMessage: Message | null;
     timestamp: number;
     messages?: Message[];
+    typing?: { [uid: string]: boolean };
 };
 
 

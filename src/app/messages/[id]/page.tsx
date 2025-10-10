@@ -9,11 +9,11 @@ import { Card, CardContent, CardHeader, CardTitle, CardFooter } from "@/componen
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { useToast } from "@/hooks/use-toast";
-import { Loader2, Send, Paperclip, ArrowLeft, File as FileIcon, Mic, Square, Smile, Copy, Pencil, Trash2 } from "lucide-react";
+import { Loader2, Send, Paperclip, ArrowLeft, File as FileIcon, Mic, Square, Smile, Copy, Pencil, Trash2, Check, CheckCheck } from "lucide-react";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import Image from "next/image";
 import Link from "next/link";
-import { formatDistanceToNow } from "date-fns";
+import { formatDistanceToNow, format } from "date-fns";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import EmojiPicker, { EmojiClickData } from "emoji-picker-react";
@@ -37,7 +37,7 @@ function LinkPreviewCard({ preview }: { preview: LinkPreview }) {
     )
 }
 
-function MessageBubble({ message, isOwnMessage, participant, conversationId }: { message: Message; isOwnMessage: boolean, participant: { name: string, photoURL: string } | undefined, conversationId: string }) {
+function MessageBubble({ message, isOwnMessage, participant, conversationId, isLastMessage, otherParticipant }: { message: Message; isOwnMessage: boolean, participant: { name: string, photoURL: string } | undefined, conversationId: string, isLastMessage: boolean, otherParticipant: UserType | null }) {
     const { toast } = useToast();
     const { user, editDirectMessage, deleteDirectMessage, reactToDirectMessage } = useAppContext();
     const [isEditing, setIsEditing] = useState(false);
@@ -116,9 +116,11 @@ function MessageBubble({ message, isOwnMessage, participant, conversationId }: {
     };
     
     const reactions = Object.entries(message.reactions || {});
+    
+    const isSeen = isLastMessage && otherParticipant && message.readBy && message.readBy[otherParticipant.uid];
 
     return (
-        <div className={`group flex items-end gap-2 ${isOwnMessage ? 'justify-end' : ''}`}>
+        <div className={`group flex items-end gap-2 ${isOwnMessage ? 'justify-end' : ''}`} onContextMenu={(e) => e.preventDefault()}>
             {!isOwnMessage && participant && (
                 <Link href={`/profile/${message.creatorUid}`}>
                     <Avatar className="h-8 w-8">
@@ -132,10 +134,13 @@ function MessageBubble({ message, isOwnMessage, participant, conversationId }: {
                     <DropdownMenuTrigger asChild>
                          <div className={`relative max-w-md rounded-xl p-3 px-4 ${isOwnMessage ? 'bg-primary text-primary-foreground' : 'bg-muted'}`}>
                             {renderContent()}
-                            <p className={`text-xs mt-1 ${isOwnMessage ? 'text-primary-foreground/70' : 'text-muted-foreground'}`}>
-                                {formatDistanceToNow(new Date(message.timestamp), { addSuffix: true })}
-                                {message.isEdited && ' (edited)'}
-                            </p>
+                            <div className={`flex items-center justify-end gap-1.5 text-xs mt-1 ${isOwnMessage ? 'text-primary-foreground/70' : 'text-muted-foreground'}`}>
+                                {message.isEdited && <span>(edited)</span>}
+                                <span>{format(new Date(message.timestamp), "p")}</span>
+                                {isOwnMessage && (
+                                  isSeen ? <CheckCheck size={16} /> : <Check size={16} />
+                                )}
+                            </div>
                             {reactions.length > 0 && (
                                 <div className={`absolute -bottom-3 flex gap-1 ${isOwnMessage ? 'right-2' : 'left-2'}`}>
                                     {reactions.map(([emoji, uids]) => (
@@ -181,12 +186,24 @@ function MessageBubble({ message, isOwnMessage, participant, conversationId }: {
     );
 }
 
+function useDebounce(value: any, delay: number) {
+  const [debouncedValue, setDebouncedValue] = useState(value);
+  useEffect(() => {
+    const handler = setTimeout(() => {
+      setDebouncedValue(value);
+    }, delay);
+    return () => {
+      clearTimeout(handler);
+    };
+  }, [value, delay]);
+  return debouncedValue;
+}
 
 export default function ConversationPage() {
     const params = useParams();
     const router = useRouter();
     const { id: conversationId } = params;
-    const { user, getConversationById, sendDirectMessage, loading } = useAppContext();
+    const { user, getConversationById, sendDirectMessage, loading, allUsers, markMessagesAsRead, updateTypingStatus } = useAppContext();
     const { toast } = useToast();
 
     const [conversation, setConversation] = useState<Conversation | null>(null);
@@ -197,6 +214,9 @@ export default function ConversationPage() {
     const [isRecording, setIsRecording] = useState(false);
     const mediaRecorderRef = useRef<MediaRecorder | null>(null);
     const audioChunksRef = useRef<Blob[]>([]);
+    
+    const lastTextRef = useRef("");
+    const debouncedText = useDebounce(text, 500);
 
      useEffect(() => {
         if (loading) return;
@@ -207,19 +227,46 @@ export default function ConversationPage() {
         const foundConvo = getConversationById(conversationId as string);
         if (foundConvo) {
             setConversation(foundConvo);
+            markMessagesAsRead(conversationId as string, true);
         } else if (!loading) {
             toast({ variant: "destructive", title: "Conversation not found." });
             router.push('/');
         }
-    }, [conversationId, getConversationById, user, loading, router, toast]);
+         return () => {
+            if(foundConvo) {
+                 markMessagesAsRead(conversationId as string, true);
+            }
+         }
+    }, [conversationId, getConversationById, user, loading, router, toast, markMessagesAsRead]);
 
     useEffect(() => {
         messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
     }, [conversation?.messages]);
+    
+    useEffect(() => {
+        if (user && conversationId) {
+            const isTyping = text.length > 0 && lastTextRef.current.length === 0;
+            const isStoppedTyping = text.length === 0 && lastTextRef.current.length > 0;
+
+            if (isTyping) {
+                updateTypingStatus(conversationId as string, true, true);
+            } else if (isStoppedTyping) {
+                updateTypingStatus(conversationId as string, false, true);
+            }
+        }
+        lastTextRef.current = text;
+    }, [text, user, conversationId, updateTypingStatus]);
+
+    useEffect(() => {
+        if (user && debouncedText.length === 0 && lastTextRef.current.length > 0) {
+            updateTypingStatus(conversationId as string, false, true);
+        }
+    }, [debouncedText, user, conversationId, updateTypingStatus]);
 
     const handleSendText = async () => {
-        if (!text.trim()) return;
+        if (!text.trim() || !user) return;
         setIsSending(true);
+        updateTypingStatus(conversationId as string, false, true);
         const success = await sendDirectMessage(conversationId as string, { content: text, type: 'text' });
         if (success) {
             setText("");
@@ -298,7 +345,9 @@ export default function ConversationPage() {
     const getOtherParticipant = () => {
         if (!user || !conversation) return null;
         const otherUid = conversation.participantUids.find(uid => uid !== user.uid);
-        return conversation.participants[otherUid!];
+        if (!otherUid) return null;
+        // Get the full user object from allUsers to include presence
+        return allUsers.find(u => u.uid === otherUid) || null;
     }
     
     if (loading || !conversation) {
@@ -310,6 +359,7 @@ export default function ConversationPage() {
     }
     
     const otherParticipant = getOtherParticipant();
+    const isTyping = conversation.typing && otherParticipant && conversation.typing[otherParticipant.uid];
 
     return (
         <div className="h-[calc(100vh-4rem-1px)]">
@@ -319,24 +369,34 @@ export default function ConversationPage() {
                         <ArrowLeft className="h-5 w-5" />
                     </Button>
                     {otherParticipant && (
-                        <Link href={`/profile/${conversation.participantUids.find(uid => uid !== user?.uid)}`} className="flex items-center gap-3">
+                        <Link href={`/profile/${otherParticipant.uid}`} className="flex items-center gap-3">
                              <Avatar>
                                 <AvatarImage src={otherParticipant.photoURL} alt={otherParticipant.name} />
                                 <AvatarFallback>{otherParticipant.name?.substring(0,2)}</AvatarFallback>
                             </Avatar>
-                            <CardTitle>{otherParticipant.name}</CardTitle>
+                            <div>
+                                <CardTitle>{otherParticipant.name}</CardTitle>
+                                <p className="text-xs text-muted-foreground">
+                                    {isTyping ? <span className="italic">typing...</span> : 
+                                     otherParticipant.presence?.state === 'online' ? 'Online' : 
+                                     otherParticipant.presence?.lastChanged ? `Last seen ${formatDistanceToNow(otherParticipant.presence.lastChanged, { addSuffix: true })}` : 'Offline'
+                                    }
+                                </p>
+                            </div>
                         </Link>
                     )}
                 </CardHeader>
                 <CardContent className="flex-1 overflow-y-auto p-4 space-y-6">
                     {conversation.messages && conversation.messages.length > 0 ? (
-                        conversation.messages.sort((a,b) => a.timestamp - b.timestamp).map(msg => (
+                        conversation.messages.sort((a,b) => a.timestamp - b.timestamp).map((msg, idx) => (
                             <MessageBubble
                                 key={msg.id}
                                 message={msg}
                                 isOwnMessage={user?.uid === msg.creatorUid}
                                 participant={conversation.participants[msg.creatorUid]}
                                 conversationId={conversation.id}
+                                isLastMessage={idx === conversation.messages!.length - 1}
+                                otherParticipant={otherParticipant}
                             />
                         ))
                     ) : (

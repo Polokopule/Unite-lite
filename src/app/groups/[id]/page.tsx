@@ -10,11 +10,11 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
-import { Loader2, Lock, Users, Send, Paperclip, Image as ImageIcon, Download, File, Music, Video, Menu, Mic, Square, Smile, Copy, Pencil, Trash2 } from "lucide-react";
+import { Loader2, Lock, Users, Send, Paperclip, Image as ImageIcon, Download, File, Music, Video, Menu, Mic, Square, Smile, Copy, Pencil, Trash2, Check, CheckCheck } from "lucide-react";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import Image from "next/image";
 import Link from "next/link";
-import { formatDistanceToNow } from "date-fns";
+import { formatDistanceToNow, format } from "date-fns";
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from "@/components/ui/sheet";
 import { Popover, PopoverTrigger, PopoverContent } from "@/components/ui/popover";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger, DropdownMenuPortal } from "@/components/ui/dropdown-menu";
@@ -39,7 +39,7 @@ function LinkPreviewCard({ preview }: { preview: LinkPreview }) {
     )
 }
 
-function MessageBubble({ message, isOwnMessage, groupId }: { message: Message; isOwnMessage: boolean; groupId: string }) {
+function MessageBubble({ message, isOwnMessage, groupId, memberCount }: { message: Message; isOwnMessage: boolean; groupId: string; memberCount: number; }) {
     const { toast } = useToast();
     const { user, editMessage, deleteMessage, reactToMessage } = useAppContext();
     const [isEditing, setIsEditing] = useState(false);
@@ -121,9 +121,12 @@ function MessageBubble({ message, isOwnMessage, groupId }: { message: Message; i
     };
     
     const reactions = Object.entries(message.reactions || {});
+    
+    const readCount = message.readBy ? Object.keys(message.readBy).length : 0;
+    const isSeenByAll = readCount >= memberCount;
 
     return (
-        <div className={`group flex items-end gap-2 ${isOwnMessage ? 'justify-end' : ''}`}>
+        <div className={`group flex items-end gap-2 ${isOwnMessage ? 'justify-end' : ''}`} onContextMenu={(e) => e.preventDefault()}>
             {!isOwnMessage && (
                 <Link href={`/profile/${message.creatorUid}`}>
                     <Avatar className="h-8 w-8">
@@ -140,10 +143,13 @@ function MessageBubble({ message, isOwnMessage, groupId }: { message: Message; i
                                 <p className="text-xs font-bold pb-1">{message.creatorName}</p>
                             )}
                             {renderContent()}
-                            <p className={`text-xs mt-1 ${isOwnMessage ? 'text-primary-foreground/70' : 'text-muted-foreground'}`}>
-                                {formatDistanceToNow(new Date(message.timestamp), { addSuffix: true })}
-                                {message.isEdited && ' (edited)'}
-                            </p>
+                            <div className={`flex items-center justify-end gap-1.5 text-xs mt-1 ${isOwnMessage ? 'text-primary-foreground/70' : 'text-muted-foreground'}`}>
+                                {message.isEdited && <span>(edited)</span>}
+                                <span>{format(new Date(message.timestamp), "p")}</span>
+                                {isOwnMessage && (
+                                  isSeenByAll ? <CheckCheck size={16} /> : <Check size={16} />
+                                )}
+                            </div>
                             {reactions.length > 0 && (
                                 <div className={`absolute -bottom-3 flex gap-1 ${isOwnMessage ? 'right-2' : 'left-2'}`}>
                                     {reactions.map(([emoji, uids]) => (
@@ -190,8 +196,21 @@ function MessageBubble({ message, isOwnMessage, groupId }: { message: Message; i
     );
 }
 
-function ChatArea({ groupId, messages, groupName }: { groupId: string; messages: Message[], groupName: string }) {
-    const { user, sendMessage } = useAppContext();
+function useDebounce(value: any, delay: number) {
+  const [debouncedValue, setDebouncedValue] = useState(value);
+  useEffect(() => {
+    const handler = setTimeout(() => {
+      setDebouncedValue(value);
+    }, delay);
+    return () => {
+      clearTimeout(handler);
+    };
+  }, [value, delay]);
+  return debouncedValue;
+}
+
+function ChatArea({ groupId, messages, group, members }: { groupId: string; messages: Message[], group: Group | null, members: UserType[] }) {
+    const { user, sendMessage, updateTypingStatus } = useAppContext();
     const { toast } = useToast();
     const [text, setText] = useState("");
     const [isSending, setIsSending] = useState(false);
@@ -200,14 +219,42 @@ function ChatArea({ groupId, messages, groupName }: { groupId: string; messages:
     const [isRecording, setIsRecording] = useState(false);
     const mediaRecorderRef = useRef<MediaRecorder | null>(null);
     const audioChunksRef = useRef<Blob[]>([]);
+    const lastTextRef = useRef("");
+    const debouncedText = useDebounce(text, 500);
 
     useEffect(() => {
         messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
     }, [messages]);
 
+    useEffect(() => {
+        if (user) {
+            const isTyping = text.length > 0 && lastTextRef.current.length === 0;
+            const isStoppedTyping = text.length === 0 && lastTextRef.current.length > 0;
+
+            if (isTyping) {
+                updateTypingStatus(groupId, true);
+            } else if (isStoppedTyping) {
+                updateTypingStatus(groupId, false);
+            }
+        }
+        lastTextRef.current = text;
+    }, [text, user, groupId, updateTypingStatus]);
+
+    useEffect(() => {
+        if (user && debouncedText.length === 0 && lastTextRef.current.length > 0) {
+            updateTypingStatus(groupId, false);
+        }
+    }, [debouncedText, user, groupId, updateTypingStatus]);
+    
+    const typingUsers = group?.typing ? Object.keys(group.typing)
+        .filter(uid => group.typing![uid] && uid !== user?.uid)
+        .map(uid => members.find(m => m.uid === uid)?.name || "Someone") : [];
+
+
     const handleSendText = async () => {
-        if (!text.trim()) return;
+        if (!text.trim() || !user) return;
         setIsSending(true);
+        updateTypingStatus(groupId, false);
         const success = await sendMessage(groupId, { content: text, type: 'text' });
         if (success) {
             setText("");
@@ -287,12 +334,12 @@ function ChatArea({ groupId, messages, groupName }: { groupId: string; messages:
     return (
         <Card className="flex flex-col h-full border-0 sm:border rounded-none sm:rounded-lg">
             <CardHeader className="flex flex-row items-center justify-between">
-                <CardTitle>{groupName}</CardTitle>
+                <CardTitle>{group?.name}</CardTitle>
             </CardHeader>
             <CardContent className="flex-1 overflow-y-auto p-4 space-y-6">
                 {messages && messages.length > 0 ? (
                      messages.sort((a,b) => a.timestamp - b.timestamp).map(msg => (
-                        <MessageBubble key={msg.id} message={msg} isOwnMessage={user?.uid === msg.creatorUid} groupId={groupId} />
+                        <MessageBubble key={msg.id} message={msg} isOwnMessage={user?.uid === msg.creatorUid} groupId={groupId} memberCount={group?.members?.length || 1} />
                     ))
                 ) : (
                     <div className="text-center text-muted-foreground h-full flex items-center justify-center">
@@ -301,7 +348,12 @@ function ChatArea({ groupId, messages, groupName }: { groupId: string; messages:
                 )}
                  <div ref={messagesEndRef} />
             </CardContent>
-            <CardFooter className="border-t p-4">
+            <CardFooter className="border-t p-4 flex flex-col items-start gap-2">
+                 {typingUsers.length > 0 && (
+                    <p className="text-xs text-muted-foreground italic">
+                        {typingUsers.join(", ")} {typingUsers.length === 1 ? 'is' : 'are'} typing...
+                    </p>
+                 )}
                 <div className="flex items-center gap-2 w-full">
                     {isRecording ? (
                         <div className="flex-1 flex items-center gap-2 bg-muted p-2 rounded-lg">
@@ -359,11 +411,19 @@ function MembersList({ members }: { members: UserType[] }) {
             {members.map(member => (
                 <li key={member.uid}>
                     <Link href={`/profile/${member.uid}`} className="flex items-center gap-3 p-2 rounded-md hover:bg-muted transition-colors">
-                        <Avatar className="h-8 w-8">
+                        <Avatar className="h-8 w-8 relative">
                             {member.photoURL && <AvatarImage src={member.photoURL} alt={member.name} />}
                             <AvatarFallback>{getInitials(member.name)}</AvatarFallback>
+                            {member.presence?.state === 'online' && <div className="absolute bottom-0 right-0 w-2.5 h-2.5 bg-green-500 rounded-full border-2 border-background" />}
                         </Avatar>
-                        <span>{member.name}</span>
+                        <div className="flex-1">
+                            <span>{member.name}</span>
+                            {member.presence?.state === 'offline' && member.presence?.lastChanged && (
+                                <p className="text-xs text-muted-foreground">
+                                    Last seen {formatDistanceToNow(member.presence.lastChanged, { addSuffix: true })}
+                                </p>
+                            )}
+                        </div>
                     </Link>
                 </li>
             ))}
@@ -375,7 +435,7 @@ function MembersList({ members }: { members: UserType[] }) {
 export default function GroupPage() {
     const params = useParams();
     const { id: groupId } = params;
-    const { user, groups, joinGroup, allUsers, loading } = useAppContext();
+    const { user, groups, joinGroup, allUsers, loading, markMessagesAsRead } = useAppContext();
     const { toast } = useToast();
 
     const [group, setGroup] = useState<Group | null>(null);
@@ -389,10 +449,14 @@ export default function GroupPage() {
         if (foundGroup) {
             setGroup(foundGroup);
             if (user) {
-                setIsMember(foundGroup.members?.includes(user.uid) || false);
+                const member = foundGroup.members?.includes(user.uid) || false;
+                setIsMember(member);
+                if (member) {
+                    markMessagesAsRead(groupId);
+                }
             }
         }
-    }, [groupId, groups, user, loading]);
+    }, [groupId, groups, user, loading, markMessagesAsRead]);
 
     const handleJoin = async () => {
         if (!group) return;
@@ -460,7 +524,7 @@ export default function GroupPage() {
     return (
         <div className="h-[calc(100vh-4rem-1px)] flex">
             <div className="flex-1 h-full">
-                 <ChatArea groupId={group.id} messages={group.messages || []} groupName={group.name}/>
+                 <ChatArea groupId={group.id} messages={group.messages || []} group={group} members={membersDetails} />
             </div>
             <div className="hidden lg:block w-72 border-l h-full">
                 <Card className="h-full border-0 rounded-none">
