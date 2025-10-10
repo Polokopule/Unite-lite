@@ -189,7 +189,7 @@ export function AppContextProvider({ children }: { children: React.ReactNode }) 
             id: key,
             ...data[key],
             members: data[key].members || {},
-            messages: data[key].messages ? Object.values(data[key].messages).map(msg => ({...msg, reactions: msg.reactions ? Object.entries(msg.reactions).reduce((acc, [emoji, uidsObj]) => ({...acc, [emoji]: Object.keys(uidsObj)}), {}) : {}})) : []
+            messages: data[key].messages ? Object.values(data[key].messages).map((msg: any) => ({...msg, reactions: msg.reactions ? Object.entries(msg.reactions).reduce((acc: any, [emoji, uidsObj]: any) => ({...acc, [emoji]: Object.keys(uidsObj)}), {}) : {}})) : []
         }));
         setGroups(groupList);
     });
@@ -209,6 +209,7 @@ export function AppContextProvider({ children }: { children: React.ReactNode }) 
   useEffect(() => {
     let purchasedListener: () => void;
     let notificationsListener: () => void;
+    let conversationIdsListener: () => void;
     const conversationListeners: (() => void)[] = [];
 
     if (user) {
@@ -224,7 +225,7 @@ export function AppContextProvider({ children }: { children: React.ReactNode }) 
         });
 
         const userConversationsRef = ref(db, `users/${user.uid}/conversationIds`);
-        const conversationIdsListener = onValue(userConversationsRef, (snapshot) => {
+        conversationIdsListener = onValue(userConversationsRef, (snapshot) => {
             const conversationIds = snapshot.val() || {};
             
             // Clear existing listeners
@@ -280,6 +281,7 @@ export function AppContextProvider({ children }: { children: React.ReactNode }) 
     return () => {
         if (purchasedListener) purchasedListener();
         if (notificationsListener) notificationsListener();
+        if (conversationIdsListener) conversationIdsListener();
         conversationListeners.forEach(l => l());
     };
 }, [user]);
@@ -1009,7 +1011,7 @@ export function AppContextProvider({ children }: { children: React.ReactNode }) 
         await set(newMessageRef, messagePayload);
 
         if (messageData.type !== 'system' && messageData.content) {
-            const urlMatch = messageData.content?.match(urlRegex);
+            const urlMatch = messageData.content.match(urlRegex);
             if (urlMatch) {
                 generateLinkPreviewFlow({ url: urlMatch[0] }).then(preview => {
                     if (preview.title) {
@@ -1460,5 +1462,7 @@ export function useAppContext() {
   }
   return context;
 }
+
+    
 
     
