@@ -376,7 +376,7 @@ export default function ConversationPage() {
     const [text, setText] = useState("");
     const [isSending, setIsSending] = useState(false);
     const fileInputRef = useRef<HTMLInputElement>(null);
-    const scrollAreaRef = useRef<HTMLDivElement>(null);
+    const scrollViewportRef = useRef<HTMLDivElement>(null);
     
     const [recordingState, setRecordingState] = useState<'idle' | 'recording' | 'previewing'>('idle');
     const [recordedAudio, setRecordedAudio] = useState<{ url: string; blob: Blob } | null>(null);
@@ -421,11 +421,8 @@ export default function ConversationPage() {
     }, [conversationId, getConversationById, user, loading, router, toast, markMessagesAsRead, lockedConversations, isLocked]);
 
     useEffect(() => {
-        if (scrollAreaRef.current) {
-            const viewport = scrollAreaRef.current.querySelector('[data-radix-scroll-area-viewport]');
-            if (viewport) {
-                viewport.scrollTop = viewport.scrollHeight;
-            }
+        if (scrollViewportRef.current) {
+            scrollViewportRef.current.scrollTop = scrollViewportRef.current.scrollHeight;
         }
     }, [conversation?.messages, isLocked]);
     
@@ -617,9 +614,9 @@ export default function ConversationPage() {
     const isOtherUserBlocked = user.blockedUsers?.includes(otherParticipant?.uid || '');
 
     return (
-        <div className="fixed inset-0 bg-background z-50 h-[100vh] sm:h-[100vh]">
-            <div className="relative h-full">
-                <header className="absolute top-0 left-0 right-0 z-10 flex items-center justify-between border-b p-4 bg-background">
+        <div className="fixed inset-0 bg-background z-50 h-[100vh] sm:h-auto">
+            <div className="flex flex-col h-full">
+                <header className="flex-shrink-0 flex items-center justify-between border-b p-4 bg-background">
                     <div className="flex items-center gap-3">
                         <Button variant="ghost" size="icon" className="mr-2" onClick={() => router.back()}>
                             <ArrowLeft className="h-5 w-5" />
@@ -701,7 +698,7 @@ export default function ConversationPage() {
                 </header>
 
                 {isLocked ? (
-                    <div className="flex flex-col flex-1 items-center justify-center gap-4 p-4 text-center h-full">
+                    <div className="flex flex-col flex-1 items-center justify-center gap-4 p-4 text-center">
                         <Lock className="h-12 w-12 text-muted-foreground" />
                         <h2 className="text-xl font-semibold">This chat is locked</h2>
                         <p className="text-muted-foreground">Enter your PIN to unlock the conversation.</p>
@@ -718,7 +715,7 @@ export default function ConversationPage() {
                     </div>
                 ) : (
                     <>
-                        <ScrollArea className="h-full pt-20 pb-24" ref={scrollAreaRef}>
+                        <ScrollArea className="flex-1" viewportRef={scrollViewportRef}>
                             <div className="p-4 space-y-6">
                                 {conversation.messages && conversation.messages.length > 0 ? (
                                     conversation.messages.sort((a,b) => a.timestamp - b.timestamp).map((msg, idx) => (
@@ -739,7 +736,7 @@ export default function ConversationPage() {
                                 )}
                             </div>
                         </ScrollArea>
-                        <footer className="absolute bottom-0 left-0 right-0 z-10 border-t p-4 bg-background">
+                        <footer className="flex-shrink-0 border-t p-4 bg-background">
                            {amIBlocked || isOtherUserBlocked ? (
                                 <div className="w-full text-center text-sm text-muted-foreground p-2 bg-muted rounded-md">
                                     {isOtherUserBlocked ? `You have blocked ${otherParticipant?.name}. You cannot send messages.` : `You have been blocked by ${otherParticipant?.name}.`}

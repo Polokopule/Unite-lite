@@ -20,7 +20,7 @@ export default function AiChatPage() {
   const [history, setHistory] = useState<AIChatMessage[]>([]);
   const [question, setQuestion] = useState('');
   const [isLoading, setIsLoading] = useState(false);
-  const scrollAreaRef = useRef<HTMLDivElement>(null);
+  const scrollViewportRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     if (user?.aiChatHistory && user.aiChatHistory.length > 0) {
@@ -36,11 +36,8 @@ export default function AiChatPage() {
   }, [user]);
 
   useEffect(() => {
-    if (scrollAreaRef.current) {
-        const viewport = scrollAreaRef.current.querySelector('[data-radix-scroll-area-viewport]');
-        if (viewport) {
-            viewport.scrollTop = viewport.scrollHeight;
-        }
+    if (scrollViewportRef.current) {
+      scrollViewportRef.current.scrollTop = scrollViewportRef.current.scrollHeight;
     }
   }, [history, isLoading]);
 
@@ -84,9 +81,9 @@ export default function AiChatPage() {
   };
 
   return (
-    <div className="fixed inset-0 bg-background z-50 h-[100vh] sm:h-[100vh]">
-        <div className="relative h-full">
-          <header className="absolute top-0 left-0 right-0 z-10 flex items-center justify-between border-b p-4 bg-background">
+    <div className="fixed inset-0 bg-background z-50 h-[100vh] sm:h-auto">
+        <div className="flex flex-col h-full">
+          <header className="flex-shrink-0 flex items-center justify-between border-b p-4 bg-background">
              <div className="flex items-center gap-3">
                 <Button variant="ghost" size="icon" className="mr-2" onClick={() => router.back()}>
                     <ArrowLeft className="h-5 w-5" />
@@ -99,7 +96,7 @@ export default function AiChatPage() {
                 </div>
             </div>
           </header>
-          <ScrollArea className="h-full pt-20 pb-24" ref={scrollAreaRef}>
+          <ScrollArea className="flex-1" viewportRef={scrollViewportRef}>
             <div className="p-4 space-y-4">
               {history.map((message, index) => (
                 <div
@@ -148,7 +145,7 @@ export default function AiChatPage() {
               )}
             </div>
           </ScrollArea>
-          <footer className="absolute bottom-0 left-0 right-0 z-10 border-t p-4 bg-background">
+          <footer className="flex-shrink-0 border-t p-4 bg-background">
             <div className="flex w-full items-center gap-2">
               <Textarea
                 placeholder="Ask a question about Unite..."

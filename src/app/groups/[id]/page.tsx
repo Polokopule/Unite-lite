@@ -277,7 +277,7 @@ function ChatArea({ groupId, messages, group, members, membersDetails }: { group
     const [text, setText] = useState("");
     const [isSending, setIsSending] = useState(false);
     const fileInputRef = useRef<HTMLInputElement>(null);
-    const scrollAreaRef = useRef<HTMLDivElement>(null);
+    const scrollViewportRef = useRef<HTMLDivElement>(null);
     
     const [recordingState, setRecordingState] = useState<'idle' | 'recording' | 'previewing'>('idle');
     const [recordedAudio, setRecordedAudio] = useState<{ url: string; blob: Blob } | null>(null);
@@ -292,11 +292,8 @@ function ChatArea({ groupId, messages, group, members, membersDetails }: { group
     const [isSavingPin, setIsSavingPin] = useState(false);
 
     useEffect(() => {
-        if (scrollAreaRef.current) {
-            const viewport = scrollAreaRef.current.querySelector('[data-radix-scroll-area-viewport]');
-            if (viewport) {
-                viewport.scrollTop = viewport.scrollHeight;
-            }
+        if (scrollViewportRef.current) {
+            scrollViewportRef.current.scrollTop = scrollViewportRef.current.scrollHeight;
         }
     }, [messages]);
 
@@ -447,8 +444,8 @@ function ChatArea({ groupId, messages, group, members, membersDetails }: { group
     };
 
     return (
-        <div className="relative h-full">
-            <header className="absolute top-0 left-0 right-0 z-10 flex items-center justify-between p-4 border-b bg-background">
+        <div className="flex flex-col h-full">
+            <header className="flex-shrink-0 flex items-center justify-between p-4 border-b bg-background">
                 <div className="flex items-center gap-3">
                      <Button variant="ghost" size="icon" className="mr-2" onClick={() => router.back()}>
                         <ArrowLeft className="h-5 w-5" />
@@ -552,7 +549,7 @@ function ChatArea({ groupId, messages, group, members, membersDetails }: { group
                 </DropdownMenu>
             </header>
             
-            <ScrollArea className="h-full pt-20 pb-24" ref={scrollAreaRef}>
+            <ScrollArea className="flex-1" viewportRef={scrollViewportRef}>
                  <div className="p-4 space-y-6">
                     {messages && messages.length > 0 ? (
                          messages.sort((a,b) => a.timestamp - b.timestamp).map(msg => (
@@ -566,7 +563,7 @@ function ChatArea({ groupId, messages, group, members, membersDetails }: { group
                  </div>
             </ScrollArea>
            
-            <footer className="absolute bottom-0 left-0 right-0 z-10 border-t p-4 bg-background">
+            <footer className="flex-shrink-0 border-t p-4 bg-background">
                  <div className="flex items-center gap-2 w-full">
                     {recordingState === 'previewing' && recordedAudio ? (
                         <>
@@ -762,7 +759,7 @@ export default function GroupPage() {
     }
 
     return (
-         <div className="fixed inset-0 bg-background z-50 h-[100vh] sm:h-[100vh]">
+         <div className="fixed inset-0 bg-background z-50 h-[100vh] sm:h-auto">
              <ChatArea groupId={group.id} messages={group.messages || []} group={group} members={membersDetails} membersDetails={membersDetails} />
         </div>
     );
