@@ -29,7 +29,7 @@ export default function AiChatPage() {
       setHistory([
         {
           role: 'model',
-          text: `Hello! I'm Unite AI. How can I help you understand the Unite platform today?`,
+          parts: [{ text: `Hello! I'm Unite AI. How can I help you understand the Unite platform today?`}],
         },
       ]);
     }
@@ -44,24 +44,19 @@ export default function AiChatPage() {
   const handleSend = async () => {
     if (!question.trim()) return;
 
-    const userMessage: AIChatMessage = { role: 'user', text: question };
+    const userMessage: AIChatMessage = { role: 'user', parts: [{ text: question }] };
     const newHistory = [...history, userMessage];
     setHistory(newHistory);
     setQuestion('');
     setIsLoading(true);
 
     try {
-      const genkitHistory = newHistory.map((msg) => ({
-        role: msg.role,
-        content: [{ text: msg.text }],
-      }));
-
       const response = await uniteAIFlow({
-        history: genkitHistory,
+        history: newHistory,
         question: question,
       });
       
-      const modelMessage: AIChatMessage = { role: 'model', text: response };
+      const modelMessage: AIChatMessage = { role: 'model', parts: [{ text: response }] };
       const finalHistory = [...newHistory, modelMessage];
       setHistory(finalHistory);
       await updateAIChatHistory(finalHistory);
@@ -70,7 +65,7 @@ export default function AiChatPage() {
       console.error("AI flow error:", error);
       const errorMessage: AIChatMessage = {
         role: 'model',
-        text: 'Sorry, I encountered an error. Please try again.',
+        parts: [{ text: 'Sorry, I encountered an error. Please try again.' }],
       };
       const finalHistory = [...newHistory, errorMessage];
       setHistory(finalHistory);
@@ -79,94 +74,96 @@ export default function AiChatPage() {
       setIsLoading(false);
     }
   };
+  
+  const getMessageText = (msg: AIChatMessage) => {
+    return msg.parts.map(p => p.text).join('');
+  }
 
   return (
-    <div className="fixed inset-0 bg-background z-50 h-[100vh] sm:h-auto">
-        <div className="flex flex-col h-full">
-          <header className="flex-shrink-0 flex items-center justify-between border-b p-4 bg-background">
-             <div className="flex items-center gap-3">
-                <Button variant="ghost" size="icon" className="mr-2" onClick={() => router.back()}>
-                    <ArrowLeft className="h-5 w-5" />
-                </Button>
-                <div className="flex items-center gap-2">
-                    <Avatar className="h-10 w-10">
-                        <AvatarFallback><Bot /></AvatarFallback>
-                    </Avatar>
-                    <h2 className="font-semibold">AI Assistant</h2>
-                </div>
+    <div className="flex flex-col h-full">
+        <header className="flex-shrink-0 flex items-center justify-between border-b p-4 bg-background">
+            <div className="flex items-center gap-3">
+            <Button variant="ghost" size="icon" className="mr-2" onClick={() => router.back()}>
+                <ArrowLeft className="h-5 w-5" />
+            </Button>
+            <div className="flex items-center gap-2">
+                <Avatar className="h-10 w-10">
+                    <AvatarFallback><Bot /></AvatarFallback>
+                </Avatar>
+                <h2 className="font-semibold">AI Assistant</h2>
             </div>
-          </header>
-          <ScrollArea className="flex-1" viewportRef={scrollViewportRef}>
-            <div className="p-4 space-y-4">
-              {history.map((message, index) => (
-                <div
-                  key={index}
-                  className={`flex items-start gap-3 ${
-                    message.role === 'user' ? 'justify-end' : ''
-                  }`}
-                >
-                  {message.role === 'model' && (
-                    <Avatar className="h-8 w-8 bg-primary text-primary-foreground">
-                      <AvatarFallback>
-                        <Bot size={20} />
-                      </AvatarFallback>
-                    </Avatar>
-                  )}
-                  <div
-                    className={`max-w-xs rounded-lg p-3 text-sm ${
-                      message.role === 'user'
-                        ? 'bg-primary text-primary-foreground'
-                        : 'bg-muted'
-                    }`}
-                  >
-                    {message.text}
-                  </div>
-                  {message.role === 'user' && user && (
-                    <Avatar className="h-8 w-8">
-                      <AvatarImage src={user.photoURL} alt={user.name} />
-                      <AvatarFallback>
-                        {user.name?.substring(0, 2)}
-                      </AvatarFallback>
-                    </Avatar>
-                  )}
-                </div>
-              ))}
-              {isLoading && (
-                 <div className="flex items-start gap-3">
-                    <Avatar className="h-8 w-8 bg-primary text-primary-foreground">
-                      <AvatarFallback>
-                        <Bot size={20} />
-                      </AvatarFallback>
-                    </Avatar>
-                    <div className="max-w-xs rounded-lg p-3 text-sm bg-muted flex items-center">
-                        <Loader2 className="h-5 w-5 animate-spin"/>
-                    </div>
-                </div>
-              )}
-            </div>
-          </ScrollArea>
-          <footer className="flex-shrink-0 border-t p-4 bg-background">
-            <div className="flex w-full items-center gap-2">
-              <Textarea
-                placeholder="Ask a question about Unite..."
-                value={question}
-                onKeyDown={(e) => {
-                  if (e.key === 'Enter' && !e.shiftKey) {
-                    e.preventDefault();
-                    handleSend();
-                  }
-                }}
-                onChange={(e) => setQuestion(e.target.value)}
-                disabled={isLoading}
-                rows={1}
-                className="max-h-24 resize-none"
-              />
-              <Button onClick={handleSend} disabled={isLoading || !question.trim()}>
-                <Send className="h-4 w-4" />
-              </Button>
-            </div>
-          </footer>
         </div>
+        </header>
+        <ScrollArea className="flex-1" viewportRef={scrollViewportRef}>
+        <div className="p-4 space-y-4">
+            {history.map((message, index) => (
+            <div
+                key={index}
+                className={`flex items-start gap-3 ${
+                message.role === 'user' ? 'justify-end' : ''
+                }`}
+            >
+                {message.role === 'model' && (
+                <Avatar className="h-8 w-8 bg-primary text-primary-foreground">
+                    <AvatarFallback>
+                    <Bot size={20} />
+                    </AvatarFallback>
+                </Avatar>
+                )}
+                <div
+                className={`max-w-xs rounded-lg p-3 text-sm ${
+                    message.role === 'user'
+                    ? 'bg-primary text-primary-foreground'
+                    : 'bg-muted'
+                }`}
+                >
+                {getMessageText(message)}
+                </div>
+                {message.role === 'user' && user && (
+                <Avatar className="h-8 w-8">
+                    <AvatarImage src={user.photoURL} alt={user.name} />
+                    <AvatarFallback>
+                    {user.name?.substring(0, 2)}
+                    </AvatarFallback>
+                </Avatar>
+                )}
+            </div>
+            ))}
+            {isLoading && (
+            <div className="flex items-start gap-3">
+                <Avatar className="h-8 w-8 bg-primary text-primary-foreground">
+                    <AvatarFallback>
+                    <Bot size={20} />
+                    </AvatarFallback>
+                </Avatar>
+                <div className="max-w-xs rounded-lg p-3 text-sm bg-muted flex items-center">
+                    <Loader2 className="h-5 w-5 animate-spin"/>
+                </div>
+            </div>
+            )}
+        </div>
+        </ScrollArea>
+        <footer className="flex-shrink-0 border-t p-4 bg-background">
+        <div className="flex w-full items-center gap-2">
+            <Textarea
+            placeholder="Ask a question about Unite..."
+            value={question}
+            onKeyDown={(e) => {
+                if (e.key === 'Enter' && !e.shiftKey) {
+                e.preventDefault();
+                handleSend();
+                }
+            }}
+            onChange={(e) => setQuestion(e.target.value)}
+            disabled={isLoading}
+            rows={1}
+            className="max-h-24 resize-none"
+            />
+            <Button onClick={handleSend} disabled={isLoading || !question.trim()}>
+            <Send className="h-4 w-4" />
+            </Button>
+        </div>
+        </footer>
     </div>
   );
 }

@@ -25,9 +25,13 @@ export type UserPresence = {
     lastChanged: number;
 }
 
+export type Part = {
+  text: string;
+};
+
 export type AIChatMessage = {
   role: 'user' | 'model';
-  text: string;
+  parts: Part[];
 };
 
 export type User = {

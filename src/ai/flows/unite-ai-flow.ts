@@ -48,9 +48,15 @@ If asked for instructions, provide simple, step-by-step guides (e.g., "Go to Hom
 If you don't know the answer, say that you don't have that information. Do not answer questions unrelated to Unite.
 `;
 
+    // The history from the client has a different structure. We need to map it.
+    const history = input.history?.map(h => ({
+      role: h.role,
+      content: h.parts
+    }));
+
     const response = await ai.generate({
       prompt: input.question,
-      history: input.history,
+      history: history,
       config: {
         temperature: 0.5,
       },
