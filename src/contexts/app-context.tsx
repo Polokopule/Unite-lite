@@ -74,6 +74,8 @@ interface AppContextType {
   reactToDirectMessage: (conversationId: string, messageId: string, reaction: string) => Promise<void>;
   getConversationById: (conversationId: string) => Conversation | undefined;
   markNotificationsAsRead: () => Promise<void>;
+  markMessagesAsRead: (id: string, isDirect?: boolean) => void;
+  updateTypingStatus: (id: string, isTyping: boolean, isDirect?: boolean) => void;
   loading: boolean;
 }
 
@@ -1154,6 +1156,39 @@ export function AppContextProvider({ children }: { children: React.ReactNode }) 
       }
   }
 
+  const markMessagesAsRead = async (id: string, isDirect: boolean = false) => {
+      if (!user) return;
+      const basePath = isDirect ? `conversations/${id}` : `groups/${id}`;
+      const messagesRef = ref(db, `${basePath}/messages`);
+      const snapshot = await get(messagesRef);
+      if (!snapshot.exists()) return;
+
+      const updates: { [key: string]: any } = {};
+      const messages = snapshot.val();
+      Object.keys(messages).forEach(messageId => {
+          const message = messages[messageId];
+          if (message.creatorUid !== user.uid && (!message.readBy || !message.readBy[user.uid])) {
+              updates[`${basePath}/messages/${messageId}/readBy/${user.uid}`] = serverTimestamp();
+          }
+      });
+
+      if (Object.keys(updates).length > 0) {
+          await update(ref(db), updates);
+      }
+  };
+
+  const updateTypingStatus = async (id: string, isTyping: boolean, isDirect: boolean = false) => {
+      if (!user) return;
+      const path = isDirect ? `conversations/${id}/typing/${user.uid}` : `groups/${id}/typing/${user.uid}`;
+      const typingRef = ref(db, path);
+      if (isTyping) {
+          await set(typingRef, true);
+      } else {
+          await remove(typingRef);
+      }
+  };
+
+
   const value = {
     user,
     allUsers,
@@ -1197,6 +1232,8 @@ export function AppContextProvider({ children }: { children: React.ReactNode }) 
     reactToDirectMessage,
     getConversationById,
     markNotificationsAsRead,
+    markMessagesAsRead,
+    updateTypingStatus,
     loading,
   };
 

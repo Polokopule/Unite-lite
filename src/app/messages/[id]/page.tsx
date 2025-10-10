@@ -1,4 +1,5 @@
 
+
 "use client";
 
 import { useParams, useRouter } from "next/navigation";
@@ -258,7 +259,7 @@ export default function ConversationPage() {
     }, [text, user, conversationId, updateTypingStatus]);
 
     useEffect(() => {
-        if (user && debouncedText.length === 0 && lastTextRef.current.length > 0) {
+        if (user && debouncedText.length > 0 && lastTextRef.current.length > 0) {
             updateTypingStatus(conversationId as string, false, true);
         }
     }, [debouncedText, user, conversationId, updateTypingStatus]);
