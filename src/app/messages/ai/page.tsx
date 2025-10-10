@@ -76,6 +76,9 @@ export default function AiChatPage() {
   };
   
   const getMessageText = (msg: AIChatMessage) => {
+    if (!msg || !msg.parts || !Array.isArray(msg.parts)) {
+        return '';
+    }
     return msg.parts.map(p => p.text).join('');
   }
 
