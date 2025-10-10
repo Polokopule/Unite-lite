@@ -1,7 +1,7 @@
 
 "use client";
 
-import { useParams } from "next/navigation";
+import { useParams, useRouter } from "next/navigation";
 import { useAppContext } from "@/contexts/app-context";
 import { Group, Message, User as UserType, LinkPreview } from "@/lib/types";
 import React, { useEffect, useState, useRef } from "react";
@@ -10,16 +10,18 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
-import { Loader2, Lock, Users, Send, Paperclip, Image as ImageIcon, Download, File, Music, Video, Menu, Mic, Square, Smile, Copy, Pencil, Trash2, Check, CheckCheck, Share2 } from "lucide-react";
+import { Loader2, Lock, Users, Send, Paperclip, Image as ImageIcon, Download, File, Music, Video, Menu, Mic, Square, Smile, Copy, Pencil, Trash2, Check, CheckCheck, Share2, MoreVertical, ArrowLeft } from "lucide-react";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import Image from "next/image";
 import Link from "next/link";
 import { formatTimeAgo } from "@/lib/utils";
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from "@/components/ui/sheet";
 import { Popover, PopoverTrigger, PopoverContent } from "@/components/ui/popover";
-import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger, DropdownMenuPortal } from "@/components/ui/dropdown-menu";
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger, DropdownMenuSeparator, DropdownMenuPortal } from "@/components/ui/dropdown-menu";
 import EmojiPicker, { EmojiClickData } from "emoji-picker-react";
 import { Textarea } from "@/components/ui/textarea";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogTrigger, DialogFooter } from "@/components/ui/dialog";
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
 
 function LinkPreviewCard({ preview }: { preview: LinkPreview }) {
     if (!preview.title) return null;
@@ -209,9 +211,10 @@ function useDebounce(value: any, delay: number) {
   return debouncedValue;
 }
 
-function ChatArea({ groupId, messages, group, members }: { groupId: string; messages: Message[], group: Group | null, members: UserType[] }) {
-    const { user, sendMessage, updateTypingStatus } = useAppContext();
+function ChatArea({ groupId, messages, group, members, membersDetails }: { groupId: string; messages: Message[], group: Group | null, members: UserType[], membersDetails: UserType[] }) {
+    const { user, sendMessage, updateTypingStatus, deleteGroup, updateGroupPin } = useAppContext();
     const { toast } = useToast();
+    const router = useRouter();
     const [text, setText] = useState("");
     const [isSending, setIsSending] = useState(false);
     const fileInputRef = useRef<HTMLInputElement>(null);
@@ -221,6 +224,10 @@ function ChatArea({ groupId, messages, group, members }: { groupId: string; mess
     const audioChunksRef = useRef<Blob[]>([]);
     const lastTextRef = useRef("");
     const debouncedText = useDebounce(text, 500);
+
+    const [newPin, setNewPin] = useState(group?.pin || "");
+    const [isPinDialogOpen, setIsPinDialogOpen] = useState(false);
+    const [isSavingPin, setIsSavingPin] = useState(false);
 
     useEffect(() => {
         messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
@@ -337,19 +344,136 @@ function ChatArea({ groupId, messages, group, members }: { groupId: string; mess
         toast({ title: "Invite link copied to clipboard!" });
     };
 
+    const isCreator = user?.uid === group?.creatorUid;
+
+    const handleDeleteGroup = async () => {
+        if (!group) return;
+        const success = await deleteGroup(group.id);
+        if (success) {
+            toast({ title: "Group Deleted" });
+            router.push('/groups');
+        } else {
+            toast({ variant: 'destructive', title: "Failed to delete group" });
+        }
+    };
+
+    const handleSavePin = async () => {
+        if (!group) return;
+        setIsSavingPin(true);
+        const success = await updateGroupPin(group.id, newPin);
+        if (success) {
+            toast({ title: "PIN Updated", description: "The group's privacy settings have been changed." });
+            setIsPinDialogOpen(false);
+        } else {
+            toast({ variant: 'destructive', title: "Failed to update PIN" });
+        }
+        setIsSavingPin(false);
+    };
+
     return (
         <Card className="flex flex-col h-full border-0 sm:border rounded-none sm:rounded-lg">
             <CardHeader className="flex flex-row items-center justify-between">
                 <div className="flex items-center gap-3">
+                     <Button variant="ghost" size="icon" className="mr-2 lg:hidden" onClick={() => router.back()}>
+                        <ArrowLeft className="h-5 w-5" />
+                    </Button>
                     <Avatar className="h-10 w-10">
                         <AvatarImage src={group?.photoURL} alt={group?.name} />
                         <AvatarFallback><Users/></AvatarFallback>
                     </Avatar>
-                    <CardTitle>{group?.name}</CardTitle>
+                    <div>
+                        <CardTitle>{group?.name}</CardTitle>
+                         {typingUsers.length > 0 && (
+                            <p className="text-xs text-muted-foreground italic">
+                                {typingUsers.join(", ")} {typingUsers.length === 1 ? 'is' : 'are'} typing...
+                            </p>
+                         )}
+                    </div>
                 </div>
-                <Button variant="ghost" size="icon" onClick={handleCopyInviteLink}>
-                    <Share2 className="h-5 w-5" />
-                </Button>
+                 <DropdownMenu>
+                    <DropdownMenuTrigger asChild>
+                        <Button variant="ghost" size="icon">
+                            <MoreVertical className="h-5 w-5" />
+                        </Button>
+                    </DropdownMenuTrigger>
+                    <DropdownMenuContent>
+                        <Dialog>
+                            <DialogTrigger asChild>
+                                <DropdownMenuItem onSelect={(e) => e.preventDefault()}>
+                                    <Users className="mr-2 h-4 w-4"/> View Members
+                                </DropdownMenuItem>
+                            </DialogTrigger>
+                            <DialogContent>
+                                <DialogHeader>
+                                    <DialogTitle>Members ({membersDetails.length})</DialogTitle>
+                                </DialogHeader>
+                                <MembersList members={membersDetails} />
+                            </DialogContent>
+                        </Dialog>
+                        <DropdownMenuItem onClick={handleCopyInviteLink}>
+                             <Share2 className="mr-2 h-4 w-4"/> Copy Invite Link
+                        </DropdownMenuItem>
+                        {isCreator && (
+                            <>
+                                <DropdownMenuSeparator />
+                                <DropdownMenuItem asChild>
+                                    <Link href={`/groups/edit/${groupId}`}>
+                                        <Pencil className="mr-2 h-4 w-4" /> Edit Group
+                                    </Link>
+                                </DropdownMenuItem>
+                                <Dialog open={isPinDialogOpen} onOpenChange={setIsPinDialogOpen}>
+                                    <DialogTrigger asChild>
+                                        <DropdownMenuItem onSelect={(e) => e.preventDefault()}>
+                                            <Lock className="mr-2 h-4 w-4" /> Set PIN
+                                        </DropdownMenuItem>
+                                    </DialogTrigger>
+                                    <DialogContent>
+                                        <DialogHeader>
+                                            <DialogTitle>Set Group PIN</DialogTitle>
+                                            <DialogDescription>
+                                                Leave this blank to make the group public. Setting a PIN will make it private.
+                                            </DialogDescription>
+                                        </DialogHeader>
+                                        <div className="py-4">
+                                            <Label htmlFor="pin-input">Group PIN</Label>
+                                            <Input
+                                                id="pin-input"
+                                                value={newPin}
+                                                onChange={(e) => setNewPin(e.target.value)}
+                                                placeholder="Enter a PIN..."
+                                            />
+                                        </div>
+                                        <DialogFooter>
+                                            <Button onClick={handleSavePin} disabled={isSavingPin}>
+                                                {isSavingPin && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                                                Save PIN
+                                            </Button>
+                                        </DialogFooter>
+                                    </DialogContent>
+                                </Dialog>
+                                <AlertDialog>
+                                    <AlertDialogTrigger asChild>
+                                        <DropdownMenuItem className="text-destructive" onSelect={(e) => e.preventDefault()}>
+                                            <Trash2 className="mr-2 h-4 w-4" /> Delete Group
+                                        </DropdownMenuItem>
+                                    </AlertDialogTrigger>
+                                    <AlertDialogContent>
+                                        <AlertDialogHeader>
+                                            <AlertDialogTitle>Are you sure?</AlertDialogTitle>
+                                            <AlertDialogDescription>
+                                                This will permanently delete the group and all its messages. This action cannot be undone.
+                                            </AlertDialogDescription>
+                                        </AlertDialogHeader>
+                                        <AlertDialogFooter>
+                                            <AlertDialogCancel>Cancel</AlertDialogCancel>
+                                            <AlertDialogAction onClick={handleDeleteGroup}>Delete</AlertDialogAction>
+                                        </AlertDialogFooter>
+                                    </AlertDialogContent>
+                                </AlertDialog>
+                            </>
+                        )}
+                    </DropdownMenuContent>
+                </DropdownMenu>
             </CardHeader>
             <CardContent className="flex-1 overflow-y-auto p-4 space-y-6">
                 {messages && messages.length > 0 ? (
@@ -364,11 +488,6 @@ function ChatArea({ groupId, messages, group, members }: { groupId: string; mess
                  <div ref={messagesEndRef} />
             </CardContent>
             <CardFooter className="border-t p-4 flex flex-col items-start gap-2">
-                 {typingUsers.length > 0 && (
-                    <p className="text-xs text-muted-foreground italic">
-                        {typingUsers.join(", ")} {typingUsers.length === 1 ? 'is' : 'are'} typing...
-                    </p>
-                 )}
                 <div className="flex items-center gap-2 w-full">
                     {isRecording ? (
                         <div className="flex-1 flex items-center gap-2 bg-muted p-2 rounded-lg">
@@ -539,7 +658,7 @@ export default function GroupPage() {
     return (
         <div className="h-[calc(100vh-4rem-1px)] flex">
             <div className="flex-1 h-full">
-                 <ChatArea groupId={group.id} messages={group.messages || []} group={group} members={membersDetails} />
+                 <ChatArea groupId={group.id} messages={group.messages || []} group={group} members={membersDetails} membersDetails={membersDetails} />
             </div>
             <div className="hidden lg:block w-72 border-l h-full">
                 <Card className="h-full border-0 rounded-none">
@@ -551,25 +670,7 @@ export default function GroupPage() {
                     </CardContent>
                 </Card>
             </div>
-             <div className="lg:hidden absolute top-4 right-4">
-                 <Sheet>
-                    <SheetTrigger asChild>
-                        <Button size="icon" variant="outline">
-                            <Users className="h-5 w-5"/>
-                        </Button>
-                    </SheetTrigger>
-                    <SheetContent>
-                        <SheetHeader>
-                            <SheetTitle className="flex items-center gap-2">
-                                <Users className="h-5 w-5"/> Members ({membersDetails.length})
-                            </SheetTitle>
-                        </SheetHeader>
-                        <div className="py-4">
-                           <MembersList members={membersDetails} />
-                        </div>
-                    </SheetContent>
-                </Sheet>
-            </div>
         </div>
     );
 }
+
