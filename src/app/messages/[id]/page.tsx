@@ -4,16 +4,20 @@
 import { useParams, useRouter } from "next/navigation";
 import { useAppContext } from "@/contexts/app-context";
 import { Conversation, Message, User as UserType, LinkPreview } from "@/lib/types";
-import { useEffect, useState, useRef } from "react";
+import React, { useEffect, useState, useRef } from "react";
 import { Card, CardContent, CardHeader, CardTitle, CardFooter } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { useToast } from "@/hooks/use-toast";
-import { Loader2, Send, Paperclip, ArrowLeft, File as FileIcon, Mic, Square } from "lucide-react";
+import { Loader2, Send, Paperclip, ArrowLeft, File as FileIcon, Mic, Square, Smile, Copy, Pencil, Trash2 } from "lucide-react";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import Image from "next/image";
 import Link from "next/link";
 import { formatDistanceToNow } from "date-fns";
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import EmojiPicker, { EmojiClickData } from "emoji-picker-react";
+import { Textarea } from "@/components/ui/textarea";
 
 function LinkPreviewCard({ preview }: { preview: LinkPreview }) {
     if (!preview.title) return null;
@@ -33,8 +37,52 @@ function LinkPreviewCard({ preview }: { preview: LinkPreview }) {
     )
 }
 
-function MessageBubble({ message, isOwnMessage, participant }: { message: Message; isOwnMessage: boolean, participant: { name: string, photoURL: string } | undefined }) {
+function MessageBubble({ message, isOwnMessage, participant, conversationId }: { message: Message; isOwnMessage: boolean, participant: { name: string, photoURL: string } | undefined, conversationId: string }) {
+    const { toast } = useToast();
+    const { user, editDirectMessage, deleteDirectMessage, reactToDirectMessage } = useAppContext();
+    const [isEditing, setIsEditing] = useState(false);
+    const [editedContent, setEditedContent] = useState(message.content);
+
+    const handleCopy = () => {
+        navigator.clipboard.writeText(message.content);
+        toast({ title: "Copied to clipboard!" });
+    };
+
+    const handleEdit = async () => {
+        if (!editedContent.trim()) return;
+        const success = await editDirectMessage(conversationId, message.id, editedContent);
+        if (success) {
+            setIsEditing(false);
+            toast({ title: "Message updated" });
+        } else {
+            toast({ variant: 'destructive', title: "Failed to edit message" });
+        }
+    };
+    
+    const handleDelete = async () => {
+        const success = await deleteDirectMessage(conversationId, message.id);
+        if (!success) {
+            toast({ variant: 'destructive', title: "Failed to delete message" });
+        }
+    };
+
+    const handleReaction = (emoji: EmojiClickData) => {
+        reactToDirectMessage(conversationId, message.id, emoji.emoji);
+    };
+
     const renderContent = () => {
+        if (isEditing) {
+            return (
+                <div className="space-y-2">
+                    <Textarea value={editedContent} onChange={(e) => setEditedContent(e.target.value)} className="min-h-[60px]" />
+                    <div className="flex gap-2 justify-end">
+                        <Button variant="ghost" size="sm" onClick={() => setIsEditing(false)}>Cancel</Button>
+                        <Button size="sm" onClick={handleEdit}>Save</Button>
+                    </div>
+                </div>
+            )
+        }
+
         switch (message.type) {
             case 'image':
                 return (
@@ -66,9 +114,11 @@ function MessageBubble({ message, isOwnMessage, participant }: { message: Messag
                 );
         }
     };
+    
+    const reactions = Object.entries(message.reactions || {});
 
     return (
-        <div className={`flex items-end gap-2 ${isOwnMessage ? 'justify-end' : ''}`}>
+        <div className={`group flex items-end gap-2 ${isOwnMessage ? 'justify-end' : ''}`}>
             {!isOwnMessage && participant && (
                 <Link href={`/profile/${message.creatorUid}`}>
                     <Avatar className="h-8 w-8">
@@ -77,11 +127,58 @@ function MessageBubble({ message, isOwnMessage, participant }: { message: Messag
                     </Avatar>
                 </Link>
             )}
-            <div className={`max-w-md rounded-xl p-3 px-4 ${isOwnMessage ? 'bg-primary text-primary-foreground' : 'bg-muted'}`}>
-                {renderContent()}
-                <p className={`text-xs mt-1 ${isOwnMessage ? 'text-primary-foreground/70' : 'text-muted-foreground'}`}>
-                    {formatDistanceToNow(new Date(message.timestamp), { addSuffix: true })}
-                </p>
+            <div className={`flex items-center gap-2 ${isOwnMessage ? 'flex-row-reverse' : 'flex-row'}`}>
+                <div className="opacity-0 group-hover:opacity-100 transition-opacity">
+                     <DropdownMenu>
+                        <DropdownMenuTrigger asChild>
+                            <Button variant="ghost" size="icon" className="h-7 w-7">...</Button>
+                        </DropdownMenuTrigger>
+                        <DropdownMenuContent>
+                             <Popover>
+                                <PopoverTrigger asChild>
+                                    <DropdownMenuItem onSelect={(e) => e.preventDefault()}>
+                                        <Smile className="mr-2 h-4 w-4" /> React
+                                    </DropdownMenuItem>
+                                </PopoverTrigger>
+                                <PopoverContent className="p-0 border-0">
+                                    <EmojiPicker onEmojiClick={handleReaction} />
+                                </PopoverContent>
+                            </Popover>
+                            {message.type === 'text' && (
+                                 <DropdownMenuItem onClick={handleCopy}>
+                                    <Copy className="mr-2 h-4 w-4" /> Copy
+                                </DropdownMenuItem>
+                            )}
+                            {isOwnMessage && message.type === 'text' && (
+                                <DropdownMenuItem onClick={() => setIsEditing(true)}>
+                                    <Pencil className="mr-2 h-4 w-4" /> Edit
+                                </DropdownMenuItem>
+                            )}
+                             {isOwnMessage && (
+                                <DropdownMenuItem onClick={handleDelete} className="text-destructive">
+                                    <Trash2 className="mr-2 h-4 w-4" /> Delete
+                                </DropdownMenuItem>
+                            )}
+                        </DropdownMenuContent>
+                    </DropdownMenu>
+                </div>
+                <div className={`relative max-w-md rounded-xl p-3 px-4 ${isOwnMessage ? 'bg-primary text-primary-foreground' : 'bg-muted'}`}>
+                    {renderContent()}
+                    <p className={`text-xs mt-1 ${isOwnMessage ? 'text-primary-foreground/70' : 'text-muted-foreground'}`}>
+                        {formatDistanceToNow(new Date(message.timestamp), { addSuffix: true })}
+                        {message.isEdited && ' (edited)'}
+                    </p>
+                    {reactions.length > 0 && (
+                        <div className={`absolute -bottom-3 flex gap-1 ${isOwnMessage ? 'right-2' : 'left-2'}`}>
+                            {reactions.map(([emoji, uids]) => (
+                                <div key={emoji} className="bg-background border rounded-full px-1.5 py-0.5 text-xs flex items-center gap-1 shadow-sm">
+                                    <span>{emoji}</span>
+                                    <span>{uids.length}</span>
+                                </div>
+                            ))}
+                        </div>
+                    )}
+                </div>
             </div>
         </div>
     );
@@ -184,6 +281,22 @@ export default function ConversationPage() {
             setIsRecording(false);
         }
     };
+    
+    const handleSendAction = () => {
+        if (text.trim()) {
+            handleSendText();
+        } else if (!isRecording) {
+            startRecording();
+        } else {
+            stopRecording();
+        }
+    };
+    
+    const handleReleaseSendAction = () => {
+        if (!text.trim()) {
+             stopRecording();
+        }
+    };
 
     const getOtherParticipant = () => {
         if (!user || !conversation) return null;
@@ -218,7 +331,7 @@ export default function ConversationPage() {
                         </Link>
                     )}
                 </CardHeader>
-                <CardContent className="flex-1 overflow-y-auto p-4 space-y-4">
+                <CardContent className="flex-1 overflow-y-auto p-4 space-y-6">
                     {conversation.messages && conversation.messages.length > 0 ? (
                         conversation.messages.sort((a,b) => a.timestamp - b.timestamp).map(msg => (
                             <MessageBubble
@@ -226,6 +339,7 @@ export default function ConversationPage() {
                                 message={msg}
                                 isOwnMessage={user?.uid === msg.creatorUid}
                                 participant={conversation.participants[msg.creatorUid]}
+                                conversationId={conversation.id}
                             />
                         ))
                     ) : (
@@ -264,10 +378,10 @@ export default function ConversationPage() {
                         <Button 
                             size="icon"
                             variant={isRecording ? "destructive" : "default"}
-                            onMouseDown={startRecording}
-                            onMouseUp={stopRecording}
-                            onTouchStart={startRecording}
-                            onTouchEnd={stopRecording}
+                            onMouseDown={handleSendAction}
+                            onMouseUp={handleReleaseSendAction}
+                            onTouchStart={handleSendAction}
+                            onTouchEnd={handleReleaseSendAction}
                             disabled={isSending}
                         >
                             {isRecording ? <Square className="h-4 w-4" /> : (text.trim() ? <Send className="h-4 w-4" /> : <Mic className="h-4 w-4" />)}

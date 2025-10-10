@@ -107,6 +107,7 @@ export type Message = {
     fileName?: string;
     isEdited?: boolean;
     linkPreview?: LinkPreview | null;
+    reactions?: { [emoji: string]: string[] }; // e.g. { '👍': ['user1', 'user2'] }
 }
 
 // Represents a user-created group

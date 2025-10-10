@@ -4,18 +4,22 @@
 import { useParams } from "next/navigation";
 import { useAppContext } from "@/contexts/app-context";
 import { Group, Message, User as UserType, LinkPreview } from "@/lib/types";
-import { useEffect, useState, useRef } from "react";
+import React, { useEffect, useState, useRef } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
-import { Loader2, Lock, Users, Send, Paperclip, Image as ImageIcon, Download, File, Music, Video, Menu, Mic, Square } from "lucide-react";
+import { Loader2, Lock, Users, Send, Paperclip, Image as ImageIcon, Download, File, Music, Video, Menu, Mic, Square, Smile, Copy, Pencil, Trash2 } from "lucide-react";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import Image from "next/image";
 import Link from "next/link";
 import { formatDistanceToNow } from "date-fns";
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from "@/components/ui/sheet";
+import { Popover, PopoverTrigger, PopoverContent } from "@/components/ui/popover";
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
+import EmojiPicker, { EmojiClickData } from "emoji-picker-react";
+import { Textarea } from "@/components/ui/textarea";
 
 function LinkPreviewCard({ preview }: { preview: LinkPreview }) {
     if (!preview.title) return null;
@@ -35,8 +39,51 @@ function LinkPreviewCard({ preview }: { preview: LinkPreview }) {
     )
 }
 
-function MessageBubble({ message, isOwnMessage }: { message: Message; isOwnMessage: boolean }) {
+function MessageBubble({ message, isOwnMessage, groupId }: { message: Message; isOwnMessage: boolean; groupId: string }) {
+    const { toast } = useToast();
+    const { user, editMessage, deleteMessage, reactToMessage } = useAppContext();
+    const [isEditing, setIsEditing] = useState(false);
+    const [editedContent, setEditedContent] = useState(message.content);
+
+    const handleCopy = () => {
+        navigator.clipboard.writeText(message.content);
+        toast({ title: "Copied to clipboard!" });
+    };
+
+    const handleEdit = async () => {
+        if (!editedContent.trim()) return;
+        const success = await editMessage(groupId, message.id, editedContent);
+        if (success) {
+            setIsEditing(false);
+            toast({ title: "Message updated" });
+        } else {
+            toast({ variant: 'destructive', title: "Failed to edit message" });
+        }
+    };
+    
+    const handleDelete = async () => {
+        const success = await deleteMessage(groupId, message.id);
+         if (!success) {
+            toast({ variant: 'destructive', title: "Failed to delete message" });
+        }
+    };
+
+    const handleReaction = (emoji: EmojiClickData) => {
+        reactToMessage(groupId, message.id, emoji.emoji);
+    };
+
     const renderContent = () => {
+        if (isEditing) {
+            return (
+                <div className="space-y-2">
+                    <Textarea value={editedContent} onChange={(e) => setEditedContent(e.target.value)} className="min-h-[60px]" />
+                    <div className="flex gap-2 justify-end">
+                        <Button variant="ghost" size="sm" onClick={() => setIsEditing(false)}>Cancel</Button>
+                        <Button size="sm" onClick={handleEdit}>Save</Button>
+                    </div>
+                </div>
+            )
+        }
         switch (message.type) {
             case 'image':
                 return (
@@ -72,9 +119,11 @@ function MessageBubble({ message, isOwnMessage }: { message: Message; isOwnMessa
                 );
         }
     };
+    
+    const reactions = Object.entries(message.reactions || {});
 
     return (
-        <div className={`flex items-end gap-2 ${isOwnMessage ? 'justify-end' : ''}`}>
+        <div className={`group flex items-end gap-2 ${isOwnMessage ? 'justify-end' : ''}`}>
             {!isOwnMessage && (
                 <Link href={`/profile/${message.creatorUid}`}>
                     <Avatar className="h-8 w-8">
@@ -83,15 +132,63 @@ function MessageBubble({ message, isOwnMessage }: { message: Message; isOwnMessa
                     </Avatar>
                 </Link>
             )}
-            <div className={`max-w-md rounded-xl p-3 px-4 ${isOwnMessage ? 'bg-primary text-primary-foreground' : 'bg-muted'}`}>
-                {!isOwnMessage && (
-                    <p className="text-xs font-bold pb-1">{message.creatorName}</p>
-                )}
-                {renderContent()}
-                <p className={`text-xs mt-1 ${isOwnMessage ? 'text-primary-foreground/70' : 'text-muted-foreground'}`}>
-                    {formatDistanceToNow(new Date(message.timestamp), { addSuffix: true })}
-                </p>
-            </div>
+             <div className={`flex items-center gap-2 ${isOwnMessage ? 'flex-row-reverse' : 'flex-row'}`}>
+                <div className="opacity-0 group-hover:opacity-100 transition-opacity">
+                    <DropdownMenu>
+                        <DropdownMenuTrigger asChild>
+                            <Button variant="ghost" size="icon" className="h-7 w-7">...</Button>
+                        </DropdownMenuTrigger>
+                        <DropdownMenuContent>
+                             <Popover>
+                                <PopoverTrigger asChild>
+                                    <DropdownMenuItem onSelect={(e) => e.preventDefault()}>
+                                        <Smile className="mr-2 h-4 w-4" /> React
+                                    </DropdownMenuItem>
+                                </PopoverTrigger>
+                                <PopoverContent className="p-0 border-0">
+                                    <EmojiPicker onEmojiClick={handleReaction} />
+                                </PopoverContent>
+                            </Popover>
+
+                            {message.type === 'text' && (
+                                 <DropdownMenuItem onClick={handleCopy}>
+                                    <Copy className="mr-2 h-4 w-4" /> Copy
+                                </DropdownMenuItem>
+                            )}
+                            {isOwnMessage && message.type === 'text' && (
+                                <DropdownMenuItem onClick={() => setIsEditing(true)}>
+                                    <Pencil className="mr-2 h-4 w-4" /> Edit
+                                </DropdownMenuItem>
+                            )}
+                             {isOwnMessage && (
+                                <DropdownMenuItem onClick={handleDelete} className="text-destructive">
+                                    <Trash2 className="mr-2 h-4 w-4" /> Delete
+                                </DropdownMenuItem>
+                            )}
+                        </DropdownMenuContent>
+                    </DropdownMenu>
+                </div>
+                <div className={`relative max-w-md rounded-xl p-3 px-4 ${isOwnMessage ? 'bg-primary text-primary-foreground' : 'bg-muted'}`}>
+                    {!isOwnMessage && (
+                        <p className="text-xs font-bold pb-1">{message.creatorName}</p>
+                    )}
+                    {renderContent()}
+                    <p className={`text-xs mt-1 ${isOwnMessage ? 'text-primary-foreground/70' : 'text-muted-foreground'}`}>
+                        {formatDistanceToNow(new Date(message.timestamp), { addSuffix: true })}
+                        {message.isEdited && ' (edited)'}
+                    </p>
+                    {reactions.length > 0 && (
+                        <div className={`absolute -bottom-3 flex gap-1 ${isOwnMessage ? 'right-2' : 'left-2'}`}>
+                            {reactions.map(([emoji, uids]) => (
+                                <div key={emoji} className="bg-background border rounded-full px-1.5 py-0.5 text-xs flex items-center gap-1 shadow-sm">
+                                    <span>{emoji}</span>
+                                    <span>{uids.length}</span>
+                                </div>
+                            ))}
+                        </div>
+                    )}
+                </div>
+             </div>
         </div>
     );
 }
@@ -173,16 +270,32 @@ function ChatArea({ groupId, messages, groupName }: { groupId: string; messages:
             setIsRecording(false);
         }
     };
+    
+    const handleSendAction = () => {
+        if (text.trim()) {
+            handleSendText();
+        } else if (!isRecording) {
+            startRecording();
+        } else {
+            stopRecording();
+        }
+    };
+    
+    const handleReleaseSendAction = () => {
+        if (!text.trim()) {
+             stopRecording();
+        }
+    };
 
     return (
         <Card className="flex flex-col h-full border-0 sm:border rounded-none sm:rounded-lg">
             <CardHeader className="flex flex-row items-center justify-between">
                 <CardTitle>{groupName}</CardTitle>
             </CardHeader>
-            <CardContent className="flex-1 overflow-y-auto p-4 space-y-4">
+            <CardContent className="flex-1 overflow-y-auto p-4 space-y-6">
                 {messages && messages.length > 0 ? (
                      messages.sort((a,b) => a.timestamp - b.timestamp).map(msg => (
-                        <MessageBubble key={msg.id} message={msg} isOwnMessage={user?.uid === msg.creatorUid} />
+                        <MessageBubble key={msg.id} message={msg} isOwnMessage={user?.uid === msg.creatorUid} groupId={groupId} />
                     ))
                 ) : (
                     <div className="text-center text-muted-foreground h-full flex items-center justify-center">
@@ -220,10 +333,10 @@ function ChatArea({ groupId, messages, groupName }: { groupId: string; messages:
                     <Button
                         size="icon"
                         variant={isRecording ? "destructive" : "default"}
-                        onMouseDown={startRecording}
-                        onMouseUp={stopRecording}
-                        onTouchStart={startRecording}
-                        onTouchEnd={stopRecording}
+                        onMouseDown={handleSendAction}
+                        onMouseUp={handleReleaseSendAction}
+                        onTouchStart={handleSendAction}
+                        onTouchEnd={handleReleaseSendAction}
                         disabled={isSending}
                     >
                         {isRecording ? <Square className="h-4 w-4" /> : (text.trim() ? <Send className="h-4 w-4" /> : <Mic className="h-4 w-4" />)}

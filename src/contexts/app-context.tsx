@@ -66,10 +66,12 @@ interface AppContextType {
   sendMessage: (groupId: string, messageData: { content: string; type: 'text' } | { file: File; type: 'image' | 'audio' | 'video' | 'file' }) => Promise<boolean>;
   editMessage: (groupId: string, messageId: string, newContent: string) => Promise<boolean>;
   deleteMessage: (groupId: string, messageId: string) => Promise<boolean>;
+  reactToMessage: (groupId: string, messageId: string, reaction: string) => Promise<void>;
   startConversation: (otherUserId: string) => Promise<string | null>;
   sendDirectMessage: (conversationId: string, messageData: { content: string; type: 'text' } | { file: File; type: 'image' | 'audio' | 'video' | 'file' }) => Promise<boolean>;
   editDirectMessage: (conversationId: string, messageId: string, newContent: string) => Promise<boolean>;
   deleteDirectMessage: (conversationId: string, messageId: string) => Promise<boolean>;
+  reactToDirectMessage: (conversationId: string, messageId: string, reaction: string) => Promise<void>;
   getConversationById: (conversationId: string) => Conversation | undefined;
   markNotificationsAsRead: () => Promise<void>;
   loading: boolean;
@@ -169,7 +171,7 @@ export function AppContextProvider({ children }: { children: React.ReactNode }) 
             id: key,
             ...data[key],
             members: data[key].members ? Object.keys(data[key].members) : [],
-            messages: data[key].messages ? Object.values(data[key].messages) : []
+            messages: data[key].messages ? Object.values(data[key].messages).map(msg => ({...msg, reactions: msg.reactions ? Object.entries(msg.reactions).reduce((acc, [emoji, uidsObj]) => ({...acc, [emoji]: Object.keys(uidsObj)}), {}) : {}})) : []
         }));
         setGroups(groupList);
     });
@@ -219,7 +221,7 @@ export function AppContextProvider({ children }: { children: React.ReactNode }) 
                   const userConvos = Object.keys(convoIds)
                     .map(id => ({ id, ...allConvos[id] }))
                     .filter(c => c.participantUids)
-                    .map(c => ({...c, messages: c.messages ? Object.values(c.messages) : [] }))
+                    .map(c => ({...c, messages: c.messages ? Object.values(c.messages).map(msg => ({...msg, reactions: msg.reactions ? Object.entries(msg.reactions).reduce((acc, [emoji, uidsObj]) => ({...acc, [emoji]: Object.keys(uidsObj)}), {}) : {}})) : [] }))
                     .sort((a, b) => (b.lastMessage?.timestamp || b.timestamp) - (a.lastMessage?.timestamp || a.timestamp));
                   setConversations(userConvos);
               })
@@ -909,18 +911,22 @@ export function AppContextProvider({ children }: { children: React.ReactNode }) 
         if (!user) return false;
         try {
             const messageRef = ref(db, `groups/${groupId}/messages/${messageId}`);
-            const updateData: any = { content: newContent, isEdited: true };
+            const msgSnapshot = await get(messageRef);
+            if (msgSnapshot.exists() && msgSnapshot.val().creatorUid === user.uid) {
+                const updateData: any = { content: newContent, isEdited: true };
 
-            const urlMatch = newContent.match(urlRegex);
-            if (urlMatch) {
-                const preview = await generateLinkPreview({ url: urlMatch[0] });
-                updateData.linkPreview = preview.title ? preview : null;
-            } else {
-                updateData.linkPreview = null;
+                const urlMatch = newContent.match(urlRegex);
+                if (urlMatch) {
+                    const preview = await generateLinkPreview({ url: urlMatch[0] });
+                    updateData.linkPreview = preview.title ? preview : null;
+                } else {
+                    updateData.linkPreview = null;
+                }
+                
+                await update(messageRef, updateData);
+                return true;
             }
-            
-            await update(messageRef, updateData);
-            return true;
+            return false;
         } catch (e) {
             console.error("Error editing message:", e);
             return false;
@@ -931,11 +937,27 @@ export function AppContextProvider({ children }: { children: React.ReactNode }) 
         if (!user) return false;
         try {
             const messageRef = ref(db, `groups/${groupId}/messages/${messageId}`);
-            await remove(messageRef);
-            return true;
+            const msgSnapshot = await get(messageRef);
+            if (msgSnapshot.exists() && msgSnapshot.val().creatorUid === user.uid) {
+                await remove(messageRef);
+                return true;
+            }
+            return false;
         } catch (e) {
             console.error("Error deleting message:", e);
             return false;
+        }
+    };
+
+    const reactToMessage = async (groupId: string, messageId: string, reaction: string): Promise<void> => {
+        if (!user) return;
+        const reactionRef = ref(db, `groups/${groupId}/messages/${messageId}/reactions/${reaction}/${user.uid}`);
+        const reactionSnapshot = await get(reactionRef);
+
+        if (reactionSnapshot.exists()) {
+            await remove(reactionRef);
+        } else {
+            await set(reactionRef, true);
         }
     };
 
@@ -1060,18 +1082,22 @@ export function AppContextProvider({ children }: { children: React.ReactNode }) 
         if (!user) return false;
         try {
             const messageRef = ref(db, `conversations/${conversationId}/messages/${messageId}`);
-             const updateData: any = { content: newContent, isEdited: true };
+            const msgSnapshot = await get(messageRef);
+            if (msgSnapshot.exists() && msgSnapshot.val().creatorUid === user.uid) {
+                const updateData: any = { content: newContent, isEdited: true };
 
-            const urlMatch = newContent.match(urlRegex);
-            if (urlMatch) {
-                const preview = await generateLinkPreview({ url: urlMatch[0] });
-                updateData.linkPreview = preview.title ? preview : null;
-            } else {
-                updateData.linkPreview = null;
+                const urlMatch = newContent.match(urlRegex);
+                if (urlMatch) {
+                    const preview = await generateLinkPreview({ url: urlMatch[0] });
+                    updateData.linkPreview = preview.title ? preview : null;
+                } else {
+                    updateData.linkPreview = null;
+                }
+
+                await update(messageRef, updateData);
+                return true;
             }
-
-            await update(messageRef, updateData);
-            return true;
+            return false;
         } catch (e) {
             console.error("Error editing direct message:", e);
             return false;
@@ -1082,11 +1108,27 @@ export function AppContextProvider({ children }: { children: React.ReactNode }) 
         if (!user) return false;
         try {
             const messageRef = ref(db, `conversations/${conversationId}/messages/${messageId}`);
-            await remove(messageRef);
-            return true;
+             const msgSnapshot = await get(messageRef);
+            if (msgSnapshot.exists() && msgSnapshot.val().creatorUid === user.uid) {
+                await remove(messageRef);
+                return true;
+            }
+            return false;
         } catch (e) {
             console.error("Error deleting direct message:", e);
             return false;
+        }
+    };
+    
+    const reactToDirectMessage = async (conversationId: string, messageId: string, reaction: string): Promise<void> => {
+        if (!user) return;
+        const reactionRef = ref(db, `conversations/${conversationId}/messages/${messageId}/reactions/${reaction}/${user.uid}`);
+        const reactionSnapshot = await get(reactionRef);
+
+        if (reactionSnapshot.exists()) {
+            await remove(reactionRef);
+        } else {
+            await set(reactionRef, true);
         }
     };
 
@@ -1147,10 +1189,12 @@ export function AppContextProvider({ children }: { children: React.ReactNode }) 
     sendMessage,
     editMessage,
     deleteMessage,
+    reactToMessage,
     startConversation,
     sendDirectMessage,
     editDirectMessage,
     deleteDirectMessage,
+    reactToDirectMessage,
     getConversationById,
     markNotificationsAsRead,
     loading,
