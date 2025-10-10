@@ -104,7 +104,7 @@ function MessageBubble({ message, isOwnMessage, groupId, memberCount }: { messag
         }
         switch (message.type) {
             case 'image':
-                return (
+                 return (
                      <Dialog>
                         <DialogTrigger asChild>
                              <div className="relative max-w-xs cursor-pointer">
@@ -358,7 +358,7 @@ function ChatArea({ groupId, messages, group, members, membersDetails }: { group
         if (!recordedAudio) return;
         setIsSending(true);
         toast({ title: 'Uploading...', description: 'Sending voice note' });
-        const audioFile = new File([recordedAudio.blob], `voice-note-${Date.now()}.webm`, { type: 'audio/webm' });
+        const audioFile = new window.File([recordedAudio.blob], `voice-note-${Date.now()}.webm`, { type: 'audio/webm' });
         const success = await sendMessage(groupId, { file: audioFile });
         if (!success) {
             toast({ variant: 'destructive', title: 'Failed to send voice note' });
@@ -727,7 +727,7 @@ export default function GroupPage() {
     }
 
     return (
-         <div className="fixed inset-0 bg-background z-50 h-[75svh]">
+         <div className="fixed inset-0 bg-background z-50 h-[85vh]">
              <ChatArea groupId={group.id} messages={group.messages || []} group={group} members={membersDetails} membersDetails={membersDetails} />
         </div>
     );

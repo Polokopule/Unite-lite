@@ -508,7 +508,7 @@ export default function ConversationPage() {
 
         setIsSending(true);
         toast({ title: 'Uploading...', description: 'Sending voice note' });
-        const audioFile = new File([recordedAudio.blob], `voice-note-${Date.now()}.webm`, { type: 'audio/webm' });
+        const audioFile = new window.File([recordedAudio.blob], `voice-note-${Date.now()}.webm`, { type: 'audio/webm' });
         const success = await sendDirectMessage(conversationId as string, { file: audioFile });
         if (!success) {
             toast({ variant: 'destructive', title: 'Failed to send voice note' });
@@ -592,7 +592,7 @@ export default function ConversationPage() {
     const isOtherUserBlocked = user.blockedUsers?.includes(otherParticipant?.uid || '');
 
     return (
-        <div className="fixed inset-0 bg-background z-50 h-[75svh]">
+        <div className="fixed inset-0 bg-background z-50 h-[85vh]">
              <Card className="flex flex-col h-full border-0 sm:border rounded-none sm:rounded-lg">
                 <CardHeader className="flex-row items-center justify-between border-b p-4">
                     <div className="flex items-center gap-3">
