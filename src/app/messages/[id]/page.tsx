@@ -615,8 +615,8 @@ export default function ConversationPage() {
 
     return (
         <div className="h-screen bg-background">
-            <div className="flex flex-col h-full">
-                <header className="flex-shrink-0 flex items-center justify-between border-b p-4 bg-background">
+            <div className="flex flex-col h-screen">
+                <header className="relative z-[10000] flex-shrink-0 flex items-center justify-between border-b p-4 bg-background">
                     <div className="flex items-center gap-3">
                         <Button variant="ghost" size="icon" className="mr-2" onClick={() => router.back()}>
                             <ArrowLeft className="h-5 w-5" />
@@ -715,7 +715,7 @@ export default function ConversationPage() {
                     </div>
                 ) : (
                     <>
-                        <ScrollArea className="flex-1" viewportRef={scrollViewportRef}>
+                        <ScrollArea className="flex-1 bg-muted/20" viewportRef={scrollViewportRef}>
                             <div className="p-4 space-y-6">
                                 {conversation.messages && conversation.messages.length > 0 ? (
                                     conversation.messages.sort((a,b) => a.timestamp - b.timestamp).map((msg, idx) => (
@@ -804,5 +804,7 @@ export default function ConversationPage() {
         </div>
     );
 }
+
+    
 
     

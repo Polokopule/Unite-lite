@@ -84,7 +84,7 @@ export default function AiChatPage() {
 
   return (
     <div className="flex flex-col h-screen">
-        <header className="flex-shrink-0 flex items-center justify-between border-b p-4 bg-background">
+        <header className="relative z-[10000] flex-shrink-0 flex items-center justify-between border-b p-4 bg-background">
             <div className="flex items-center gap-3">
             <Button variant="ghost" size="icon" className="mr-2" onClick={() => router.back()}>
                 <ArrowLeft className="h-5 w-5" />
@@ -97,7 +97,7 @@ export default function AiChatPage() {
             </div>
         </div>
         </header>
-        <ScrollArea className="flex-1" viewportRef={scrollViewportRef}>
+        <ScrollArea className="flex-1 bg-muted/20" viewportRef={scrollViewportRef}>
         <div className="p-4 space-y-4">
             {history.map((message, index) => (
             <div
@@ -170,5 +170,7 @@ export default function AiChatPage() {
     </div>
   );
 }
+
+    
 
     

@@ -444,8 +444,8 @@ function ChatArea({ groupId, messages, group, members, membersDetails }: { group
     };
 
     return (
-        <div className="flex flex-col h-full">
-            <header className="flex-shrink-0 flex items-center justify-between p-4 border-b bg-background">
+        <div className="flex flex-col h-screen">
+            <header className="relative z-[10000] flex-shrink-0 flex items-center justify-between p-4 border-b bg-background">
                 <div className="flex items-center gap-3">
                      <Button variant="ghost" size="icon" className="mr-2" onClick={() => router.back()}>
                         <ArrowLeft className="h-5 w-5" />
@@ -549,7 +549,7 @@ function ChatArea({ groupId, messages, group, members, membersDetails }: { group
                 </DropdownMenu>
             </header>
             
-            <ScrollArea className="flex-1" viewportRef={scrollViewportRef}>
+            <ScrollArea className="flex-1 bg-muted/20" viewportRef={scrollViewportRef}>
                  <div className="p-4 space-y-6">
                     {messages && messages.length > 0 ? (
                          messages.sort((a,b) => a.timestamp - b.timestamp).map(msg => (
@@ -764,5 +764,7 @@ export default function GroupPage() {
         </div>
     );
 }
+
+    
 
     
