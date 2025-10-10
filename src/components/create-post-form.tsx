@@ -1,4 +1,5 @@
 
+
 "use client";
 
 import { useState, useRef, useEffect } from "react";
@@ -8,55 +9,10 @@ import { Loader2, Paperclip, X, Image as ImageIcon, File as FileIcon } from "luc
 import { useToast } from "@/hooks/use-toast";
 import { Avatar, AvatarFallback, AvatarImage } from "./ui/avatar";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogTrigger } from "@/components/ui/dialog";
-import { generateLinkPreview } from "@/services/link-preview";
 import { LinkPreview as LinkPreviewType } from "@/lib/types";
 import Image from "next/image";
 import { Textarea } from "./ui/textarea";
 
-
-// A simple debounce hook
-function useDebounce(value: string, delay: number) {
-    const [debouncedValue, setDebouncedValue] = useState(value);
-
-    useEffect(() => {
-        const handler = setTimeout(() => {
-            setDebouncedValue(value);
-        }, delay);
-
-        return () => {
-            clearTimeout(handler);
-        };
-    }, [value, delay]);
-
-    return debouncedValue;
-}
-
-function LinkPreviewCard({ preview, onRemove }: { preview: LinkPreviewType, onRemove: () => void }) {
-    if (!preview.title) return null;
-    return (
-        <div className="relative mt-2 border rounded-lg overflow-hidden">
-             <Button
-                variant="ghost"
-                size="icon"
-                className="absolute top-1 right-1 h-6 w-6 bg-black/50 hover:bg-black/70 text-white hover:text-white rounded-full z-10"
-                onClick={onRemove}
-            >
-                <X className="h-4 w-4" />
-            </Button>
-            {preview.imageUrl && (
-                <div className="relative aspect-video">
-                     <Image src={preview.imageUrl} alt={preview.title} fill className="object-cover" />
-                </div>
-            )}
-            <div className="p-3 bg-muted/50">
-                <a href={preview.url} target="_blank" rel="noopener noreferrer" className="hover:underline">
-                    <p className="font-semibold text-sm truncate">{preview.title}</p>
-                </a>
-                <p className="text-xs text-muted-foreground line-clamp-2">{preview.description}</p>
-            </div>
-        </div>
-    )
-}
 
 function FilePreview({ file, onRemove }: { file: File, onRemove: () => void }) {
      const isImage = file.type.startsWith('image/');
@@ -103,35 +59,9 @@ function PostForm({ onPostSuccess, initialFile }: { onPostSuccess: () => void, i
     const { user, addPost } = useAppContext();
     const [content, setContent] = useState("");
     const [file, setFile] = useState<File | null>(initialFile || null);
-    const [linkPreview, setLinkPreview] = useState<LinkPreviewType | null>(null);
-    const [isFetchingPreview, setIsFetchingPreview] = useState(false);
     const [isPosting, setIsPosting] = useState(false);
     const fileInputRef = useRef<HTMLInputElement>(null);
     const { toast } = useToast();
-
-    const debouncedContent = useDebounce(content, 500);
-    const urlRegex = /(https?:\/\/[^\s]+)/;
-
-    useEffect(() => {
-        const fetchPreview = async () => {
-            const match = debouncedContent.match(urlRegex);
-            if (match && !linkPreview && !file) {
-                const url = match[0];
-                setIsFetchingPreview(true);
-                try {
-                    const preview = await generateLinkPreview({ url });
-                    if (preview.title) {
-                        setLinkPreview(preview);
-                    }
-                } catch (error) {
-                    console.error("Failed to generate link preview", error);
-                } finally {
-                    setIsFetchingPreview(false);
-                }
-            }
-        };
-        fetchPreview();
-    }, [debouncedContent, linkPreview, file]);
     
     useEffect(() => {
         if(initialFile) {
@@ -145,7 +75,6 @@ function PostForm({ onPostSuccess, initialFile }: { onPostSuccess: () => void, i
         const selectedFile = e.target.files?.[0];
         if (selectedFile) {
             setFile(selectedFile);
-            setLinkPreview(null);
         }
     };
 
@@ -157,7 +86,6 @@ function PostForm({ onPostSuccess, initialFile }: { onPostSuccess: () => void, i
         const success = await addPost({
             content,
             file,
-            linkPreview: linkPreview
         });
         setIsPosting(false);
 
@@ -180,8 +108,6 @@ function PostForm({ onPostSuccess, initialFile }: { onPostSuccess: () => void, i
                     autoFocus
                 />
                 {file && <FilePreview file={file} onRemove={() => setFile(null)} />}
-                {isFetchingPreview && !linkPreview && <div className="text-sm text-muted-foreground">Fetching link preview...</div>}
-                {linkPreview && <LinkPreviewCard preview={linkPreview} onRemove={() => setLinkPreview(null)} />}
             </div>
             <DialogFooter>
                  <div className="flex items-center gap-2">

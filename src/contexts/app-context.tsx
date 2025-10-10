@@ -22,7 +22,6 @@ type AddCourseData = {
 type AddPostData = {
     content: string;
     repostedFrom?: { creatorUid: string; creatorName: string } | null;
-    linkPreview?: LinkPreview | null;
     file?: File | null; // For new file uploads
     fileUrl?: string; // For reposting existing media
     fileName?: string;
@@ -61,14 +60,17 @@ interface AppContextType {
   likePost: (postId: string) => Promise<void>;
   addComment: (postId: string, content: string, parentId?: string | null) => Promise<boolean>;
   likeComment: (postId: string, commentId: string) => Promise<void>;
-  createGroup: (groupData: { name: string; description: string; pin?: string }) => Promise<boolean>;
+  createGroup: (groupData: { name: string; description: string; pin?: string, photoFile?: File | null }) => Promise<string | null>;
+  updateGroup: (groupId: string, groupData: { name: string; description: string }, photoFile: File | null) => Promise<boolean>;
+  updateGroupPin: (groupId: string, pin: string) => Promise<boolean>;
+  deleteGroup: (groupId: string) => Promise<boolean>;
   joinGroup: (groupId: string, pin?: string) => Promise<boolean>;
-  sendMessage: (groupId: string, messageData: { content: string; type: 'text' } | { file: File; type: 'image' | 'audio' | 'video' | 'file' }) => Promise<boolean>;
+  sendMessage: (groupId: string, messageData: { content?: string; file?: File }) => Promise<boolean>;
   editMessage: (groupId: string, messageId: string, newContent: string) => Promise<boolean>;
   deleteMessage: (groupId: string, messageId: string) => Promise<boolean>;
   reactToMessage: (groupId: string, messageId: string, reaction: string) => Promise<void>;
   startConversation: (otherUserId: string) => Promise<string | null>;
-  sendDirectMessage: (conversationId: string, messageData: { content: string; type: 'text' } | { file: File; type: 'image' | 'audio' | 'video' | 'file' }) => Promise<boolean>;
+  sendDirectMessage: (conversationId: string, messageData: { content?: string, file?: File }) => Promise<boolean>;
   editDirectMessage: (conversationId: string, messageId: string, newContent: string) => Promise<boolean>;
   deleteDirectMessage: (conversationId: string, messageId: string) => Promise<boolean>;
   reactToDirectMessage: (conversationId: string, messageId: string, reaction: string) => Promise<void>;
@@ -493,47 +495,35 @@ export function AppContextProvider({ children }: { children: React.ReactNode }) 
     if (!user || user.uid === targetUserId) return;
 
     // Update current user's following list
-    const currentUserRef = ref(db, `users/${user.uid}`);
-    const currentUserFollowing = user.following ? [...user.following, targetUserId] : [targetUserId];
-    await update(currentUserRef, { following: currentUserFollowing });
+    const currentUserRef = ref(db, `users/${user.uid}/following/${targetUserId}`);
+    await set(currentUserRef, true);
 
     // Update target user's followers list
-    const targetUserRef = ref(db, `users/${targetUserId}`);
-    const targetSnapshot = await get(targetUserRef);
-    if(targetSnapshot.exists()) {
-        const targetUser = targetSnapshot.val();
-        const targetUserFollowers = targetUser.followers ? [...targetUser.followers, user.uid] : [user.uid];
-        await update(targetUserRef, { followers: targetUserFollowers });
+    const targetUserRef = ref(db, `users/${targetUserId}/followers/${user.uid}`);
+    await set(targetUserRef, true);
         
-        // Create notification
-        await createNotification({
-            recipientUid: targetUserId,
-            actorUid: user.uid,
-            actorName: user.name,
-            actorPhotoURL: user.photoURL,
-            type: 'new_follower',
-            targetUrl: `/profile/${user.uid}`,
-            targetId: user.uid,
-        });
-    }
+    // Create notification
+    await createNotification({
+        recipientUid: targetUserId,
+        actorUid: user.uid,
+        actorName: user.name,
+        actorPhotoURL: user.photoURL,
+        type: 'new_follower',
+        targetUrl: `/profile/${user.uid}`,
+        targetId: user.uid,
+    });
   };
 
   const unfollowUser = async (targetUserId: string) => {
     if (!user) return;
 
     // Update current user's following list
-    const currentUserRef = ref(db, `users/${user.uid}`);
-    const currentUserFollowing = user.following?.filter(id => id !== targetUserId) || [];
-    await update(currentUserRef, { following: currentUserFollowing });
+    const currentUserRef = ref(db, `users/${user.uid}/following/${targetUserId}`);
+    await remove(currentUserRef);
     
     // Update target user's followers list
-    const targetUserRef = ref(db, `users/${targetUserId}`);
-    const targetSnapshot = await get(targetUserRef);
-     if(targetSnapshot.exists()) {
-        const targetUser = targetSnapshot.val();
-        const targetUserFollowers = targetUser.followers?.filter((id: string) => id !== user.uid) || [];
-        await update(targetUserRef, { followers: targetUserFollowers });
-    }
+    const targetUserRef = ref(db, `users/${targetUserId}/followers/${user.uid}`);
+    await remove(targetUserRef);
   };
 
     const getFileType = (file: File): 'image' | 'audio' | 'video' | 'file' => {
@@ -570,9 +560,9 @@ export function AppContextProvider({ children }: { children: React.ReactNode }) 
         }
     };
 
-  const addPost = async (postData: AddPostData): Promise<boolean> => {
+    const addPost = async (postData: AddPostData): Promise<boolean> => {
       if (!user) return false;
-      const { content, file, repostedFrom, fileUrl, fileName, fileType, linkPreview } = postData;
+      const { content, file, repostedFrom, fileUrl, fileName, fileType } = postData;
       if (!content?.trim() && !file && !fileUrl) return false;
       
       try {
@@ -589,10 +579,6 @@ export function AppContextProvider({ children }: { children: React.ReactNode }) 
             timestamp: serverTimestamp() as any, // This will be converted by firebase
             repostedFrom: repostedFrom || null,
         };
-
-        if (linkPreview) {
-          newPost.linkPreview = linkPreview;
-        }
         
         if (file) {
             const fileStorageRef = storageRef(storage, `post-files/${postId}/${file.name}`);
@@ -607,6 +593,15 @@ export function AppContextProvider({ children }: { children: React.ReactNode }) 
             newPost.fileUrl = fileUrl;
             newPost.fileName = fileName;
             newPost.fileType = fileType;
+        }
+
+        const urlMatch = content.match(urlRegex);
+        if (urlMatch) {
+            generateLinkPreview({ url: urlMatch[0] }).then(preview => {
+                if (preview.title) {
+                    update(newPostRef, { linkPreview: preview });
+                }
+            });
         }
 
 
@@ -719,15 +714,16 @@ export function AppContextProvider({ children }: { children: React.ReactNode }) 
                 postId: postId
             };
 
+            await set(newCommentRef, newComment);
+            
             const urlMatch = content.match(urlRegex);
             if (urlMatch) {
-                const preview = await generateLinkPreview({ url: urlMatch[0] });
-                if (preview.title) {
-                    newComment.linkPreview = preview;
-                }
+                generateLinkPreview({ url: urlMatch[0] }).then(preview => {
+                    if (preview.title) {
+                        update(newCommentRef, { linkPreview: preview });
+                    }
+                });
             }
-
-            await set(newCommentRef, newComment);
 
             await handleMentions(content, postId, commentId);
 
@@ -793,12 +789,21 @@ export function AppContextProvider({ children }: { children: React.ReactNode }) 
     };
 
 
-  const createGroup = async (groupData: { name: string; description: string; pin?: string }): Promise<boolean> => {
-    if (!user) return false;
+  const createGroup = async (groupData: { name: string; description: string; pin?: string, photoFile?: File | null }): Promise<string | null> => {
+    if (!user) return null;
     
     try {
         const groupsRef = ref(db, 'groups');
         const newGroupRef = push(groupsRef);
+        const groupId = newGroupRef.key!;
+
+        let photoURL = '';
+        if (groupData.photoFile) {
+            const photoStorageRef = storageRef(storage, `group-avatars/${groupId}`);
+            await uploadBytes(photoStorageRef, groupData.photoFile);
+            photoURL = await getDownloadURL(photoStorageRef);
+        }
+
         const newGroup: Omit<Group, 'id' | 'members'> = {
             name: groupData.name,
             description: groupData.description,
@@ -806,15 +811,69 @@ export function AppContextProvider({ children }: { children: React.ReactNode }) 
             creatorName: user.name,
             hasPin: !!groupData.pin,
             pin: groupData.pin || null,
+            photoURL: photoURL
         };
         await set(newGroupRef, newGroup);
         // Automatically add creator as a member
-        await set(ref(db, `groups/${newGroupRef.key}/members/${user.uid}`), true);
-        return true;
+        await set(ref(db, `groups/${groupId}/members/${user.uid}`), true);
+        return groupId;
     } catch(e) {
-        return false;
+        console.error(e)
+        return null;
     }
   };
+  
+    const updateGroup = async (groupId: string, groupData: { name: string; description: string }, photoFile: File | null): Promise<boolean> => {
+        if (!user) return false;
+        const groupRef = ref(db, `groups/${groupId}`);
+        const groupSnapshot = await get(groupRef);
+        if (groupSnapshot.exists() && groupSnapshot.val().creatorUid === user.uid) {
+            try {
+                const updates: any = { ...groupData };
+                if (photoFile) {
+                    const photoStorageRef = storageRef(storage, `group-avatars/${groupId}`);
+                    await uploadBytes(photoStorageRef, photoFile);
+                    updates.photoURL = await getDownloadURL(photoStorageRef);
+                }
+                await update(groupRef, updates);
+                return true;
+            } catch (e) {
+                console.error("Error updating group:", e);
+                return false;
+            }
+        }
+        return false;
+    };
+    
+    const updateGroupPin = async (groupId: string, pin: string): Promise<boolean> => {
+        if (!user) return false;
+        const groupRef = ref(db, `groups/${groupId}`);
+        const groupSnapshot = await get(groupRef);
+        if (groupSnapshot.exists() && groupSnapshot.val().creatorUid === user.uid) {
+            try {
+                await update(groupRef, { pin: pin || null, hasPin: !!pin });
+                return true;
+            } catch (e) {
+                return false;
+            }
+        }
+        return false;
+    };
+
+    const deleteGroup = async (groupId: string): Promise<boolean> => {
+        if (!user) return false;
+        const groupRef = ref(db, `groups/${groupId}`);
+        const groupSnapshot = await get(groupRef);
+        if (groupSnapshot.exists() && groupSnapshot.val().creatorUid === user.uid) {
+            try {
+                await remove(groupRef);
+                return true;
+            } catch (e) {
+                return false;
+            }
+        }
+        return false;
+    };
 
   const joinGroup = async (groupId: string, pin?: string): Promise<boolean> => {
       if (!user) return false;
@@ -838,11 +897,13 @@ export function AppContextProvider({ children }: { children: React.ReactNode }) 
       }
   };
 
-  const sendMessage = async (groupId: string, messageData: { content: string; type: 'text' } | { file: File; type: 'image' | 'audio' | 'video' | 'file' }): Promise<boolean> => {
+  const sendMessage = async (groupId: string, messageData: { content?: string; file?: File }): Promise<boolean> => {
     if (!user) return false;
     
     const group = groups.find(g => g.id === groupId);
     if (!group) return false;
+
+    if(!messageData.content && !messageData.file) return false;
 
     try {
         const messagesRef = ref(db, `groups/${groupId}/messages`);
@@ -856,21 +917,7 @@ export function AppContextProvider({ children }: { children: React.ReactNode }) 
             timestamp: serverTimestamp() as any,
         };
 
-        if (messageData.type === 'text') {
-            messagePayload = {
-                ...messagePayload,
-                content: messageData.content,
-                type: 'text',
-            };
-            const urlMatch = messageData.content.match(urlRegex);
-            if (urlMatch) {
-                const preview = await generateLinkPreview({ url: urlMatch[0] });
-                if (preview.title) {
-                    messagePayload.linkPreview = preview;
-                }
-            }
-        } else {
-            // Upload file to Firebase Storage
+        if (messageData.file) {
             const file = messageData.file;
             const fileRef = storageRef(storage, `group-files/${groupId}/${Date.now()}_${file.name}`);
             const snapshot = await uploadBytes(fileRef, file);
@@ -883,9 +930,26 @@ export function AppContextProvider({ children }: { children: React.ReactNode }) 
                 fileUrl: downloadURL,
                 fileName: file.name,
             };
+        } else if (messageData.content) {
+             messagePayload = {
+                ...messagePayload,
+                content: messageData.content,
+                type: 'text',
+            };
         }
 
         await set(newMessageRef, messagePayload);
+
+        if (messageData.content) {
+            const urlMatch = messageData.content.match(urlRegex);
+            if (urlMatch) {
+                generateLinkPreview({ url: urlMatch[0] }).then(preview => {
+                    if (preview.title) {
+                        update(newMessageRef, { linkPreview: preview });
+                    }
+                });
+            }
+        }
 
         // Create notifications for all other group members
         const notificationPromises = group.members
@@ -1004,11 +1068,13 @@ export function AppContextProvider({ children }: { children: React.ReactNode }) 
     }
   };
 
-  const sendDirectMessage = async (conversationId: string, messageData: { content: string; type: 'text' } | { file: File; type: 'image' | 'audio' | 'video' | 'file' }): Promise<boolean> => {
+  const sendDirectMessage = async (conversationId: string, messageData: { content?: string, file?: File }): Promise<boolean> => {
     if (!user) return false;
     
     const conversation = conversations.find(c => c.id === conversationId);
     if (!conversation) return false;
+
+    if(!messageData.content && !messageData.file) return false;
 
     try {
         const messagesRef = ref(db, `conversations/${conversationId}/messages`);
@@ -1024,20 +1090,7 @@ export function AppContextProvider({ children }: { children: React.ReactNode }) 
             type: 'text' // default
         };
 
-        if (messageData.type === 'text') {
-            messagePayload = {
-                ...messagePayload,
-                content: messageData.content,
-                type: 'text',
-            };
-            const urlMatch = messageData.content.match(urlRegex);
-            if (urlMatch) {
-                const preview = await generateLinkPreview({ url: urlMatch[0] });
-                if (preview.title) {
-                    messagePayload.linkPreview = preview;
-                }
-            }
-        } else {
+        if (messageData.file) {
             const file = messageData.file;
             const fileRef = storageRef(storage, `direct-messages/${conversationId}/${Date.now()}_${file.name}`);
             const snapshot = await uploadBytes(fileRef, file);
@@ -1049,9 +1102,27 @@ export function AppContextProvider({ children }: { children: React.ReactNode }) 
                 fileUrl: downloadURL,
                 fileName: file.name,
             };
+        } else if (messageData.content) {
+            messagePayload = {
+                ...messagePayload,
+                content: messageData.content,
+                type: 'text',
+            };
         }
 
         await set(newMessageRef, messagePayload);
+
+         if (messageData.content) {
+            const urlMatch = messageData.content.match(urlRegex);
+            if (urlMatch) {
+                generateLinkPreview({ url: urlMatch[0] }).then(preview => {
+                    if (preview.title) {
+                        update(newMessageRef, { linkPreview: preview });
+                    }
+                });
+            }
+        }
+        
         // Update last message and timestamp for the conversation
         await update(ref(db, `conversations/${conversationId}`), {
             lastMessage: messagePayload,
@@ -1220,6 +1291,9 @@ export function AppContextProvider({ children }: { children: React.ReactNode }) 
     addComment,
     likeComment,
     createGroup,
+    updateGroup,
+    updateGroupPin,
+    deleteGroup,
     joinGroup,
     sendMessage,
     editMessage,
@@ -1254,3 +1328,4 @@ export function useAppContext() {
 }
 
     
+

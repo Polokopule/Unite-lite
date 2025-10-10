@@ -34,8 +34,8 @@ export type User = {
   purchasedCourses?: { [courseId: string]: PurchasedCourse };
   createdCourses?: string[];
   createdAds?: string[];
-  following?: string[];
-  followers?: string[];
+  following?: { [uid: string]: boolean };
+  followers?: { [uid: string]: boolean };
   photoURL?: string;
   conversationIds?: { [id: string]: boolean };
   presence?: UserPresence;
