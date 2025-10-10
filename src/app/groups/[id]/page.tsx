@@ -374,7 +374,7 @@ function ChatArea({ groupId, messages, group, members, membersDetails }: { group
         <Card className="flex flex-col h-full border-0 sm:border rounded-none sm:rounded-lg">
             <CardHeader className="flex flex-row items-center justify-between p-4 border-b">
                 <div className="flex items-center gap-3">
-                     <Button variant="ghost" size="icon" className="mr-2 lg:hidden" onClick={() => router.back()}>
+                     <Button variant="ghost" size="icon" className="mr-2" onClick={() => router.back()}>
                         <ArrowLeft className="h-5 w-5" />
                     </Button>
                     <Avatar className="h-10 w-10">
@@ -656,19 +656,9 @@ export default function GroupPage() {
     }
 
     return (
-         <div className="fixed inset-0 top-16 bg-background z-10 md:static md:inset-auto md:z-auto md:h-[calc(100vh-4rem-1px)] flex">
-            <div className="flex-1 h-full">
+         <div className="fixed inset-0 top-0 bg-background z-50 h-screen md:h-auto md:static md:inset-auto md:z-auto md:h-[calc(100vh-4rem-1px)] flex">
+            <div className="flex-1 h-full pt-16 md:pt-0">
                  <ChatArea groupId={group.id} messages={group.messages || []} group={group} members={membersDetails} membersDetails={membersDetails} />
-            </div>
-            <div className="hidden lg:block w-72 border-l h-full">
-                <Card className="h-full border-0 rounded-none">
-                    <CardHeader>
-                        <CardTitle className="flex items-center gap-2"><Users className="h-5 w-5"/> Members ({membersDetails.length})</CardTitle>
-                    </CardHeader>
-                    <CardContent>
-                        <MembersList members={membersDetails} />
-                    </CardContent>
-                </Card>
             </div>
         </div>
     );

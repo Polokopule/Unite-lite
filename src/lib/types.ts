@@ -39,6 +39,7 @@ export type User = {
   photoURL?: string;
   conversationIds?: { [id: string]: boolean };
   presence?: UserPresence;
+  deletedConversations?: { [id: string]: boolean };
 };
 
 export type PurchasedCourse = {
@@ -140,6 +141,7 @@ export type Conversation = {
     timestamp: number;
     messages?: Message[];
     typing?: { [uid: string]: boolean };
+    pinnedBy?: { [uid: string]: number };
 };
 
 

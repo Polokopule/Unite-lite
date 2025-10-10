@@ -10,7 +10,7 @@ import { Card, CardContent, CardHeader, CardTitle, CardFooter } from "@/componen
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { useToast } from "@/hooks/use-toast";
-import { Loader2, Send, Paperclip, ArrowLeft, File as FileIcon, Mic, Square, Smile, Copy, Pencil, Trash2, Check, CheckCheck, MoreVertical, ShieldCheck, ShieldOff, Lock, Unlock, Pin, PinOff, UserX } from "lucide-react";
+import { Loader2, Send, Paperclip, ArrowLeft, File as FileIcon, Mic, Square, Smile, Copy, Pencil, Trash2, Check, CheckCheck, MoreVertical, ShieldCheck, ShieldOff, Lock, Unlock, Pin, PinOff, UserX, User } from "lucide-react";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import Image from "next/image";
 import Link from "next/link";
@@ -19,7 +19,9 @@ import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigge
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import EmojiPicker, { EmojiClickData } from "emoji-picker-react";
 import { Textarea } from "@/components/ui/textarea";
-import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger, DialogFooter } from "@/components/ui/dialog";
+import { AlertDialog, AlertDialogTrigger, AlertDialogContent, AlertDialogHeader, AlertDialogTitle, AlertDialogDescription, AlertDialogFooter, AlertDialogCancel, AlertDialogAction } from "@/components/ui/alert-dialog";
+import { Label } from "@/components/ui/label";
 
 function LinkPreviewCard({ preview }: { preview: LinkPreview }) {
     if (!preview.title) return null;
@@ -242,12 +244,90 @@ function SharedGroupsDialog({ otherUser, currentUser, children }: { otherUser: U
     );
 }
 
+function LockChatDialog({ conversationId, isLocked, children }: { conversationId: string, isLocked: boolean, children: React.ReactNode }) {
+    const { lockConversation, unlockConversation } = useAppContext();
+    const { toast } = useToast();
+    const [open, setOpen] = useState(false);
+    const [pin, setPin] = useState("");
+    const [confirmPin, setConfirmPin] = useState("");
+    const [isSaving, setIsSaving] = useState(false);
+
+    const handleLock = async () => {
+        if (pin.length !== 4) {
+            toast({ variant: 'destructive', title: "PIN must be 4 digits" });
+            return;
+        }
+        if (pin !== confirmPin) {
+            toast({ variant: 'destructive', title: "PINs do not match" });
+            return;
+        }
+        setIsSaving(true);
+        lockConversation(conversationId, pin);
+        setIsSaving(false);
+        setPin("");
+        setConfirmPin("");
+        toast({ title: "Chat Locked" });
+        setOpen(false);
+    }
+    
+    const handleUnlock = () => {
+        unlockConversation(conversationId);
+        toast({ title: "Chat Unlocked" });
+        setOpen(false);
+    }
+
+    return (
+        <Dialog open={open} onOpenChange={setOpen}>
+            <DialogTrigger asChild>{children}</DialogTrigger>
+            <DialogContent>
+                <DialogHeader>
+                    <DialogTitle>{isLocked ? "Unlock Chat" : "Lock Chat"}</DialogTitle>
+                </DialogHeader>
+                {isLocked ? (
+                    <div>
+                        <DialogDescription>
+                            Unlocking this chat will remove the PIN requirement.
+                        </DialogDescription>
+                        <DialogFooter className="mt-4">
+                            <Button variant="destructive" onClick={handleUnlock}>Unlock</Button>
+                        </DialogFooter>
+                    </div>
+                ) : (
+                    <div className="space-y-4 py-4">
+                         <DialogDescription>
+                            Set a 4-digit PIN to lock this conversation. You will need this PIN to view messages.
+                        </DialogDescription>
+                         <Input
+                            type="password"
+                            maxLength={4}
+                            value={pin}
+                            onChange={(e) => setPin(e.target.value)}
+                            placeholder="Enter 4-digit PIN"
+                         />
+                         <Input
+                            type="password"
+                            maxLength={4}
+                            value={confirmPin}
+                            onChange={(e) => setConfirmPin(e.target.value)}
+                            placeholder="Confirm PIN"
+                         />
+                         <DialogFooter>
+                             <Button onClick={handleLock} disabled={isSaving}>
+                                 {isSaving ? <Loader2 className="animate-spin" /> : "Lock Chat"}
+                             </Button>
+                         </DialogFooter>
+                    </div>
+                )}
+            </DialogContent>
+        </Dialog>
+    )
+}
 
 export default function ConversationPage() {
     const params = useParams();
     const router = useRouter();
     const { id: conversationId } = params;
-    const { user, getConversationById, sendDirectMessage, loading, allUsers, groups, markMessagesAsRead, updateTypingStatus } = useAppContext();
+    const { user, getConversationById, sendDirectMessage, loading, allUsers, groups, markMessagesAsRead, updateTypingStatus, togglePinConversation, deleteConversationForUser, lockedConversations, unlockConversation } = useAppContext();
     const { toast } = useToast();
 
     const [conversation, setConversation] = useState<Conversation | null>(null);
@@ -258,6 +338,8 @@ export default function ConversationPage() {
     const [isRecording, setIsRecording] = useState(false);
     const mediaRecorderRef = useRef<MediaRecorder | null>(null);
     const audioChunksRef = useRef<Blob[]>([]);
+    const [isLocked, setIsLocked] = useState(false);
+    const [pinInput, setPinInput] = useState("");
     
     const lastTextRef = useRef("");
     const debouncedText = useDebounce(text, 500);
@@ -268,24 +350,34 @@ export default function ConversationPage() {
             router.push('/login-user');
             return;
         }
-        const foundConvo = getConversationById(conversationId as string);
+        const convoId = conversationId as string;
+        const foundConvo = getConversationById(convoId);
+
+        if (lockedConversations[convoId]) {
+            setIsLocked(true);
+        } else {
+            setIsLocked(false);
+        }
+
         if (foundConvo) {
             setConversation(foundConvo);
-            markMessagesAsRead(conversationId as string, true);
+            if (!isLocked) {
+                 markMessagesAsRead(convoId, true);
+            }
         } else if (!loading) {
             toast({ variant: "destructive", title: "Conversation not found." });
-            router.push('/');
+            router.push('/#messages');
         }
          return () => {
-            if(foundConvo) {
-                 markMessagesAsRead(conversationId as string, true);
+            if(foundConvo && !isLocked) {
+                 markMessagesAsRead(convoId, true);
             }
          }
-    }, [conversationId, getConversationById, user, loading, router, toast, markMessagesAsRead]);
+    }, [conversationId, getConversationById, user, loading, router, toast, markMessagesAsRead, lockedConversations, isLocked]);
 
     useEffect(() => {
         messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
-    }, [conversation?.messages]);
+    }, [conversation?.messages, isLocked]);
     
     useEffect(() => {
         if (user && conversationId) {
@@ -302,7 +394,7 @@ export default function ConversationPage() {
     }, [text, user, conversationId, updateTypingStatus]);
 
     useEffect(() => {
-        if (user && debouncedText.length > 0 && lastTextRef.current.length > 0) {
+        if (user && debouncedText.length === 0 && lastTextRef.current.length > 0) {
             updateTypingStatus(conversationId as string, false, true);
         }
     }, [debouncedText, user, conversationId, updateTypingStatus]);
@@ -386,6 +478,31 @@ export default function ConversationPage() {
         }
     };
 
+    const handlePinToggle = () => {
+        if (!conversation) return;
+        togglePinConversation(conversation.id);
+        const isCurrentlyPinned = conversation.pinnedBy && conversation.pinnedBy[user!.uid];
+        toast({ title: isCurrentlyPinned ? "Conversation Unpinned" : "Conversation Pinned" });
+    }
+
+    const handleDeleteConversation = () => {
+        if (!conversation) return;
+        deleteConversationForUser(conversation.id);
+        toast({ title: "Conversation Deleted" });
+        router.push("/#messages");
+    }
+
+    const handleUnlock = () => {
+        if (lockedConversations[conversationId as string] === pinInput) {
+            unlockConversation(conversationId as string);
+            setIsLocked(false);
+            setPinInput("");
+            toast({ title: "Chat Unlocked" });
+        } else {
+            toast({ variant: 'destructive', title: "Incorrect PIN" });
+        }
+    }
+
     const getOtherParticipant = () => {
         if (!user || !conversation) return null;
         const otherUid = conversation.participantUids.find(uid => uid !== user.uid);
@@ -404,10 +521,11 @@ export default function ConversationPage() {
     
     const otherParticipant = getOtherParticipant();
     const isTyping = conversation.typing && otherParticipant && conversation.typing[otherParticipant.uid];
+    const isPinned = conversation.pinnedBy && conversation.pinnedBy[user.uid];
 
     return (
-        <div className="fixed inset-0 top-16 bg-background z-10 md:static md:inset-auto md:z-auto md:h-[calc(100vh-4rem-1px)]">
-             <Card className="flex flex-col h-full border-0 sm:border rounded-none sm:rounded-lg">
+        <div className="fixed inset-0 top-0 bg-background z-50 h-screen md:h-auto md:static md:inset-auto md:z-auto md:h-[calc(100vh-4rem-1px)]">
+             <Card className="flex flex-col h-full border-0 sm:border rounded-none sm:rounded-lg pt-16 md:pt-0">
                 <CardHeader className="flex-row items-center justify-between border-b p-4">
                     <div className="flex items-center gap-3">
                         <Button variant="ghost" size="icon" className="mr-2" onClick={() => router.back()}>
@@ -441,7 +559,7 @@ export default function ConversationPage() {
                             <DropdownMenuContent align="end">
                                 <DropdownMenuItem asChild>
                                     <Link href={`/profile/${otherParticipant.uid}`}>
-                                        <FileIcon className="mr-2 h-4 w-4" /> View Profile
+                                        <User className="mr-2 h-4 w-4" /> View Profile
                                     </Link>
                                 </DropdownMenuItem>
                                 <SharedGroupsDialog otherUser={otherParticipant} currentUser={user}>
@@ -450,79 +568,123 @@ export default function ConversationPage() {
                                     </DropdownMenuItem>
                                 </SharedGroupsDialog>
                                 <DropdownMenuSeparator />
-                                <DropdownMenuItem disabled>
-                                    <Pin className="mr-2 h-4 w-4" /> Pin to Top
+                                <DropdownMenuItem onClick={handlePinToggle}>
+                                    {isPinned ? <PinOff className="mr-2 h-4 w-4" /> : <Pin className="mr-2 h-4 w-4" />}
+                                    {isPinned ? 'Unpin from Top' : 'Pin to Top'}
                                 </DropdownMenuItem>
-                                <DropdownMenuItem disabled>
-                                    <Lock className="mr-2 h-4 w-4" /> Lock Chat
-                                </DropdownMenuItem>
+                                <LockChatDialog conversationId={conversation.id} isLocked={isLocked}>
+                                     <DropdownMenuItem onSelect={(e) => e.preventDefault()}>
+                                        {isLocked ? <Unlock className="mr-2 h-4 w-4" /> : <Lock className="mr-2 h-4 w-4" />}
+                                        {isLocked ? 'Unlock Chat' : 'Lock Chat'}
+                                    </DropdownMenuItem>
+                                </LockChatDialog>
                                 <DropdownMenuSeparator />
                                 <DropdownMenuItem className="text-destructive" disabled>
                                     <UserX className="mr-2 h-4 w-4" /> Block
                                 </DropdownMenuItem>
+                                 <AlertDialog>
+                                    <AlertDialogTrigger asChild>
+                                        <DropdownMenuItem className="text-destructive" onSelect={(e) => e.preventDefault()}>
+                                            <Trash2 className="mr-2 h-4 w-4" /> Delete Chat
+                                        </DropdownMenuItem>
+                                    </AlertDialogTrigger>
+                                    <AlertDialogContent>
+                                        <AlertDialogHeader>
+                                            <AlertDialogTitle>Delete Conversation?</AlertDialogTitle>
+                                            <AlertDialogDescription>
+                                                This will only delete the conversation for you. The other person will still see the messages. This action cannot be undone.
+                                            </AlertDialogDescription>
+                                        </AlertDialogHeader>
+                                        <AlertDialogFooter>
+                                            <AlertDialogCancel>Cancel</AlertDialogCancel>
+                                            <AlertDialogAction onClick={handleDeleteConversation}>Delete</AlertDialogAction>
+                                        </AlertDialogFooter>
+                                    </AlertDialogContent>
+                                </AlertDialog>
                             </DropdownMenuContent>
                         </DropdownMenu>
                     )}
                 </CardHeader>
-                <CardContent className="flex-1 overflow-y-auto p-4 space-y-6">
-                    {conversation.messages && conversation.messages.length > 0 ? (
-                        conversation.messages.sort((a,b) => a.timestamp - b.timestamp).map((msg, idx) => (
-                            <MessageBubble
-                                key={msg.id}
-                                message={msg}
-                                isOwnMessage={user?.uid === msg.creatorUid}
-                                participant={conversation.participants[msg.creatorUid]}
-                                conversationId={conversation.id}
-                                isLastMessage={idx === conversation.messages!.length - 1}
-                                otherParticipant={otherParticipant}
-                            />
-                        ))
-                    ) : (
-                        <div className="text-center text-muted-foreground h-full flex items-center justify-center">
-                            <p>This is the beginning of your conversation.</p>
+
+                {isLocked ? (
+                    <div className="flex flex-col flex-1 items-center justify-center gap-4 p-4 text-center">
+                        <Lock className="h-12 w-12 text-muted-foreground" />
+                        <h2 className="text-xl font-semibold">This chat is locked</h2>
+                        <p className="text-muted-foreground">Enter your PIN to unlock the conversation.</p>
+                        <div className="flex gap-2">
+                             <Input 
+                                type="password"
+                                maxLength={4}
+                                value={pinInput}
+                                onChange={(e) => setPinInput(e.target.value)}
+                                placeholder="PIN"
+                             />
+                             <Button onClick={handleUnlock}>Unlock</Button>
                         </div>
-                    )}
-                    <div ref={messagesEndRef} />
-                </CardContent>
-                <CardFooter className="border-t p-4">
-                    <div className="flex items-center gap-2 w-full">
-                        {isRecording ? (
-                            <div className="flex-1 flex items-center gap-2 bg-muted p-2 rounded-lg">
-                                <Mic className="h-5 w-5 text-destructive animate-pulse" />
-                                <p className="text-sm text-muted-foreground">Recording...</p>
-                            </div>
-                        ) : (
-                            <Input
-                                placeholder="Type a message..."
-                                value={text}
-                                onChange={(e) => setText(e.target.value)}
-                                onKeyDown={(e) => e.key === 'Enter' && !isSending && handleSendText()}
-                                disabled={isSending}
-                            />
-                        )}
-                        <input
-                            type="file"
-                            ref={fileInputRef}
-                            onChange={handleFileChange}
-                            accept="image/*,video/*,audio/*,application/pdf,.doc,.docx,.xls,.xlsx,.ppt,.pptx"
-                            className="hidden"
-                        />
-                        <Button size="icon" variant="outline" onClick={() => fileInputRef.current?.click()} disabled={isSending || isRecording}>
-                            <Paperclip className="h-4 w-4" />
-                        </Button>
-                        <Button 
-                            size="icon"
-                            variant={isRecording ? "destructive" : "default"}
-                            onMouseDown={handleSendAction}
-                            onMouseUp={handleReleaseSendAction}
-                            onTouchStart={handleSendAction}
-                            onTouchEnd={handleReleaseSendAction}
-                            disabled={isSending}
-                        >
-                            {isRecording ? <Square className="h-4 w-4" /> : (text.trim() ? <Send className="h-4 w-4" /> : <Mic className="h-4 w-4" />)}
-                        </Button>
                     </div>
-                </CardFooter>
+                ) : (
+                    <>
+                         <CardContent className="flex-1 overflow-y-auto p-4 space-y-6">
+                            {conversation.messages && conversation.messages.length > 0 ? (
+                                conversation.messages.sort((a,b) => a.timestamp - b.timestamp).map((msg, idx) => (
+                                    <MessageBubble
+                                        key={msg.id}
+                                        message={msg}
+                                        isOwnMessage={user?.uid === msg.creatorUid}
+                                        participant={conversation.participants[msg.creatorUid]}
+                                        conversationId={conversation.id}
+                                        isLastMessage={idx === conversation.messages!.length - 1}
+                                        otherParticipant={otherParticipant}
+                                    />
+                                ))
+                            ) : (
+                                <div className="text-center text-muted-foreground h-full flex items-center justify-center">
+                                    <p>This is the beginning of your conversation.</p>
+                                </div>
+                            )}
+                            <div ref={messagesEndRef} />
+                        </CardContent>
+                        <CardFooter className="border-t p-4">
+                            <div className="flex items-center gap-2 w-full">
+                                {isRecording ? (
+                                    <div className="flex-1 flex items-center gap-2 bg-muted p-2 rounded-lg">
+                                        <Mic className="h-5 w-5 text-destructive animate-pulse" />
+                                        <p className="text-sm text-muted-foreground">Recording...</p>
+                                    </div>
+                                ) : (
+                                    <Input
+                                        placeholder="Type a message..."
+                                        value={text}
+                                        onChange={(e) => setText(e.target.value)}
+                                        onKeyDown={(e) => e.key === 'Enter' && !isSending && handleSendText()}
+                                        disabled={isSending}
+                                    />
+                                )}
+                                <input
+                                    type="file"
+                                    ref={fileInputRef}
+                                    onChange={handleFileChange}
+                                    accept="image/*,video/*,audio/*,application/pdf,.doc,.docx,.xls,.xlsx,.ppt,.pptx"
+                                    className="hidden"
+                                />
+                                <Button size="icon" variant="outline" onClick={() => fileInputRef.current?.click()} disabled={isSending || isRecording}>
+                                    <Paperclip className="h-4 w-4" />
+                                </Button>
+                                <Button 
+                                    size="icon"
+                                    variant={isRecording ? "destructive" : "default"}
+                                    onMouseDown={handleSendAction}
+                                    onMouseUp={handleReleaseSendAction}
+                                    onTouchStart={handleSendAction}
+                                    onTouchEnd={handleReleaseSendAction}
+                                    disabled={isSending}
+                                >
+                                    {isRecording ? <Square className="h-4 w-4" /> : (text.trim() ? <Send className="h-4 w-4" /> : <Mic className="h-4 w-4" />)}
+                                </Button>
+                            </div>
+                        </CardFooter>
+                    </>
+                )}
             </Card>
         </div>
     );
