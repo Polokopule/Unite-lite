@@ -499,7 +499,6 @@ function ChatArea({ groupId, messages, group, members, membersDetails }: { group
                             placeholder="Type a message..."
                             value={text}
                             onChange={(e) => setText(e.target.value)}
-                            onKeyDown={(e) => e.key === 'Enter' && !e.shiftKey && (e.preventDefault(), handleSendText())}
                             disabled={isSending}
                             rows={1}
                             className="max-h-24 resize-none"
@@ -658,10 +657,8 @@ export default function GroupPage() {
     }
 
     return (
-         <div className="fixed inset-0 top-0 bg-background z-50 h-screen md:h-auto md:static md:inset-auto md:z-auto md:h-full flex">
-            <div className="flex-1 h-full pt-0">
-                 <ChatArea groupId={group.id} messages={group.messages || []} group={group} members={membersDetails} membersDetails={membersDetails} />
-            </div>
+         <div className="fixed inset-0 top-0 bg-background z-50 h-screen">
+             <ChatArea groupId={group.id} messages={group.messages || []} group={group} members={membersDetails} membersDetails={membersDetails} />
         </div>
     );
 }

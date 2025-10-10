@@ -558,8 +558,8 @@ export default function ConversationPage() {
     const isOtherUserBlocked = user.blockedUsers?.includes(otherParticipant?.uid || '');
 
     return (
-        <div className="fixed inset-0 top-0 bg-background z-50 h-screen md:h-auto md:static md:inset-auto md:z-auto md:h-full">
-             <Card className="flex flex-col h-full border-0 sm:border rounded-none sm:rounded-lg pt-0">
+        <div className="fixed inset-0 top-0 bg-background z-50 h-screen">
+             <Card className="flex flex-col h-full border-0 sm:border rounded-none sm:rounded-lg">
                 <CardHeader className="flex-row items-center justify-between border-b p-4">
                     <div className="flex items-center gap-3">
                         <Button variant="ghost" size="icon" className="mr-2" onClick={() => router.back()}>
@@ -696,7 +696,6 @@ export default function ConversationPage() {
                                             placeholder="Type a message..."
                                             value={text}
                                             onChange={(e) => setText(e.target.value)}
-                                            onKeyDown={(e) => e.key === 'Enter' && !e.shiftKey && (e.preventDefault(), handleSendText())}
                                             disabled={isSending}
                                             rows={1}
                                             className="max-h-24 resize-none"
