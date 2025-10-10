@@ -558,8 +558,8 @@ export default function ConversationPage() {
     const isOtherUserBlocked = user.blockedUsers?.includes(otherParticipant?.uid || '');
 
     return (
-        <div className="fixed inset-0 top-0 bg-background z-50 h-screen">
-             <Card className="flex flex-col h-full border-0 sm:border rounded-none sm:rounded-lg">
+        <div className="fixed inset-0 top-0 bg-background z-50">
+             <Card className="flex flex-col h-screen border-0 sm:border rounded-none sm:rounded-lg">
                 <CardHeader className="flex-row items-center justify-between border-b p-4">
                     <div className="flex items-center gap-3">
                         <Button variant="ghost" size="icon" className="mr-2" onClick={() => router.back()}>
@@ -735,3 +735,4 @@ export default function ConversationPage() {
     
 
     
+

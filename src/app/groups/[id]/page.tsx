@@ -10,7 +10,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
-import { Loader2, Lock, Users, Send, Paperclip, Image as ImageIcon, Download, File, Music, Video, Menu, Mic, Square, Smile, Copy, Pencil, Trash2, Check, CheckCheck, Share2, MoreVertical, ArrowLeft } from "lucide-react";
+import { Loader2, Lock, Users, Send, Paperclip, Image as ImageIcon, Download, File as FileIcon, Music, Video, Menu, Mic, Square, Smile, Copy, Pencil, Trash2, Check, CheckCheck, Share2, MoreVertical, ArrowLeft } from "lucide-react";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import Image from "next/image";
 import Link from "next/link";
@@ -104,7 +104,7 @@ function MessageBubble({ message, isOwnMessage, groupId, memberCount }: { messag
             case 'file':
                 return (
                     <a href={message.fileUrl!} target="_blank" rel="noopener noreferrer" className="flex items-center gap-2 bg-secondary/50 p-3 rounded-lg hover:bg-secondary transition-colors">
-                        <File className="h-6 w-6 text-primary" />
+                        <FileIcon className="h-6 w-6 text-primary" />
                         <div>
                             <p className="font-semibold text-sm break-all">{message.fileName}</p>
                             <p className="text-xs text-muted-foreground">Click to download</p>
@@ -371,7 +371,7 @@ function ChatArea({ groupId, messages, group, members, membersDetails }: { group
     };
 
     return (
-        <Card className="flex flex-col h-full border-0 sm:border rounded-none sm:rounded-lg">
+        <Card className="flex flex-col h-screen border-0 sm:border rounded-none sm:rounded-lg">
             <CardHeader className="flex flex-row items-center justify-between p-4 border-b">
                 <div className="flex items-center gap-3">
                      <Button variant="ghost" size="icon" className="mr-2" onClick={() => router.back()}>
@@ -657,7 +657,7 @@ export default function GroupPage() {
     }
 
     return (
-         <div className="fixed inset-0 top-0 bg-background z-50 h-screen">
+         <div className="fixed inset-0 top-0 bg-background z-50">
              <ChatArea groupId={group.id} messages={group.messages || []} group={group} members={membersDetails} membersDetails={membersDetails} />
         </div>
     );
@@ -666,3 +666,4 @@ export default function GroupPage() {
     
 
     
+
