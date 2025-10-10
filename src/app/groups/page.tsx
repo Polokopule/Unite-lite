@@ -6,6 +6,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { useAppContext } from "@/contexts/app-context";
 import Link from "next/link";
 import { Users, Lock, PlusCircle } from "lucide-react";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 
 export default function GroupsPage() {
     const { groups, user } = useAppContext();
@@ -28,12 +29,18 @@ export default function GroupsPage() {
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                     {groups.map((group) => (
                         <Card key={group.id} className="flex flex-col hover:shadow-lg transition-shadow">
-                            <CardHeader>
-                                <CardTitle className="flex items-center justify-between">
-                                    <span className="truncate">{group.name}</span>
-                                    {group.hasPin && <Lock className="h-4 w-4 text-muted-foreground flex-shrink-0" />}
-                                </CardTitle>
-                                <CardDescription>{group.description.substring(0, 100)}{group.description.length > 100 && '...'}</CardDescription>
+                            <CardHeader className="flex-row items-center gap-4">
+                                <Avatar className="h-12 w-12">
+                                    <AvatarImage src={group.photoURL} alt={group.name} />
+                                    <AvatarFallback><Users/></AvatarFallback>
+                                </Avatar>
+                                <div>
+                                    <CardTitle className="flex items-center justify-between">
+                                        <span className="truncate">{group.name}</span>
+                                        {group.hasPin && <Lock className="h-4 w-4 text-muted-foreground flex-shrink-0 ml-2" />}
+                                    </CardTitle>
+                                    <CardDescription>{group.description.substring(0, 100)}{group.description.length > 100 && '...'}</CardDescription>
+                                </div>
                             </CardHeader>
                             <CardContent className="flex-grow">
                                 <div className="flex items-center text-sm text-muted-foreground gap-2">
@@ -44,7 +51,7 @@ export default function GroupsPage() {
                             <CardContent>
                                  <Button asChild className="w-full">
                                     <Link href={`/groups/${group.id}`}>View Group</Link>
-                                </Button>
+                                 </Button>
                             </CardContent>
                         </Card>
                     ))}

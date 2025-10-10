@@ -14,7 +14,7 @@ import { Loader2, Send, Paperclip, ArrowLeft, File as FileIcon, Mic, Square, Smi
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import Image from "next/image";
 import Link from "next/link";
-import { formatDistanceToNow, format } from "date-fns";
+import { formatTimeAgo } from "@/lib/utils";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import EmojiPicker, { EmojiClickData } from "emoji-picker-react";
@@ -137,7 +137,7 @@ function MessageBubble({ message, isOwnMessage, participant, conversationId, isL
                             {renderContent()}
                             <div className={`flex items-center justify-end gap-1.5 text-xs mt-1 ${isOwnMessage ? 'text-primary-foreground/70' : 'text-muted-foreground'}`}>
                                 {message.isEdited && <span>(edited)</span>}
-                                <span>{format(new Date(message.timestamp), "p")}</span>
+                                <span>{formatTimeAgo(new Date(message.timestamp).getTime())}</span>
                                 {isOwnMessage && (
                                   isSeen ? <CheckCheck size={16} /> : <Check size={16} />
                                 )}
@@ -380,7 +380,7 @@ export default function ConversationPage() {
                                 <p className="text-xs text-muted-foreground">
                                     {isTyping ? <span className="italic">typing...</span> : 
                                      otherParticipant.presence?.state === 'online' ? 'Online' : 
-                                     otherParticipant.presence?.lastChanged ? `Last seen ${formatDistanceToNow(otherParticipant.presence.lastChanged, { addSuffix: true })}` : 'Offline'
+                                     otherParticipant.presence?.lastChanged ? `Last seen ${formatTimeAgo(otherParticipant.presence.lastChanged)}` : 'Offline'
                                     }
                                 </p>
                             </div>
@@ -450,5 +450,3 @@ export default function ConversationPage() {
         </div>
     );
 }
-
-    

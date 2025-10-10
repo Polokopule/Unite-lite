@@ -10,11 +10,11 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
-import { Loader2, Lock, Users, Send, Paperclip, Image as ImageIcon, Download, File, Music, Video, Menu, Mic, Square, Smile, Copy, Pencil, Trash2, Check, CheckCheck } from "lucide-react";
+import { Loader2, Lock, Users, Send, Paperclip, Image as ImageIcon, Download, File, Music, Video, Menu, Mic, Square, Smile, Copy, Pencil, Trash2, Check, CheckCheck, Share2 } from "lucide-react";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import Image from "next/image";
 import Link from "next/link";
-import { formatDistanceToNow, format } from "date-fns";
+import { formatTimeAgo } from "@/lib/utils";
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from "@/components/ui/sheet";
 import { Popover, PopoverTrigger, PopoverContent } from "@/components/ui/popover";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger, DropdownMenuPortal } from "@/components/ui/dropdown-menu";
@@ -145,7 +145,7 @@ function MessageBubble({ message, isOwnMessage, groupId, memberCount }: { messag
                             {renderContent()}
                             <div className={`flex items-center justify-end gap-1.5 text-xs mt-1 ${isOwnMessage ? 'text-primary-foreground/70' : 'text-muted-foreground'}`}>
                                 {message.isEdited && <span>(edited)</span>}
-                                <span>{format(new Date(message.timestamp), "p")}</span>
+                                <span>{formatTimeAgo(new Date(message.timestamp).getTime())}</span>
                                 {isOwnMessage && (
                                   isSeenByAll ? <CheckCheck size={16} /> : <Check size={16} />
                                 )}
@@ -331,10 +331,25 @@ function ChatArea({ groupId, messages, group, members }: { groupId: string; mess
         }
     };
 
+    const handleCopyInviteLink = () => {
+        const inviteLink = `${window.location.origin}/groups/${groupId}`;
+        navigator.clipboard.writeText(inviteLink);
+        toast({ title: "Invite link copied to clipboard!" });
+    };
+
     return (
         <Card className="flex flex-col h-full border-0 sm:border rounded-none sm:rounded-lg">
             <CardHeader className="flex flex-row items-center justify-between">
-                <CardTitle>{group?.name}</CardTitle>
+                <div className="flex items-center gap-3">
+                    <Avatar className="h-10 w-10">
+                        <AvatarImage src={group?.photoURL} alt={group?.name} />
+                        <AvatarFallback><Users/></AvatarFallback>
+                    </Avatar>
+                    <CardTitle>{group?.name}</CardTitle>
+                </div>
+                <Button variant="ghost" size="icon" onClick={handleCopyInviteLink}>
+                    <Share2 className="h-5 w-5" />
+                </Button>
             </CardHeader>
             <CardContent className="flex-1 overflow-y-auto p-4 space-y-6">
                 {messages && messages.length > 0 ? (
@@ -420,7 +435,7 @@ function MembersList({ members }: { members: UserType[] }) {
                             <span>{member.name}</span>
                             {member.presence?.state === 'offline' && member.presence?.lastChanged && (
                                 <p className="text-xs text-muted-foreground">
-                                    Last seen {formatDistanceToNow(member.presence.lastChanged, { addSuffix: true })}
+                                    Last seen {formatTimeAgo(member.presence.lastChanged)}
                                 </p>
                             )}
                         </div>
@@ -452,7 +467,7 @@ export default function GroupPage() {
                 const member = foundGroup.members?.includes(user.uid) || false;
                 setIsMember(member);
                 if (member) {
-                    markMessagesAsRead(groupId);
+                    markMessagesAsRead(groupId as string);
                 }
             }
         }
@@ -558,5 +573,3 @@ export default function GroupPage() {
         </div>
     );
 }
-
-    

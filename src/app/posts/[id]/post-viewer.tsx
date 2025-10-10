@@ -6,13 +6,13 @@ import { useParams } from "next/navigation";
 import { useAppContext } from "@/contexts/app-context";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from "@/components/ui/card";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from "@/componentsui/card";
 import React, { useEffect, useState, useMemo } from "react";
 import { Post as PostType, Comment as CommentType, LinkPreview } from "@/lib/types";
 import { Loader2, MessageCircle, Heart, Send, File as FileIcon, Share2, Link2, SendToBack, Repeat, Trash, Pencil } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import Link from "next/link";
-import { formatDistanceToNow } from "date-fns";
+import { formatTimeAgo } from "@/lib/utils";
 import { Input } from "@/components/ui/input";
 import Image from "next/image";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger, DropdownMenuSub, DropdownMenuSubTrigger, DropdownMenuSubContent } from "@/components/ui/dropdown-menu";
@@ -21,6 +21,7 @@ import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, 
 import { Textarea } from "@/components/ui/textarea";
 import { User as UserType } from "@/lib/types";
 import { useRouter } from "next/navigation";
+import { Separator } from "@/components/ui/separator";
 
 // --- Reusable Components from page.tsx (Consider moving to a components directory) ---
 
@@ -303,7 +304,7 @@ function CommentItem({ comment, postId }: { comment: CommentType; postId: string
                     {comment.linkPreview && <LinkPreviewCard preview={comment.linkPreview} />}
                 </div>
                 <div className="flex items-center gap-2 text-xs text-muted-foreground px-2 pt-1">
-                    <span>{formatDistanceToNow(new Date(comment.timestamp), { addSuffix: true })}</span>
+                    <span>{formatTimeAgo(new Date(comment.timestamp).getTime())}</span>
                     <button onClick={handleLike} disabled={!user} className={`font-semibold hover:underline ${isLiked ? 'text-primary' : ''}`}>Like</button>
                     <button onClick={() => setShowReplyForm(!showReplyForm)} className="font-semibold hover:underline">Reply</button>
                      {comment.likes.length > 0 && (
@@ -481,7 +482,7 @@ function PostCard({ post }: { post: PostType }) {
                         <div>
                             <Link href={`/profile/${post.creatorUid}`} className="font-semibold hover:underline">{post.creatorName}</Link>
                             <p className="text-xs text-muted-foreground">
-                                {formatDistanceToNow(new Date(post.timestamp), { addSuffix: true })}
+                                {formatTimeAgo(new Date(post.timestamp).getTime())}
                             </p>
                         </div>
                     </div>
@@ -531,7 +532,7 @@ function PostCard({ post }: { post: PostType }) {
 
             <CardFooter className="flex-col items-start">
                 <div className="pt-4 mt-4 border-t w-full">
-                    <div className="flex items-center gap-4 text-muted-foreground">
+                    <div className="flex items-center text-muted-foreground">
                         <Button variant="ghost" size="sm" onClick={handleLike} disabled={!user} className="flex items-center gap-2">
                             <Heart className={`h-4 w-4 ${isLiked ? 'fill-red-500 text-red-500' : ''}`} />
                         </Button>
@@ -557,10 +558,16 @@ function PostCard({ post }: { post: PostType }) {
                                 </div>
                             </DropdownMenuContent>
                         </DropdownMenu>
+
+                        <Separator orientation="vertical" className="h-4 mx-2" />
+                        
                         <Button variant="ghost" size="sm" className="flex items-center gap-2" onClick={() => setShowComments(!showComments)}>
                             <MessageCircle className="h-4 w-4" />
                             <span>{post.comments?.length || 0}</span>
                         </Button>
+                        
+                        <Separator orientation="vertical" className="h-4 mx-2" />
+
                         <DropdownMenu>
                             <DropdownMenuTrigger asChild>
                                 <Button variant="ghost" size="sm" className="flex items-center gap-2">

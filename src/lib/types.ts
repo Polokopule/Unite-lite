@@ -129,6 +129,7 @@ export type Group = {
     hasPin: boolean;
     pin: string | null;
     typing?: { [uid: string]: boolean };
+    photoURL?: string;
 }
 
 export type Conversation = {

@@ -10,7 +10,9 @@ import { useToast } from "@/hooks/use-toast";
 import { useAppContext } from "@/contexts/app-context";
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
-import { Users, PlusCircle, Loader2 } from "lucide-react";
+import { Users, PlusCircle, Loader2, Upload } from "lucide-react";
+import Image from "next/image";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 
 export default function CreateGroupPage() {
   const { user, createGroup, loading } = useAppContext();
@@ -21,6 +23,8 @@ export default function CreateGroupPage() {
   const [description, setDescription] = useState("");
   const [pin, setPin] = useState("");
   const [isCreating, setIsCreating] = useState(false);
+  const [groupImage, setGroupImage] = useState<File | null>(null);
+  const [groupImageUrl, setGroupImageUrl] = useState<string | null>(null);
 
   useEffect(() => {
     if (!loading && !user) {
@@ -28,6 +32,14 @@ export default function CreateGroupPage() {
       router.push('/login-user');
     }
   }, [user, loading, router, toast]);
+
+  const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      setGroupImage(file);
+      setGroupImageUrl(URL.createObjectURL(file));
+    }
+  };
 
   const handleCreate = async () => {
     if (!name || !description) {
@@ -40,7 +52,7 @@ export default function CreateGroupPage() {
     }
     
     setIsCreating(true);
-    const success = await createGroup({ name, description, pin });
+    const success = await createGroup({ name, description, pin, photoFile: groupImage });
     setIsCreating(false);
 
     if(success) {
@@ -81,6 +93,22 @@ export default function CreateGroupPage() {
             </div>
           </CardHeader>
           <CardContent className="space-y-6">
+            <div className="space-y-2">
+                <Label>Group Avatar (Optional)</Label>
+                <div className="flex items-center gap-4">
+                    <Avatar className="h-20 w-20">
+                        {groupImageUrl ? <AvatarImage src={groupImageUrl} alt="Group preview"/> : <AvatarFallback><Users/></AvatarFallback>}
+                    </Avatar>
+                     <Input id="group-image" type="file" accept="image/*" onChange={handleImageChange} className="hidden" />
+                    <Button type="button" variant="outline" asChild>
+                      <Label htmlFor="group-image" className="cursor-pointer">
+                          <Upload className="h-4 w-4 mr-2" />
+                          Upload Image
+                      </Label>
+                    </Button>
+                </div>
+            </div>
+
             <div className="space-y-2">
               <Label htmlFor="name">Group Name</Label>
               <Input

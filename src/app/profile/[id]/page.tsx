@@ -12,11 +12,12 @@ import { User as UserType, Post as PostType, Comment as CommentType, LinkPreview
 import { Loader2, UserPlus, UserMinus, MessageCircle, Heart, Send, File as FileIcon, Share2, Link2, SendToBack, Repeat } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import Link from "next/link";
-import { formatDistanceToNow } from "date-fns";
+import { formatTimeAgo } from "@/lib/utils";
 import { Input } from "@/components/ui/input";
 import Image from "next/image";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import { Separator } from "@/components/ui/separator";
 
 // --- Comment Form ---
 function CommentForm({ postId, parentId = null, onCommentPosted }: { postId: string; parentId?: string | null, onCommentPosted?: () => void }) {
@@ -83,7 +84,7 @@ function CommentItem({ comment, postId }: { comment: CommentType; postId: string
                     <p className="whitespace-pre-wrap break-words">{comment.content}</p>
                 </div>
                 <div className="flex items-center gap-2 text-xs text-muted-foreground px-2 pt-1">
-                    <span>{formatDistanceToNow(new Date(comment.timestamp), { addSuffix: true })}</span>
+                    <span>{formatTimeAgo(new Date(comment.timestamp).getTime())}</span>
                     <button onClick={handleLike} disabled={!user} className={`font-semibold hover:underline ${isLiked ? 'text-primary' : ''}`}>Like</button>
                     <button onClick={() => setShowReplyForm(!showReplyForm)} className="font-semibold hover:underline">Reply</button>
                      {comment.likes.length > 0 && (
@@ -231,7 +232,7 @@ function PostCard({ post }: { post: PostType }) {
                     <div>
                         <Link href={`/profile/${post.creatorUid}`} className="font-semibold hover:underline">{post.creatorName}</Link>
                         <p className="text-xs text-muted-foreground">
-                            {formatDistanceToNow(new Date(post.timestamp), { addSuffix: true })}
+                            {formatTimeAgo(new Date(post.timestamp).getTime())}
                         </p>
                     </div>
                 </div>
@@ -245,7 +246,7 @@ function PostCard({ post }: { post: PostType }) {
             </CardContent>
             <CardFooter className="pb-3 pt-3 flex-col items-start">
                 <div className="pt-4 mt-4 border-t w-full">
-                    <div className="flex items-center gap-4 text-muted-foreground">
+                    <div className="flex items-center text-muted-foreground">
                             <Button variant="ghost" size="sm" onClick={handleLike} className="flex items-center gap-2">
                             <Heart className={`h-4 w-4 ${isLiked ? 'fill-red-500 text-red-500' : ''}`} />
                         </Button>
@@ -271,10 +272,16 @@ function PostCard({ post }: { post: PostType }) {
                                 </div>
                             </DropdownMenuContent>
                         </DropdownMenu>
+
+                        <Separator orientation="vertical" className="h-4 mx-2" />
+
                         <Button variant="ghost" size="sm" className="flex items-center gap-2" onClick={() => setShowComments(!showComments)}>
                             <MessageCircle className="h-4 w-4" />
                             <span>{post.comments?.length || 0}</span>
                         </Button>
+                        
+                        <Separator orientation="vertical" className="h-4 mx-2" />
+
                         <DropdownMenu>
                             <DropdownMenuTrigger asChild>
                                 <Button variant="ghost" size="sm" className="flex items-center gap-2">

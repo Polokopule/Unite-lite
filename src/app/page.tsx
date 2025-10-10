@@ -7,7 +7,7 @@ import { Ad, Post as PostType, FeedItem, Comment as CommentType, Course, Group, 
 import { Button } from "@/components/ui/button";
 import { Loader2, MessageCircle, Heart, Send, ShoppingBag, Wallet, CheckCircle, PlusCircle, Home as HomeIcon, Bell, Users, Lock, User as UserIconLucide, Reply, File as FileIcon, Search, MessageSquare, Share2, Link2, SendToBack, Trash, Pencil, Repeat } from "lucide-react";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { formatDistanceToNow } from "date-fns";
+import { formatTimeAgo } from "@/lib/utils";
 import { Input } from "@/components/ui/input";
 import Link from "next/link";
 import { useMemo, useState, useEffect, useRef } from "react";
@@ -307,7 +307,7 @@ function CommentItem({ comment, postId }: { comment: CommentType; postId: string
                     {comment.linkPreview && <LinkPreviewCard preview={comment.linkPreview} />}
                 </div>
                 <div className="flex items-center gap-2 text-xs text-muted-foreground px-2 pt-1">
-                    <span>{formatDistanceToNow(new Date(comment.timestamp), { addSuffix: true })}</span>
+                    <span>{formatTimeAgo(new Date(comment.timestamp).getTime())}</span>
                     <button onClick={handleLike} disabled={!user} className={`font-semibold hover:underline ${isLiked ? 'text-primary' : ''}`}>Like</button>
                     <button onClick={() => setShowReplyForm(!showReplyForm)} className="font-semibold hover:underline">Reply</button>
                      {comment.likes.length > 0 && (
@@ -487,7 +487,7 @@ function PostCard({ post }: { post: PostType }) {
                         <div>
                             <Link href={`/profile/${post.creatorUid}`} className="font-semibold hover:underline">{post.creatorName}</Link>
                             <p className="text-xs text-muted-foreground">
-                                {formatDistanceToNow(new Date(post.timestamp), { addSuffix: true })}
+                                {formatTimeAgo(new Date(post.timestamp).getTime())}
                             </p>
                         </div>
                     </div>
@@ -533,7 +533,7 @@ function PostCard({ post }: { post: PostType }) {
                 <PostAttachment post={post} />
 
                 <div className="pt-4 mt-4 border-t">
-                    <div className="flex items-center gap-4 text-muted-foreground">
+                    <div className="flex items-center text-muted-foreground">
                         <Button variant="ghost" size="sm" onClick={handleLike} disabled={!user} className="flex items-center gap-2">
                             <Heart className={`h-4 w-4 ${isLiked ? 'fill-red-500 text-red-500' : ''}`} />
                         </Button>
@@ -561,10 +561,15 @@ function PostCard({ post }: { post: PostType }) {
                             </DropdownMenuContent>
                         </DropdownMenu>
 
+                        <Separator orientation="vertical" className="h-4 mx-2" />
+
                         <Button variant="ghost" size="sm" className="flex items-center gap-2" onClick={() => setShowComments(!showComments)}>
                             <MessageCircle className="h-4 w-4" />
                             <span>{post.comments?.length || 0}</span>
                         </Button>
+                        
+                        <Separator orientation="vertical" className="h-4 mx-2" />
+                        
                         <DropdownMenu>
                             <DropdownMenuTrigger asChild>
                                 <Button variant="ghost" size="sm" className="flex items-center gap-2">
@@ -1001,7 +1006,7 @@ function MessagesContent() {
                                                 <p className="text-sm text-muted-foreground truncate">{convo.lastMessage?.content || 'No messages yet'}</p>
                                             </div>
                                              {convo.lastMessage && (
-                                                <p className="text-xs text-muted-foreground">{formatDistanceToNow(new Date(convo.lastMessage.timestamp), { addSuffix: true })}</p>
+                                                <p className="text-xs text-muted-foreground">{formatTimeAgo(new Date(convo.lastMessage.timestamp).getTime())}</p>
                                              )}
                                          </Link>
                                     </li>
@@ -1073,7 +1078,7 @@ function NotificationsContent() {
                                                {' '}
                                                {getNotificationMessage(n)}
                                            </p>
-                                           <p className="text-xs text-muted-foreground">{formatDistanceToNow(new Date(n.timestamp), { addSuffix: true })}</p>
+                                           <p className="text-xs text-muted-foreground">{formatTimeAgo(new Date(n.timestamp).getTime())}</p>
                                        </div>
                                         <Button asChild variant="ghost" size="sm">
                                             <Link href={n.targetUrl}>View</Link>
