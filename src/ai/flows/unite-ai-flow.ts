@@ -32,7 +32,7 @@ Unite is a platform with the following features:
 When answering, be concise, friendly, and focus only on information relevant to the Unite platform. Do not answer questions unrelated to Unite. If you don't know the answer, say that you don't have that information.
 `;
 
-    const { output } = await ai.generate({
+    const response = await ai.generate({
       prompt: input.question,
       history: input.history,
       config: {
@@ -40,6 +40,7 @@ When answering, be concise, friendly, and focus only on information relevant to 
       },
       system: systemPrompt,
     });
-    return output?.text || "I'm sorry, I couldn't come up with a response.";
+    
+    return response.text || "I'm sorry, I couldn't come up with a response.";
   }
 );

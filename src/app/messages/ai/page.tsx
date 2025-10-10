@@ -1,46 +1,40 @@
-'use client';
+
+"use client";
 
 import { useState, useRef, useEffect } from 'react';
-import { Button } from './ui/button';
-import { Bot, Loader2, Send, X } from 'lucide-react';
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-  DialogFooter,
-} from './ui/dialog';
-import { Input } from './ui/input';
+import { Button } from '@/components/ui/button';
+import { Bot, Loader2, Send, ArrowLeft } from 'lucide-react';
+import { Card, CardContent, CardHeader, CardTitle, CardFooter } from '@/components/ui/card';
+import { Input } from '@/components/ui/input';
 import { uniteAIFlow } from '@/ai/flows/unite-ai-flow';
-import { Avatar, AvatarFallback, AvatarImage } from './ui/avatar';
+import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { useAppContext } from '@/contexts/app-context';
-import { ScrollArea } from './ui/scroll-area';
-import { Logo } from './logo';
+import { ScrollArea } from '@/components/ui/scroll-area';
+import { Logo } from '@/components/logo';
+import { useRouter } from 'next/navigation';
 
 type ChatMessage = {
   role: 'user' | 'model';
   text: string;
 };
 
-export function UniteAIChat() {
+export default function AiChatPage() {
   const { user } = useAppContext();
-  const [isOpen, setIsOpen] = useState(false);
+  const router = useRouter();
   const [history, setHistory] = useState<ChatMessage[]>([]);
   const [question, setQuestion] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const scrollAreaRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
-    if (isOpen) {
-      setHistory([
-        {
-          role: 'model',
-          text: `Hello! I'm Unite AI. How can I help you understand the Unite platform today?`,
-        },
-      ]);
-      setQuestion('');
-    }
-  }, [isOpen]);
+    setHistory([
+      {
+        role: 'model',
+        text: `Hello! I'm Unite AI. How can I help you understand the Unite platform today?`,
+      },
+    ]);
+    setQuestion('');
+  }, []);
 
   useEffect(() => {
     // Scroll to the bottom when history changes
@@ -50,7 +44,7 @@ export function UniteAIChat() {
             viewport.scrollTop = viewport.scrollHeight;
         }
     }
-  }, [history]);
+  }, [history, isLoading]);
 
   const handleSend = async () => {
     if (!question.trim()) return;
@@ -70,10 +64,12 @@ export function UniteAIChat() {
         history: genkitHistory,
         question: question,
       });
-
+      
       const modelMessage: ChatMessage = { role: 'model', text: response };
       setHistory((prev) => [...prev, modelMessage]);
+
     } catch (error) {
+      console.error("AI flow error:", error);
       const errorMessage: ChatMessage = {
         role: 'model',
         text: 'Sorry, I encountered an error. Please try again.',
@@ -85,22 +81,21 @@ export function UniteAIChat() {
   };
 
   return (
-    <>
-      <Button
-        className="fixed bottom-4 right-4 z-50 h-14 w-14 rounded-full shadow-lg"
-        onClick={() => setIsOpen(true)}
-      >
-        <Bot className="h-7 w-7" />
-        <span className="sr-only">Open AI Chat</span>
-      </Button>
-      <Dialog open={isOpen} onOpenChange={setIsOpen}>
-        <DialogContent className="sm:max-w-md flex flex-col h-[70vh] max-h-[70vh]">
-          <DialogHeader>
-            <DialogTitle className="flex items-center gap-2">
-              <Logo />
-              <span>AI Assistant</span>
-            </DialogTitle>
-          </DialogHeader>
+    <div className="fixed inset-0 bg-background z-50 h-[100vh] sm:h-[100vh]">
+        <Card className="flex flex-col h-full border-0 sm:border rounded-none sm:rounded-lg">
+          <CardHeader className="flex-row items-center justify-between border-b p-4">
+             <div className="flex items-center gap-3">
+                <Button variant="ghost" size="icon" className="mr-2" onClick={() => router.back()}>
+                    <ArrowLeft className="h-5 w-5" />
+                </Button>
+                <div className="flex items-center gap-2">
+                    <Avatar className="h-10 w-10">
+                        <AvatarFallback><Bot /></AvatarFallback>
+                    </Avatar>
+                    <CardTitle>AI Assistant</CardTitle>
+                </div>
+            </div>
+          </CardHeader>
           <ScrollArea className="flex-1" ref={scrollAreaRef}>
             <div className="p-4 space-y-4">
               {history.map((message, index) => (
@@ -150,22 +145,26 @@ export function UniteAIChat() {
               )}
             </div>
           </ScrollArea>
-          <DialogFooter>
+          <CardFooter className="border-t p-4">
             <div className="flex w-full items-center gap-2">
               <Input
                 placeholder="Ask a question about Unite..."
                 value={question}
                 onChange={(e) => setQuestion(e.target.value)}
-                onKeyDown={(e) => e.key === 'Enter' && handleSend()}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter' && !e.shiftKey) {
+                    e.preventDefault();
+                    handleSend();
+                  }
+                }}
                 disabled={isLoading}
               />
               <Button onClick={handleSend} disabled={isLoading || !question.trim()}>
                 <Send className="h-4 w-4" />
               </Button>
             </div>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
-    </>
+          </CardFooter>
+        </Card>
+    </div>
   );
 }

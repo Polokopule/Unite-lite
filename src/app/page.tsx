@@ -5,7 +5,7 @@
 import { useAppContext } from "@/contexts/app-context";
 import { Ad, Post as PostType, FeedItem, Comment as CommentType, Course, Group, User as UserType, Notification, LinkPreview, Conversation } from "@/lib/types";
 import { Button } from "@/components/ui/button";
-import { Loader2, MessageCircle, Heart, Send, ShoppingBag, Wallet, CheckCircle, PlusCircle, Home as HomeIcon, Bell, Users, Lock, User as UserIconLucide, Reply, File as FileIcon, Search, MessageSquare, Share2, Link2, SendToBack, Trash, Pencil, Repeat } from "lucide-react";
+import { Loader2, MessageCircle, Heart, Send, ShoppingBag, Wallet, CheckCircle, PlusCircle, Home as HomeIcon, Bell, Users, Lock, User as UserIconLucide, Reply, File as FileIcon, Search, MessageSquare, Share2, Link2, SendToBack, Trash, Pencil, Repeat, Bot } from "lucide-react";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { formatTimeAgo } from "@/lib/utils";
 import { Input } from "@/components/ui/input";
@@ -992,37 +992,49 @@ function MessagesContent() {
              <div className="border-y">
                 <div className="container mx-auto px-0">
                     {loading && <p className="p-4">Loading conversations...</p>}
-                    {!loading && conversations.length === 0 ? (
-                        <div className="text-center text-muted-foreground py-12">
+                    {!loading && conversations.length === 0 && (
+                         <div className="text-center text-muted-foreground py-12">
                             <MessageSquare className="mx-auto h-12 w-12 mb-4" />
                             <h3 className="text-xl font-semibold">No conversations yet</h3>
                             <p>Use the search bar to find someone to talk to.</p>
                         </div>
-                    ) : (
-                        <ul className="space-y-0">
-                            {conversations.map(convo => {
-                                const otherParticipant = getOtherParticipant(convo);
-                                if (!otherParticipant) return null;
-                                return (
-                                    <li key={convo.id} className="border-b last:border-b-0">
-                                         <Link href={`/messages/${convo.id}`} className="flex items-center gap-4 p-4 hover:bg-muted transition-colors">
-                                            <Avatar className="h-10 w-10">
-                                                <AvatarImage src={otherParticipant.photoURL} alt={otherParticipant.name} />
-                                                <AvatarFallback>{getInitials(otherParticipant.name)}</AvatarFallback>
-                                            </Avatar>
-                                            <div className="flex-1 overflow-hidden">
-                                                <p className="font-semibold truncate">{otherParticipant.name}</p>
-                                                <p className="text-sm text-muted-foreground truncate">{convo.lastMessage?.content || 'No messages yet'}</p>
-                                            </div>
-                                             {convo.lastMessage && (
-                                                <p className="text-xs text-muted-foreground">{formatTimeAgo(new Date(convo.lastMessage.timestamp).getTime())}</p>
-                                             )}
-                                         </Link>
-                                    </li>
-                                )
-                            })}
-                        </ul>
                     )}
+                    <ul className="space-y-0">
+                        {user && (
+                            <li className="border-b last:border-b-0">
+                                <Link href="/messages/ai" className="flex items-center gap-4 p-4 hover:bg-muted transition-colors">
+                                    <Avatar className="h-10 w-10 bg-primary text-primary-foreground">
+                                        <AvatarFallback><Bot /></AvatarFallback>
+                                    </Avatar>
+                                    <div className="flex-1 overflow-hidden">
+                                        <p className="font-semibold truncate">Unite AI</p>
+                                        <p className="text-sm text-muted-foreground truncate">Your helpful AI assistant.</p>
+                                    </div>
+                                </Link>
+                            </li>
+                        )}
+                        {conversations.map(convo => {
+                            const otherParticipant = getOtherParticipant(convo);
+                            if (!otherParticipant) return null;
+                            return (
+                                <li key={convo.id} className="border-b last:border-b-0">
+                                     <Link href={`/messages/${convo.id}`} className="flex items-center gap-4 p-4 hover:bg-muted transition-colors">
+                                        <Avatar className="h-10 w-10">
+                                            <AvatarImage src={otherParticipant.photoURL} alt={otherParticipant.name} />
+                                            <AvatarFallback>{getInitials(otherParticipant.name)}</AvatarFallback>
+                                        </Avatar>
+                                        <div className="flex-1 overflow-hidden">
+                                            <p className="font-semibold truncate">{otherParticipant.name}</p>
+                                            <p className="text-sm text-muted-foreground truncate">{convo.lastMessage?.content || 'No messages yet'}</p>
+                                        </div>
+                                         {convo.lastMessage && (
+                                            <p className="text-xs text-muted-foreground">{formatTimeAgo(new Date(convo.lastMessage.timestamp).getTime())}</p>
+                                         )}
+                                     </Link>
+                                </li>
+                            )
+                        })}
+                    </ul>
                 </div>
             </div>
 
