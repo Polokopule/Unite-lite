@@ -335,9 +335,12 @@ export default function ConversationPage() {
     const [isSending, setIsSending] = useState(false);
     const fileInputRef = useRef<HTMLInputElement>(null);
     const messagesEndRef = useRef<HTMLDivElement>(null);
-    const [isRecording, setIsRecording] = useState(false);
+    
+    const [recordingState, setRecordingState] = useState<'idle' | 'recording' | 'previewing'>('idle');
+    const [recordedAudio, setRecordedAudio] = useState<{ url: string; blob: Blob } | null>(null);
     const mediaRecorderRef = useRef<MediaRecorder | null>(null);
     const audioChunksRef = useRef<Blob[]>([]);
+
     const [isLocked, setIsLocked] = useState(false);
     const [pinInput, setPinInput] = useState("");
     
@@ -437,7 +440,7 @@ export default function ConversationPage() {
 
         setIsSending(true);
         toast({ title: 'Uploading...', description: `Sending ${file.name}` });
-        const success = await sendDirectMessage(conversationId as string, { file, type: 'file' }); // type will be re-evaluated in context
+        const success = await sendDirectMessage(conversationId as string, { file });
         if (!success) {
             toast({ variant: 'destructive', title: `Failed to upload file` });
         }
@@ -452,54 +455,64 @@ export default function ConversationPage() {
             mediaRecorderRef.current.ondataavailable = (event) => {
                 audioChunksRef.current.push(event.data);
             };
-            mediaRecorderRef.current.onstop = async () => {
+            mediaRecorderRef.current.onstop = () => {
                 const audioBlob = new Blob(audioChunksRef.current, { type: 'audio/webm' });
-                const audioFile = new File([audioBlob], `voice-note-${Date.now()}.webm`, { type: 'audio/webm' });
-                
-                 if (!otherParticipant || !user) return;
-                if(user.blockedUsers?.includes(otherParticipant.uid) || otherParticipant.blockedUsers?.includes(user.uid)) {
-                     toast({ variant: 'destructive', title: "Voice note not sent", description: "You cannot send messages in this chat." });
-                     return;
-                }
-
-                setIsSending(true);
-                toast({ title: 'Uploading...', description: 'Sending voice note' });
-                const success = await sendDirectMessage(conversationId as string, { file: audioFile, type: 'audio' });
-                if (!success) {
-                    toast({ variant: 'destructive', title: 'Failed to send voice note' });
-                }
-                setIsSending(false);
-
+                const audioUrl = URL.createObjectURL(audioBlob);
+                setRecordedAudio({ url: audioUrl, blob: audioBlob });
+                setRecordingState('previewing');
                 audioChunksRef.current = [];
                 stream.getTracks().forEach(track => track.stop());
             };
             mediaRecorderRef.current.start();
-            setIsRecording(true);
+            setRecordingState('recording');
         } catch (error) {
             toast({ variant: 'destructive', title: 'Microphone access denied', description: 'Please allow microphone access in your browser settings.' });
         }
     };
 
     const stopRecording = () => {
-        if (mediaRecorderRef.current && isRecording) {
+        if (mediaRecorderRef.current && recordingState === 'recording') {
             mediaRecorderRef.current.stop();
-            setIsRecording(false);
         }
     };
+
+    const handleSendAudio = async () => {
+        if (!recordedAudio || !otherParticipant || !user) return;
+
+        if (user.blockedUsers?.includes(otherParticipant.uid) || otherParticipant.blockedUsers?.includes(user.uid)) {
+            toast({ variant: 'destructive', title: "Voice note not sent", description: "You cannot send messages in this chat." });
+            return;
+        }
+
+        setIsSending(true);
+        toast({ title: 'Uploading...', description: 'Sending voice note' });
+        const audioFile = new File([recordedAudio.blob], `voice-note-${Date.now()}.webm`, { type: 'audio/webm' });
+        const success = await sendDirectMessage(conversationId as string, { file: audioFile });
+        if (!success) {
+            toast({ variant: 'destructive', title: 'Failed to send voice note' });
+        }
+        setIsSending(false);
+        setRecordedAudio(null);
+        setRecordingState('idle');
+    };
     
-    const handleSendAction = () => {
+    const handleDeleteAudio = () => {
+        if (recordedAudio) {
+            URL.revokeObjectURL(recordedAudio.url);
+        }
+        setRecordedAudio(null);
+        setRecordingState('idle');
+    };
+
+    const handlePrimaryAction = () => {
         if (text.trim()) {
             handleSendText();
-        } else if (!isRecording) {
+        } else if (recordingState === 'idle') {
             startRecording();
-        } else {
+        } else if (recordingState === 'recording') {
             stopRecording();
-        }
-    };
-    
-    const handleReleaseSendAction = () => {
-        if (!text.trim()) {
-             stopRecording();
+        } else if (recordingState === 'previewing') {
+            handleSendAudio();
         }
     };
 
@@ -539,7 +552,6 @@ export default function ConversationPage() {
         if (!user || !conversation) return null;
         const otherUid = conversation.participantUids.find(uid => uid !== user.uid);
         if (!otherUid) return null;
-        // Get the full user object from allUsers to include presence
         return allUsers.find(u => u.uid === otherUid) || null;
     }
     
@@ -558,7 +570,7 @@ export default function ConversationPage() {
     const isOtherUserBlocked = user.blockedUsers?.includes(otherParticipant?.uid || '');
 
     return (
-        <div className="fixed inset-0 top-0 bg-background z-50">
+        <div className="fixed inset-0 bg-background z-50">
              <Card className="flex flex-col h-screen border-0 sm:border rounded-none sm:rounded-lg">
                 <CardHeader className="flex-row items-center justify-between border-b p-4">
                     <div className="flex items-center gap-3">
@@ -686,41 +698,51 @@ export default function ConversationPage() {
                                 </div>
                            ) : (
                                 <div className="flex items-center gap-2 w-full">
-                                    {isRecording ? (
+                                    {recordingState === 'previewing' && recordedAudio ? (
+                                        <>
+                                            <Button variant="destructive" size="icon" onClick={handleDeleteAudio} disabled={isSending}>
+                                                <Trash2 className="h-4 w-4" />
+                                            </Button>
+                                            <audio controls src={recordedAudio.url} className="flex-1" />
+                                        </>
+                                    ) : recordingState === 'recording' ? (
                                         <div className="flex-1 flex items-center gap-2 bg-muted p-2 rounded-lg">
                                             <Mic className="h-5 w-5 text-destructive animate-pulse" />
                                             <p className="text-sm text-muted-foreground">Recording...</p>
                                         </div>
                                     ) : (
-                                        <Textarea
-                                            placeholder="Type a message..."
-                                            value={text}
-                                            onChange={(e) => setText(e.target.value)}
-                                            disabled={isSending}
-                                            rows={1}
-                                            className="max-h-24 resize-none"
-                                        />
+                                        <>
+                                            <Textarea
+                                                placeholder="Type a message..."
+                                                value={text}
+                                                onChange={(e) => setText(e.target.value)}
+                                                disabled={isSending}
+                                                rows={1}
+                                                className="max-h-24 resize-none"
+                                            />
+                                            <input
+                                                type="file"
+                                                ref={fileInputRef}
+                                                onChange={handleFileChange}
+                                                accept="image/*,video/*,audio/*,application/pdf,.doc,.docx,.xls,.xlsx,.ppt,.pptx"
+                                                className="hidden"
+                                            />
+                                            <Button size="icon" variant="outline" onClick={() => fileInputRef.current?.click()} disabled={isSending}>
+                                                <Paperclip className="h-4 w-4" />
+                                            </Button>
+                                        </>
                                     )}
-                                    <input
-                                        type="file"
-                                        ref={fileInputRef}
-                                        onChange={handleFileChange}
-                                        accept="image/*,video/*,audio/*,application/pdf,.doc,.docx,.xls,.xlsx,.ppt,.pptx"
-                                        className="hidden"
-                                    />
-                                    <Button size="icon" variant="outline" onClick={() => fileInputRef.current?.click()} disabled={isSending || isRecording}>
-                                        <Paperclip className="h-4 w-4" />
-                                    </Button>
-                                    <Button 
+                                    <Button
                                         size="icon"
-                                        variant={isRecording ? "destructive" : "default"}
-                                        onMouseDown={handleSendAction}
-                                        onMouseUp={handleReleaseSendAction}
-                                        onTouchStart={handleSendAction}
-                                        onTouchEnd={handleReleaseSendAction}
+                                        variant={recordingState === 'recording' ? "destructive" : "default"}
+                                        onClick={handlePrimaryAction}
                                         disabled={isSending}
                                     >
-                                        {isRecording ? <Square className="h-4 w-4" /> : (text.trim() ? <Send className="h-4 w-4" /> : <Mic className="h-4 w-4" />)}
+                                        {text.trim() && recordingState === 'idle' ? <Send className="h-4 w-4" />
+                                        : recordingState === 'recording' ? <Square className="h-4 w-4" />
+                                        : recordingState === 'previewing' ? <Send className="h-4 w-4" />
+                                        : <Mic className="h-4 w-4" />
+                                        }
                                     </Button>
                                 </div>
                            )}
@@ -736,3 +758,6 @@ export default function ConversationPage() {
 
     
 
+
+
+    
