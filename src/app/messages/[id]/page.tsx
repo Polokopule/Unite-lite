@@ -601,7 +601,7 @@ export default function ConversationPage() {
     
     if (loading || !conversation || !user) {
         return (
-            <div className="h-full flex items-center justify-center">
+            <div className="h-screen flex items-center justify-center">
                 <Loader2 className="animate-spin h-8 w-8" />
             </div>
         );
@@ -614,7 +614,7 @@ export default function ConversationPage() {
     const isOtherUserBlocked = user.blockedUsers?.includes(otherParticipant?.uid || '');
 
     return (
-        <div className="fixed inset-0 bg-background z-50 h-[100vh] sm:h-auto">
+        <div className="h-screen bg-background">
             <div className="flex flex-col h-full">
                 <header className="flex-shrink-0 flex items-center justify-between border-b p-4 bg-background">
                     <div className="flex items-center gap-3">
@@ -804,3 +804,5 @@ export default function ConversationPage() {
         </div>
     );
 }
+
+    

@@ -712,7 +712,7 @@ export default function GroupPage() {
     const membersDetails = group?.members ? Object.keys(group.members).map(memberId => allUsers.find(u => u.uid === memberId)).filter(Boolean) as UserType[] : [];
 
     if (loading || !group) {
-        return <div className="container mx-auto py-8 flex items-center justify-center h-[calc(100vh-4rem)]"><Loader2 className="animate-spin h-8 w-8" /></div>;
+        return <div className="container mx-auto py-8 flex items-center justify-center h-screen"><Loader2 className="animate-spin h-8 w-8" /></div>;
     }
 
     if (!isMember) {
@@ -759,8 +759,10 @@ export default function GroupPage() {
     }
 
     return (
-         <div className="fixed inset-0 bg-background z-50 h-[100vh] sm:h-auto">
+         <div className="h-screen bg-background">
              <ChatArea groupId={group.id} messages={group.messages || []} group={group} members={membersDetails} membersDetails={membersDetails} />
         </div>
     );
 }
+
+    

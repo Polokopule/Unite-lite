@@ -83,7 +83,7 @@ export default function AiChatPage() {
   }
 
   return (
-    <div className="flex flex-col h-full">
+    <div className="flex flex-col h-screen">
         <header className="flex-shrink-0 flex items-center justify-between border-b p-4 bg-background">
             <div className="flex items-center gap-3">
             <Button variant="ghost" size="icon" className="mr-2" onClick={() => router.back()}>
@@ -170,3 +170,5 @@ export default function AiChatPage() {
     </div>
   );
 }
+
+    
