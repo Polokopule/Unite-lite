@@ -40,6 +40,8 @@ export type User = {
   conversationIds?: { [id: string]: boolean };
   presence?: UserPresence;
   deletedConversations?: { [id: string]: boolean };
+  pinnedConversations?: { [id: string]: number };
+  lockedConversations?: { [id: string]: string }; // id: pin
 };
 
 export type PurchasedCourse = {
@@ -76,8 +78,8 @@ export type Comment = {
 
 export type LinkPreview = {
     url: string;
-    title: string;
-    description: string;
+    title?: string;
+    description?: string;
     imageUrl?: string;
 };
 
@@ -141,7 +143,7 @@ export type Conversation = {
     timestamp: number;
     messages?: Message[];
     typing?: { [uid: string]: boolean };
-    pinnedBy?: { [uid: string]: number };
+    pinnedBy?: { [uid: string]: boolean };
 };
 
 

@@ -10,7 +10,7 @@ import { db, auth, storage } from "@/lib/firebase";
 import { ref, onValue, set, get, update, remove, push, serverTimestamp, query, orderByChild, equalTo } from "firebase/database";
 import { onAuthStateChanged, signOut, User as FirebaseUser, updateProfile as updateFirebaseProfile } from "firebase/auth";
 import { ref as storageRef, uploadBytes, getDownloadURL } from "firebase/storage";
-import { generateLinkPreview } from "@/services/link-preview";
+import { generateLinkPreviewFlow } from '@/ai/flows/generate-link-preview';
 
 type AddCourseData = {
     title: string;
@@ -26,6 +26,7 @@ type AddPostData = {
     fileUrl?: string; // For reposting existing media
     fileName?: string;
     fileType?: 'image' | 'audio' | 'video' | 'file';
+    linkPreview?: LinkPreview | null;
 };
 
 
@@ -78,6 +79,11 @@ interface AppContextType {
   markNotificationsAsRead: () => Promise<void>;
   markMessagesAsRead: (id: string, isDirect?: boolean) => void;
   updateTypingStatus: (id: string, isTyping: boolean, isDirect?: boolean) => void;
+  togglePinConversation: (conversationId: string) => void;
+  deleteConversationForUser: (conversationId: string) => void;
+  lockConversation: (conversationId: string, pin: string) => void;
+  unlockConversation: (conversationId: string) => void;
+  lockedConversations: { [id: string]: string };
   loading: boolean;
 }
 
@@ -96,11 +102,18 @@ export function AppContextProvider({ children }: { children: React.ReactNode }) 
   const [purchasedCourses, setPurchasedCourses] = useState<PurchasedCourse[]>([]);
   const [notifications, setNotifications] = useState<Notification[]>([]);
   const [loading, setLoading] = useState(true);
+  const [lockedConversations, setLockedConversations] = useState<{ [id: string]: string }>({});
   const router = useRouter();
 
   const urlRegex = /(https?:\/\/[^\s"'<>()\[\]{}]+)/g;
 
   useEffect(() => {
+    // Load locked conversations from local storage
+    const storedLocks = localStorage.getItem('lockedConversations');
+    if (storedLocks) {
+      setLockedConversations(JSON.parse(storedLocks));
+    }
+
     // Firebase auth state listener
     const unsubscribe = onAuthStateChanged(auth, async (currentFirebaseUser) => {
       setFirebaseUser(currentFirebaseUser);
@@ -215,23 +228,24 @@ export function AppContextProvider({ children }: { children: React.ReactNode }) 
           setNotifications(notificationList.sort((a,b) => b.timestamp - a.timestamp));
       });
 
-      const userConversationsRef = ref(db, `users/${user.uid}/conversationIds`);
-      onValue(userConversationsRef, (snapshot) => {
-          const convoIds = snapshot.val();
-          if (convoIds) {
-              const convoRef = ref(db, 'conversations');
-              onValue(convoRef, (convoSnapshot) => {
-                  const allConvos = convoSnapshot.val() || {};
-                  const userConvos = Object.keys(convoIds)
-                    .map(id => ({ id, ...allConvos[id] }))
-                    .filter(c => c.participantUids)
-                    .map(c => ({...c, messages: c.messages ? Object.values(c.messages).map(msg => ({...msg, reactions: msg.reactions ? Object.entries(msg.reactions).reduce((acc, [emoji, uidsObj]) => ({...acc, [emoji]: Object.keys(uidsObj)}), {}) : {}})) : [] }))
-                    .sort((a, b) => (b.lastMessage?.timestamp || b.timestamp) - (a.lastMessage?.timestamp || a.timestamp));
-                  setConversations(userConvos);
-              })
-          } else {
-              setConversations([]);
-          }
+      const userConversationsRef = query(ref(db, 'conversations'), orderByChild(`participantUids/${user.uid}`), equalTo(true));
+      conversationsListener = onValue(userConversationsRef, (snapshot) => {
+          const convosData = snapshot.val() || {};
+          const userConvos = Object.keys(convosData)
+            .map(id => ({ id, ...convosData[id] }))
+            .filter(c => !(user.deletedConversations && user.deletedConversations[c.id]))
+            .map(c => ({
+              ...c, 
+              messages: c.messages ? Object.values(c.messages).map(msg => ({...msg, reactions: msg.reactions ? Object.entries(msg.reactions).reduce((acc, [emoji, uidsObj]) => ({...acc, [emoji]: Object.keys(uidsObj)}), {}) : {}})) : [] 
+            }))
+            .sort((a, b) => {
+                const aPinned = a.pinnedBy && a.pinnedBy[user.uid];
+                const bPinned = b.pinnedBy && b.pinnedBy[user.uid];
+                if (aPinned && !bPinned) return -1;
+                if (!aPinned && bPinned) return 1;
+                return (b.lastMessage?.timestamp || b.timestamp) - (a.lastMessage?.timestamp || a.timestamp)
+            });
+          setConversations(userConvos);
       });
 
     } else {
@@ -562,7 +576,7 @@ export function AppContextProvider({ children }: { children: React.ReactNode }) 
 
     const addPost = async (postData: AddPostData): Promise<boolean> => {
       if (!user) return false;
-      const { content, file, repostedFrom, fileUrl, fileName, fileType } = postData;
+      const { content, file, repostedFrom, fileUrl, fileName, fileType, linkPreview } = postData;
       if (!content?.trim() && !file && !fileUrl) return false;
       
       try {
@@ -578,6 +592,7 @@ export function AppContextProvider({ children }: { children: React.ReactNode }) 
             content: content || '',
             timestamp: serverTimestamp() as any, // This will be converted by firebase
             repostedFrom: repostedFrom || null,
+            linkPreview: linkPreview || null,
         };
         
         if (file) {
@@ -596,14 +611,13 @@ export function AppContextProvider({ children }: { children: React.ReactNode }) 
         }
 
         const urlMatch = content.match(urlRegex);
-        if (urlMatch) {
-            generateLinkPreview({ url: urlMatch[0] }).then(preview => {
+        if (urlMatch && !linkPreview) {
+             generateLinkPreviewFlow({ url: urlMatch[0] }).then(preview => {
                 if (preview.title) {
                     update(newPostRef, { linkPreview: preview });
                 }
             });
         }
-
 
         await set(newPostRef, newPost);
         if (content) {
@@ -714,16 +728,13 @@ export function AppContextProvider({ children }: { children: React.ReactNode }) 
                 postId: postId
             };
 
-            await set(newCommentRef, newComment);
-            
             const urlMatch = content.match(urlRegex);
             if (urlMatch) {
-                generateLinkPreview({ url: urlMatch[0] }).then(preview => {
-                    if (preview.title) {
-                        update(newCommentRef, { linkPreview: preview });
-                    }
-                });
+                const preview = await generateLinkPreviewFlow({ url: urlMatch[0] });
+                if(preview.title) newComment.linkPreview = preview;
             }
+            
+            await set(newCommentRef, newComment);
 
             await handleMentions(content, postId, commentId);
 
@@ -938,18 +949,15 @@ export function AppContextProvider({ children }: { children: React.ReactNode }) 
             };
         }
 
-        await set(newMessageRef, messagePayload);
-
-        if (messageData.content) {
-            const urlMatch = messageData.content.match(urlRegex);
-            if (urlMatch) {
-                generateLinkPreview({ url: urlMatch[0] }).then(preview => {
-                    if (preview.title) {
-                        update(newMessageRef, { linkPreview: preview });
-                    }
-                });
+        const urlMatch = messageData.content?.match(urlRegex);
+        if (urlMatch) {
+            const preview = await generateLinkPreviewFlow({ url: urlMatch[0] });
+            if (preview.title) {
+                messagePayload.linkPreview = preview;
             }
         }
+        
+        await set(newMessageRef, messagePayload);
 
         // Create notifications for all other group members
         const notificationPromises = group.members
@@ -983,7 +991,7 @@ export function AppContextProvider({ children }: { children: React.ReactNode }) 
 
                 const urlMatch = newContent.match(urlRegex);
                 if (urlMatch) {
-                    const preview = await generateLinkPreview({ url: urlMatch[0] });
+                    const preview = await generateLinkPreviewFlow({ url: urlMatch[0] });
                     updateData.linkPreview = preview.title ? preview : null;
                 } else {
                     updateData.linkPreview = null;
@@ -1044,7 +1052,7 @@ export function AppContextProvider({ children }: { children: React.ReactNode }) 
         const otherUser = allUsers.find(u => u.uid === otherUserId);
         if (!otherUser) return null;
 
-        const newConversation: Conversation = {
+        const newConversation: Omit<Conversation, 'messages'> = {
             id: conversationId,
             participantUids: [user.uid, otherUserId],
             participants: {
@@ -1057,9 +1065,12 @@ export function AppContextProvider({ children }: { children: React.ReactNode }) 
 
         try {
             await set(conversationRef, newConversation);
-            // Add conversation ID to both users
-            await set(ref(db, `users/${user.uid}/conversationIds/${conversationId}`), true);
-            await set(ref(db, `users/${otherUserId}/conversationIds/${conversationId}`), true);
+            await update(ref(db), {
+                [`users/${user.uid}/conversationIds/${conversationId}`]: true,
+                [`users/${otherUserId}/conversationIds/${conversationId}`]: true,
+                [`conversations/${conversationId}/participantUids/${user.uid}`]: true,
+                [`conversations/${conversationId}/participantUids/${otherUserId}`]: true
+            });
             return conversationId;
         } catch (error) {
             console.error("Error starting conversation:", error);
@@ -1109,20 +1120,17 @@ export function AppContextProvider({ children }: { children: React.ReactNode }) 
                 type: 'text',
             };
         }
+        
+        const urlMatch = messageData.content?.match(urlRegex);
+        if (urlMatch) {
+            const preview = await generateLinkPreviewFlow({ url: urlMatch[0] });
+            if (preview.title) {
+                messagePayload.linkPreview = preview;
+            }
+        }
 
         await set(newMessageRef, messagePayload);
 
-         if (messageData.content) {
-            const urlMatch = messageData.content.match(urlRegex);
-            if (urlMatch) {
-                generateLinkPreview({ url: urlMatch[0] }).then(preview => {
-                    if (preview.title) {
-                        update(newMessageRef, { linkPreview: preview });
-                    }
-                });
-            }
-        }
-        
         // Update last message and timestamp for the conversation
         await update(ref(db, `conversations/${conversationId}`), {
             lastMessage: messagePayload,
@@ -1161,7 +1169,7 @@ export function AppContextProvider({ children }: { children: React.ReactNode }) 
 
                 const urlMatch = newContent.match(urlRegex);
                 if (urlMatch) {
-                    const preview = await generateLinkPreview({ url: urlMatch[0] });
+                    const preview = await generateLinkPreviewFlow({ url: urlMatch[0] });
                     updateData.linkPreview = preview.title ? preview : null;
                 } else {
                     updateData.linkPreview = null;
@@ -1258,6 +1266,40 @@ export function AppContextProvider({ children }: { children: React.ReactNode }) 
           await remove(typingRef);
       }
   };
+  
+  const togglePinConversation = (conversationId: string) => {
+        if (!user) return;
+        const conversation = conversations.find(c => c.id === conversationId);
+        if (!conversation) return;
+        
+        const isPinned = conversation.pinnedBy && conversation.pinnedBy[user.uid];
+        const pinRef = ref(db, `conversations/${conversationId}/pinnedBy/${user.uid}`);
+        
+        if (isPinned) {
+            remove(pinRef);
+        } else {
+            set(pinRef, true);
+        }
+  };
+
+    const deleteConversationForUser = (conversationId: string) => {
+        if (!user) return;
+        const deleteRef = ref(db, `users/${user.uid}/deletedConversations/${conversationId}`);
+        set(deleteRef, true);
+    };
+
+    const lockConversation = (conversationId: string, pin: string) => {
+        const newLocks = { ...lockedConversations, [conversationId]: pin };
+        setLockedConversations(newLocks);
+        localStorage.setItem('lockedConversations', JSON.stringify(newLocks));
+    };
+
+    const unlockConversation = (conversationId: string) => {
+        const newLocks = { ...lockedConversations };
+        delete newLocks[conversationId];
+        setLockedConversations(newLocks);
+        localStorage.setItem('lockedConversations', JSON.stringify(newLocks));
+    };
 
 
   const value = {
@@ -1308,6 +1350,11 @@ export function AppContextProvider({ children }: { children: React.ReactNode }) 
     markNotificationsAsRead,
     markMessagesAsRead,
     updateTypingStatus,
+    togglePinConversation,
+    deleteConversationForUser,
+    lockConversation,
+    unlockConversation,
+    lockedConversations,
     loading,
   };
 
@@ -1326,6 +1373,3 @@ export function useAppContext() {
   }
   return context;
 }
-
-    
-
