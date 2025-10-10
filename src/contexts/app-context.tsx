@@ -228,7 +228,7 @@ export function AppContextProvider({ children }: { children: React.ReactNode }) 
           setNotifications(notificationList.sort((a,b) => b.timestamp - a.timestamp));
       });
 
-      const userConversationsRef = query(ref(db, 'conversations'), orderByChild(`participantUids/${user.uid}`), equalTo(true));
+      const userConversationsRef = query(ref(db, 'conversations'), orderByChild(`participants/${user.uid}/uid`), equalTo(user.uid));
       conversationsListener = onValue(userConversationsRef, (snapshot) => {
           const convosData = snapshot.val() || {};
           const userConvos = Object.keys(convosData)
@@ -236,7 +236,7 @@ export function AppContextProvider({ children }: { children: React.ReactNode }) 
             .filter(c => !(user.deletedConversations && user.deletedConversations[c.id]))
             .map(c => ({
               ...c, 
-              participantUids: c.participantUids ? Object.keys(c.participantUids) : [],
+              participantUids: c.participants ? Object.keys(c.participants) : [],
               messages: c.messages ? Object.values(c.messages).map(msg => ({...msg, reactions: msg.reactions ? Object.entries(msg.reactions).reduce((acc, [emoji, uidsObj]) => ({...acc, [emoji]: Object.keys(uidsObj)}), {}) : {}})) : [] 
             }))
             .sort((a, b) => {
@@ -593,7 +593,7 @@ export function AppContextProvider({ children }: { children: React.ReactNode }) 
             content: content || '',
             timestamp: serverTimestamp() as any, // This will be converted by firebase
             repostedFrom: repostedFrom || null,
-            linkPreview: linkPreview || null,
+            linkPreview: null, // Start with null
         };
         
         if (file) {
@@ -610,17 +610,20 @@ export function AppContextProvider({ children }: { children: React.ReactNode }) 
             newPost.fileName = fileName;
             newPost.fileType = fileType;
         }
+        
+        // Create the post first
+        await set(newPostRef, newPost);
 
+        // Then, asynchronously generate and update the link preview if a URL exists
         const urlMatch = content.match(urlRegex);
-        if (urlMatch && !linkPreview) {
-             generateLinkPreviewFlow({ url: urlMatch[0] }).then(preview => {
+        if (urlMatch) {
+            generateLinkPreviewFlow({ url: urlMatch[0] }).then(preview => {
                 if (preview.title) {
                     update(newPostRef, { linkPreview: preview });
                 }
-            });
+            }).catch(e => console.error("Link preview generation failed, but post was created.", e));
         }
 
-        await set(newPostRef, newPost);
         if (content) {
             await handleMentions(content, postId);
         }
@@ -726,17 +729,22 @@ export function AppContextProvider({ children }: { children: React.ReactNode }) 
                 content: content,
                 timestamp: serverTimestamp() as any,
                 parentId: parentId,
-                postId: postId
+                postId: postId,
+                linkPreview: null,
             };
+            
+            // Set comment without preview first
+            await set(newCommentRef, newComment);
 
             const urlMatch = content.match(urlRegex);
             if (urlMatch) {
-                const preview = await generateLinkPreviewFlow({ url: urlMatch[0] });
-                if(preview.title) newComment.linkPreview = preview;
+                generateLinkPreviewFlow({ url: urlMatch[0] }).then(preview => {
+                    if(preview.title) {
+                        update(newCommentRef, { linkPreview: preview });
+                    }
+                }).catch(e => console.error("Link preview failed for comment, but comment was created.", e));
             }
             
-            await set(newCommentRef, newComment);
-
             await handleMentions(content, postId, commentId);
 
             const post = posts.find(p => p.id === postId);
@@ -927,6 +935,7 @@ export function AppContextProvider({ children }: { children: React.ReactNode }) 
             creatorName: user.name,
             creatorPhotoURL: user.photoURL || '',
             timestamp: serverTimestamp() as any,
+            linkPreview: null,
         };
 
         if (messageData.file) {
@@ -949,16 +958,17 @@ export function AppContextProvider({ children }: { children: React.ReactNode }) 
                 type: 'text',
             };
         }
+        
+        await set(newMessageRef, messagePayload);
 
         const urlMatch = messageData.content?.match(urlRegex);
         if (urlMatch) {
-            const preview = await generateLinkPreviewFlow({ url: urlMatch[0] });
-            if (preview.title) {
-                messagePayload.linkPreview = preview;
-            }
+            generateLinkPreviewFlow({ url: urlMatch[0] }).then(preview => {
+                if (preview.title) {
+                    update(newMessageRef, { linkPreview: preview });
+                }
+            }).catch(e => console.error("Link preview failed for group message, but message was created.", e));
         }
-        
-        await set(newMessageRef, messagePayload);
 
         // Create notifications for all other group members
         const notificationPromises = group.members
@@ -992,8 +1002,9 @@ export function AppContextProvider({ children }: { children: React.ReactNode }) 
 
                 const urlMatch = newContent.match(urlRegex);
                 if (urlMatch) {
-                    const preview = await generateLinkPreviewFlow({ url: urlMatch[0] });
-                    updateData.linkPreview = preview.title ? preview : null;
+                    generateLinkPreviewFlow({ url: urlMatch[0] }).then(preview => {
+                        update(messageRef, { linkPreview: preview.title ? preview : null });
+                    }).catch(e => console.error("Link preview update failed.", e));
                 } else {
                     updateData.linkPreview = null;
                 }
@@ -1048,22 +1059,18 @@ export function AppContextProvider({ children }: { children: React.ReactNode }) 
     const conversationSnapshot = await get(conversationRef);
 
     if (conversationSnapshot.exists()) {
+        // If user had deleted it, un-delete it
+        const userDeleteRef = ref(db, `users/${user.uid}/deletedConversations/${conversationId}`);
+        remove(userDeleteRef);
         return conversationId;
     } else {
         const otherUser = allUsers.find(u => u.uid === otherUserId);
         if (!otherUser) return null;
 
-        const participantUids = {
-            [user.uid]: true,
-            [otherUserId]: true,
-        };
-
-        const newConversation: Omit<Conversation, 'messages' | 'participantUids'> & { participantUids: { [key: string]: boolean } } = {
-            id: conversationId,
-            participantUids: participantUids,
+        const newConversation: Omit<Conversation, 'id' | 'messages'> = {
             participants: {
-                [user.uid]: { name: user.name, photoURL: user.photoURL || '' },
-                [otherUserId]: { name: otherUser.name, photoURL: otherUser.photoURL || '' },
+                [user.uid]: { name: user.name, photoURL: user.photoURL || '', uid: user.uid },
+                [otherUserId]: { name: otherUser.name, photoURL: otherUser.photoURL || '', uid: otherUser.uid },
             },
             lastMessage: null,
             timestamp: serverTimestamp() as any,
@@ -1098,7 +1105,8 @@ export function AppContextProvider({ children }: { children: React.ReactNode }) 
             creatorPhotoURL: user.photoURL || '',
             timestamp: serverTimestamp() as any,
             content: '',
-            type: 'text' // default
+            type: 'text', // default
+            linkPreview: null,
         };
 
         if (messageData.file) {
@@ -1121,15 +1129,16 @@ export function AppContextProvider({ children }: { children: React.ReactNode }) 
             };
         }
         
+        await set(newMessageRef, messagePayload);
+
         const urlMatch = messageData.content?.match(urlRegex);
         if (urlMatch) {
-            const preview = await generateLinkPreviewFlow({ url: urlMatch[0] });
-            if (preview.title) {
-                messagePayload.linkPreview = preview;
-            }
+             generateLinkPreviewFlow({ url: urlMatch[0] }).then(preview => {
+                if (preview.title) {
+                    update(newMessageRef, { linkPreview: preview });
+                }
+            }).catch(e => console.error("Link preview failed for DM, but message was sent.", e));
         }
-
-        await set(newMessageRef, messagePayload);
 
         // Update last message and timestamp for the conversation
         await update(ref(db, `conversations/${conversationId}`), {
@@ -1169,8 +1178,9 @@ export function AppContextProvider({ children }: { children: React.ReactNode }) 
 
                 const urlMatch = newContent.match(urlRegex);
                 if (urlMatch) {
-                    const preview = await generateLinkPreviewFlow({ url: urlMatch[0] });
-                    updateData.linkPreview = preview.title ? preview : null;
+                     generateLinkPreviewFlow({ url: urlMatch[0] }).then(preview => {
+                        update(messageRef, { linkPreview: preview.title ? preview : null });
+                    }).catch(e => console.error("Link preview update failed.", e));
                 } else {
                     updateData.linkPreview = null;
                 }

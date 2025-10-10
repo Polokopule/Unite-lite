@@ -931,8 +931,16 @@ function MessagesContent() {
         const conversationId = await startConversation(otherUser.uid);
         if (conversationId) {
             router.push(`/messages/${conversationId}`);
+        } else {
+            toast({
+                variant: "destructive",
+                title: "Error",
+                description: "Could not start conversation.",
+            });
         }
     };
+    
+    const { toast } = useToast();
     
     const getInitials = (name: string) => {
         if (!name) return '??';
@@ -946,7 +954,8 @@ function MessagesContent() {
     const getOtherParticipant = (convo: Conversation) => {
         if (!user) return null;
         const otherUid = convo.participantUids.find(uid => uid !== user.uid);
-        return convo.participants[otherUid!];
+        if (!otherUid) return null;
+        return allUsers.find(u => u.uid === otherUid);
     }
     
     return (
@@ -1181,5 +1190,3 @@ export default function HomePage() {
         </div>
     );
 }
-
-    

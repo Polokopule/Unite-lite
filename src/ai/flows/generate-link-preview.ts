@@ -27,11 +27,13 @@ export const generateLinkPreviewFlow = ai.defineFlow(
     outputSchema: LinkPreviewOutputSchema,
   },
   async (input) => {
-    const prompt = `You are an expert at extracting metadata from a webpage.
-        From the webpage at the URL below, extract the title, description, and a representative image URL.
-        - The image URL should be a direct link to an image file (e.g., .jpg, .png, .gif, .webp).
-        - Prioritize Open Graph images (og:image). If not available, find another suitable image.
-        - Only return fields you are confident about. If you cannot find a piece of information, omit the field.
+    const prompt = `
+        You are an expert at extracting metadata from a webpage for a link preview.
+        From the webpage at the URL below, extract only the title, description, and a representative image URL.
+        - The image URL MUST be a direct link to an image file (e.g., .jpg, .png, .gif, .webp).
+        - Prioritize Open Graph images (og:image). If not available, find another suitable image on the page.
+        - If you cannot find a specific piece of information (like a description or image), omit the corresponding field entirely from the JSON.
+        - Do not invent or summarize content. Only extract what is present.
 
         Provide the output in a clean JSON format. Do not include any markdown formatting like \`\`\`json.
         
@@ -41,9 +43,9 @@ export const generateLinkPreviewFlow = ai.defineFlow(
     try {
         const llmResponse = await ai.generate({
           prompt: prompt,
-          model: 'googleai/gemini-2.5-flash',
+          model: 'googleai/gemini-pro',
           config: {
-            temperature: 0.1,
+            temperature: 0,
           },
           output: {
             format: 'json',
@@ -52,16 +54,19 @@ export const generateLinkPreviewFlow = ai.defineFlow(
         });
 
         const output = llmResponse.output;
-        if (output) {
+
+        if (output && output.title) {
+          // Ensure the URL from the input is always present in the final output
           return LinkPreviewOutputSchema.parse({ ...output, url: input.url });
         }
         
         // Fallback for empty or malformed output
+        console.warn("Link preview generation resulted in empty output for URL:", input.url);
         return {
             url: input.url,
         };
     } catch (e) {
-      console.error("Failed to generate or parse link preview from LLM response", e);
+      console.error("Failed to generate or parse link preview for:", input.url, e);
       // Return a fallback empty preview on any error
       return {
           url: input.url,

@@ -34,8 +34,8 @@ export type User = {
   purchasedCourses?: { [courseId: string]: PurchasedCourse };
   createdCourses?: string[];
   createdAds?: string[];
-  following?: { [uid: string]: boolean };
-  followers?: { [uid: string]: boolean };
+  following?: string[];
+  followers?: string[];
   photoURL?: string;
   conversationIds?: { [id: string]: boolean };
   presence?: UserPresence;
@@ -138,7 +138,7 @@ export type Group = {
 export type Conversation = {
     id: string;
     participantUids: string[];
-    participants: { [uid: string]: { name: string; photoURL: string } };
+    participants: { [uid: string]: { name: string; photoURL: string, uid: string } };
     lastMessage: Message | null;
     timestamp: number;
     messages?: Message[];
