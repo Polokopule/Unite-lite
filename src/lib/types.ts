@@ -42,6 +42,7 @@ export type User = {
   deletedConversations?: { [id: string]: boolean };
   pinnedConversations?: { [id: string]: number };
   lockedConversations?: { [id: string]: string }; // id: pin
+  blockedUsers?: string[];
 };
 
 export type PurchasedCourse = {
@@ -149,3 +150,6 @@ export type Conversation = {
 
 // Represents either a Post or an Ad in a feed
 export type FeedItem = Post | Ad;
+
+
+    

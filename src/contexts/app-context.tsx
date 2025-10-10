@@ -83,6 +83,7 @@ interface AppContextType {
   deleteConversationForUser: (conversationId: string) => void;
   lockConversation: (conversationId: string, pin: string) => void;
   unlockConversation: (conversationId: string) => void;
+  toggleBlockUser: (targetUserId: string) => void;
   lockedConversations: { [id: string]: string };
   loading: boolean;
 }
@@ -126,7 +127,8 @@ export function AppContextProvider({ children }: { children: React.ReactNode }) 
                  // Ensure photoURL is part of the user object
                 const fullUserData: User = {
                     ...userData,
-                    photoURL: currentFirebaseUser.photoURL || userData.photoURL || ''
+                    photoURL: currentFirebaseUser.photoURL || userData.photoURL || '',
+                    blockedUsers: userData.blockedUsers ? Object.keys(userData.blockedUsers) : [],
                 };
                 setUser(fullUserData);
 
@@ -167,7 +169,7 @@ export function AppContextProvider({ children }: { children: React.ReactNode }) 
 
     const usersListener = onValue(usersRef, (snapshot) => {
         const data = snapshot.val();
-        const userList: User[] = data ? Object.values(data) : [];
+        const userList: User[] = data ? Object.keys(data).map(uid => ({ ...data[uid], uid, blockedUsers: data[uid].blockedUsers ? Object.keys(data[uid].blockedUsers) : [] })) : [];
         setAllUsers(userList);
     });
     
@@ -225,7 +227,6 @@ export function AppContextProvider({ children }: { children: React.ReactNode }) 
         const userConversationsRef = ref(db, `users/${user.uid}/conversationIds`);
         const conversationIdsListener = onValue(userConversationsRef, (snapshot) => {
             const conversationIds = snapshot.val() || {};
-            const convos: Conversation[] = [];
             
             // Clear existing listeners
             conversationListeners.forEach(listener => listener());
@@ -990,7 +991,7 @@ export function AppContextProvider({ children }: { children: React.ReactNode }) 
                 if (preview.title) {
                     update(newMessageRef, { linkPreview: preview });
                 }
-            }).catch(e => console.error("Link preview failed for group message, but message was created.", e));
+            }).catch(e => console.error("Link preview generation failed, but message was created.", e));
         }
 
         // Create notifications for all other group members
@@ -1346,6 +1347,18 @@ export function AppContextProvider({ children }: { children: React.ReactNode }) 
         localStorage.setItem('lockedConversations', JSON.stringify(newLocks));
     };
 
+    const toggleBlockUser = async (targetUserId: string) => {
+        if (!user) return;
+        const blockRef = ref(db, `users/${user.uid}/blockedUsers/${targetUserId}`);
+        const isBlocked = user.blockedUsers?.includes(targetUserId);
+
+        if (isBlocked) {
+            await remove(blockRef);
+        } else {
+            await set(blockRef, true);
+        }
+    };
+
 
   const value = {
     user,
@@ -1399,6 +1412,7 @@ export function AppContextProvider({ children }: { children: React.ReactNode }) 
     deleteConversationForUser,
     lockConversation,
     unlockConversation,
+    toggleBlockUser,
     lockedConversations,
     loading,
   };
@@ -1418,3 +1432,6 @@ export function useAppContext() {
   }
   return context;
 }
+
+
+    

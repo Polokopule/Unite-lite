@@ -327,7 +327,7 @@ export default function ConversationPage() {
     const params = useParams();
     const router = useRouter();
     const { id: conversationId } = params;
-    const { user, getConversationById, sendDirectMessage, loading, allUsers, groups, markMessagesAsRead, updateTypingStatus, togglePinConversation, deleteConversationForUser, lockedConversations, unlockConversation } = useAppContext();
+    const { user, getConversationById, sendDirectMessage, loading, allUsers, groups, markMessagesAsRead, updateTypingStatus, togglePinConversation, deleteConversationForUser, lockedConversations, unlockConversation, toggleBlockUser } = useAppContext();
     const { toast } = useToast();
 
     const [conversation, setConversation] = useState<Conversation | null>(null);
@@ -400,7 +400,17 @@ export default function ConversationPage() {
     }, [debouncedText, user, conversationId, updateTypingStatus]);
 
     const handleSendText = async () => {
-        if (!text.trim() || !user) return;
+        if (!text.trim() || !user || !otherParticipant) return;
+        
+        if(user.blockedUsers?.includes(otherParticipant.uid)) {
+            toast({ variant: 'destructive', title: "Message not sent", description: `You have blocked ${otherParticipant.name}.` });
+            return;
+        }
+         if(otherParticipant.blockedUsers?.includes(user.uid)) {
+            toast({ variant: 'destructive', title: "Message not sent", description: `You have been blocked by ${otherParticipant.name}.` });
+            return;
+        }
+
         setIsSending(true);
         updateTypingStatus(conversationId as string, false, true);
         const success = await sendDirectMessage(conversationId as string, { content: text, type: 'text' });
@@ -414,7 +424,16 @@ export default function ConversationPage() {
 
     const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
         const file = e.target.files?.[0];
-        if (!file) return;
+        if (!file || !otherParticipant || !user) return;
+        
+        if(user.blockedUsers?.includes(otherParticipant.uid)) {
+            toast({ variant: 'destructive', title: "File not sent", description: `You have blocked ${otherParticipant.name}.` });
+            return;
+        }
+        if(otherParticipant.blockedUsers?.includes(user.uid)) {
+            toast({ variant: 'destructive', title: "File not sent", description: `You have been blocked by ${otherParticipant.name}.` });
+            return;
+        }
 
         setIsSending(true);
         toast({ title: 'Uploading...', description: `Sending ${file.name}` });
@@ -437,6 +456,12 @@ export default function ConversationPage() {
                 const audioBlob = new Blob(audioChunksRef.current, { type: 'audio/webm' });
                 const audioFile = new File([audioBlob], `voice-note-${Date.now()}.webm`, { type: 'audio/webm' });
                 
+                 if (!otherParticipant || !user) return;
+                if(user.blockedUsers?.includes(otherParticipant.uid) || otherParticipant.blockedUsers?.includes(user.uid)) {
+                     toast({ variant: 'destructive', title: "Voice note not sent", description: "You cannot send messages in this chat." });
+                     return;
+                }
+
                 setIsSending(true);
                 toast({ title: 'Uploading...', description: 'Sending voice note' });
                 const success = await sendDirectMessage(conversationId as string, { file: audioFile, type: 'audio' });
@@ -502,6 +527,13 @@ export default function ConversationPage() {
             toast({ variant: 'destructive', title: "Incorrect PIN" });
         }
     }
+    
+    const handleToggleBlock = () => {
+        if (!otherParticipant) return;
+        toggleBlockUser(otherParticipant.uid);
+        const isBlocked = user?.blockedUsers?.includes(otherParticipant.uid);
+        toast({ title: isBlocked ? `Unblocked ${otherParticipant.name}` : `Blocked ${otherParticipant.name}` });
+    };
 
     const getOtherParticipant = () => {
         if (!user || !conversation) return null;
@@ -513,7 +545,7 @@ export default function ConversationPage() {
     
     if (loading || !conversation || !user) {
         return (
-            <div className="h-[calc(100vh-4rem-1px)] flex items-center justify-center">
+            <div className="h-full flex items-center justify-center">
                 <Loader2 className="animate-spin h-8 w-8" />
             </div>
         );
@@ -522,10 +554,12 @@ export default function ConversationPage() {
     const otherParticipant = getOtherParticipant();
     const isTyping = conversation.typing && otherParticipant && conversation.typing[otherParticipant.uid];
     const isPinned = conversation.pinnedBy && conversation.pinnedBy[user.uid];
+    const amIBlocked = otherParticipant?.blockedUsers?.includes(user.uid);
+    const isOtherUserBlocked = user.blockedUsers?.includes(otherParticipant?.uid || '');
 
     return (
-        <div className="fixed inset-0 top-0 bg-background z-50 h-screen md:h-auto md:static md:inset-auto md:z-auto md:h-[calc(100vh-4rem-1px)]">
-             <Card className="flex flex-col h-full border-0 sm:border rounded-none sm:rounded-lg md:pt-0">
+        <div className="fixed inset-0 top-0 bg-background z-50 h-screen md:h-auto md:static md:inset-auto md:z-auto md:h-full">
+             <Card className="flex flex-col h-full border-0 sm:border rounded-none sm:rounded-lg pt-0">
                 <CardHeader className="flex-row items-center justify-between border-b p-4">
                     <div className="flex items-center gap-3">
                         <Button variant="ghost" size="icon" className="mr-2" onClick={() => router.back()}>
@@ -579,8 +613,9 @@ export default function ConversationPage() {
                                     </DropdownMenuItem>
                                 </LockChatDialog>
                                 <DropdownMenuSeparator />
-                                <DropdownMenuItem className="text-destructive" disabled>
-                                    <UserX className="mr-2 h-4 w-4" /> Block
+                                <DropdownMenuItem onClick={handleToggleBlock} className="text-destructive">
+                                    {isOtherUserBlocked ? <UserX className="mr-2 h-4 w-4" /> : <UserX className="mr-2 h-4 w-4" />}
+                                    {isOtherUserBlocked ? 'Unblock' : 'Block'}
                                 </DropdownMenuItem>
                                  <AlertDialog>
                                     <AlertDialogTrigger asChild>
@@ -645,43 +680,51 @@ export default function ConversationPage() {
                             <div ref={messagesEndRef} />
                         </CardContent>
                         <CardFooter className="border-t p-4">
-                            <div className="flex items-center gap-2 w-full">
-                                {isRecording ? (
-                                    <div className="flex-1 flex items-center gap-2 bg-muted p-2 rounded-lg">
-                                        <Mic className="h-5 w-5 text-destructive animate-pulse" />
-                                        <p className="text-sm text-muted-foreground">Recording...</p>
-                                    </div>
-                                ) : (
-                                    <Input
-                                        placeholder="Type a message..."
-                                        value={text}
-                                        onChange={(e) => setText(e.target.value)}
-                                        onKeyDown={(e) => e.key === 'Enter' && !isSending && handleSendText()}
-                                        disabled={isSending}
+                           {amIBlocked || isOtherUserBlocked ? (
+                                <div className="w-full text-center text-sm text-muted-foreground p-2 bg-muted rounded-md">
+                                    {isOtherUserBlocked ? `You have blocked ${otherParticipant?.name}. You cannot send messages.` : `You have been blocked by ${otherParticipant?.name}.`}
+                                </div>
+                           ) : (
+                                <div className="flex items-center gap-2 w-full">
+                                    {isRecording ? (
+                                        <div className="flex-1 flex items-center gap-2 bg-muted p-2 rounded-lg">
+                                            <Mic className="h-5 w-5 text-destructive animate-pulse" />
+                                            <p className="text-sm text-muted-foreground">Recording...</p>
+                                        </div>
+                                    ) : (
+                                        <Textarea
+                                            placeholder="Type a message..."
+                                            value={text}
+                                            onChange={(e) => setText(e.target.value)}
+                                            onKeyDown={(e) => e.key === 'Enter' && !e.shiftKey && (e.preventDefault(), handleSendText())}
+                                            disabled={isSending}
+                                            rows={1}
+                                            className="max-h-24 resize-none"
+                                        />
+                                    )}
+                                    <input
+                                        type="file"
+                                        ref={fileInputRef}
+                                        onChange={handleFileChange}
+                                        accept="image/*,video/*,audio/*,application/pdf,.doc,.docx,.xls,.xlsx,.ppt,.pptx"
+                                        className="hidden"
                                     />
-                                )}
-                                <input
-                                    type="file"
-                                    ref={fileInputRef}
-                                    onChange={handleFileChange}
-                                    accept="image/*,video/*,audio/*,application/pdf,.doc,.docx,.xls,.xlsx,.ppt,.pptx"
-                                    className="hidden"
-                                />
-                                <Button size="icon" variant="outline" onClick={() => fileInputRef.current?.click()} disabled={isSending || isRecording}>
-                                    <Paperclip className="h-4 w-4" />
-                                </Button>
-                                <Button 
-                                    size="icon"
-                                    variant={isRecording ? "destructive" : "default"}
-                                    onMouseDown={handleSendAction}
-                                    onMouseUp={handleReleaseSendAction}
-                                    onTouchStart={handleSendAction}
-                                    onTouchEnd={handleReleaseSendAction}
-                                    disabled={isSending}
-                                >
-                                    {isRecording ? <Square className="h-4 w-4" /> : (text.trim() ? <Send className="h-4 w-4" /> : <Mic className="h-4 w-4" />)}
-                                </Button>
-                            </div>
+                                    <Button size="icon" variant="outline" onClick={() => fileInputRef.current?.click()} disabled={isSending || isRecording}>
+                                        <Paperclip className="h-4 w-4" />
+                                    </Button>
+                                    <Button 
+                                        size="icon"
+                                        variant={isRecording ? "destructive" : "default"}
+                                        onMouseDown={handleSendAction}
+                                        onMouseUp={handleReleaseSendAction}
+                                        onTouchStart={handleSendAction}
+                                        onTouchEnd={handleReleaseSendAction}
+                                        disabled={isSending}
+                                    >
+                                        {isRecording ? <Square className="h-4 w-4" /> : (text.trim() ? <Send className="h-4 w-4" /> : <Mic className="h-4 w-4" />)}
+                                    </Button>
+                                </div>
+                           )}
                         </CardFooter>
                     </>
                 )}
@@ -689,5 +732,7 @@ export default function ConversationPage() {
         </div>
     );
 }
+
+    
 
     

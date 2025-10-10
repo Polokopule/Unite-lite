@@ -495,12 +495,14 @@ function ChatArea({ groupId, messages, group, members, membersDetails }: { group
                             <p className="text-sm text-muted-foreground">Recording...</p>
                         </div>
                     ) : (
-                        <Input
+                        <Textarea
                             placeholder="Type a message..."
                             value={text}
                             onChange={(e) => setText(e.target.value)}
-                            onKeyDown={(e) => e.key === 'Enter' && !isSending && handleSendText()}
+                            onKeyDown={(e) => e.key === 'Enter' && !e.shiftKey && (e.preventDefault(), handleSendText())}
                             disabled={isSending}
+                            rows={1}
+                            className="max-h-24 resize-none"
                         />
                     )}
                     <input 
@@ -656,12 +658,14 @@ export default function GroupPage() {
     }
 
     return (
-         <div className="fixed inset-0 top-0 bg-background z-50 h-screen md:h-auto md:static md:inset-auto md:z-auto md:h-[calc(100vh-4rem-1px)] flex">
-            <div className="flex-1 h-full md:pt-0">
+         <div className="fixed inset-0 top-0 bg-background z-50 h-screen md:h-auto md:static md:inset-auto md:z-auto md:h-full flex">
+            <div className="flex-1 h-full pt-0">
                  <ChatArea groupId={group.id} messages={group.messages || []} group={group} members={membersDetails} membersDetails={membersDetails} />
             </div>
         </div>
     );
 }
+
+    
 
     
