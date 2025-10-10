@@ -128,57 +128,54 @@ function MessageBubble({ message, isOwnMessage, participant, conversationId }: {
                 </Link>
             )}
             <div className={`flex items-center gap-2 ${isOwnMessage ? 'flex-row-reverse' : 'flex-row'}`}>
-                <div className="opacity-0 group-hover:opacity-100 transition-opacity">
-                     <DropdownMenu>
-                        <DropdownMenuTrigger asChild>
-                            <Button variant="ghost" size="icon" className="h-7 w-7">...</Button>
-                        </DropdownMenuTrigger>
-                        <DropdownMenuContent>
-                             <Popover>
-                                <PopoverTrigger asChild>
-                                    <DropdownMenuItem onSelect={(e) => e.preventDefault()}>
-                                        <Smile className="mr-2 h-4 w-4" /> React
-                                    </DropdownMenuItem>
-                                </PopoverTrigger>
-                                <PopoverContent className="p-0 border-0">
-                                    <EmojiPicker onEmojiClick={handleReaction} />
-                                </PopoverContent>
-                            </Popover>
-                            {message.type === 'text' && (
-                                 <DropdownMenuItem onClick={handleCopy}>
-                                    <Copy className="mr-2 h-4 w-4" /> Copy
-                                </DropdownMenuItem>
-                            )}
-                            {isOwnMessage && message.type === 'text' && (
-                                <DropdownMenuItem onClick={() => setIsEditing(true)}>
-                                    <Pencil className="mr-2 h-4 w-4" /> Edit
-                                </DropdownMenuItem>
-                            )}
-                             {isOwnMessage && (
-                                <DropdownMenuItem onClick={handleDelete} className="text-destructive">
-                                    <Trash2 className="mr-2 h-4 w-4" /> Delete
-                                </DropdownMenuItem>
-                            )}
-                        </DropdownMenuContent>
-                    </DropdownMenu>
-                </div>
-                <div className={`relative max-w-md rounded-xl p-3 px-4 ${isOwnMessage ? 'bg-primary text-primary-foreground' : 'bg-muted'}`}>
-                    {renderContent()}
-                    <p className={`text-xs mt-1 ${isOwnMessage ? 'text-primary-foreground/70' : 'text-muted-foreground'}`}>
-                        {formatDistanceToNow(new Date(message.timestamp), { addSuffix: true })}
-                        {message.isEdited && ' (edited)'}
-                    </p>
-                    {reactions.length > 0 && (
-                        <div className={`absolute -bottom-3 flex gap-1 ${isOwnMessage ? 'right-2' : 'left-2'}`}>
-                            {reactions.map(([emoji, uids]) => (
-                                <div key={emoji} className="bg-background border rounded-full px-1.5 py-0.5 text-xs flex items-center gap-1 shadow-sm">
-                                    <span>{emoji}</span>
-                                    <span>{uids.length}</span>
+                <DropdownMenu>
+                    <DropdownMenuTrigger asChild>
+                         <div className={`relative max-w-md rounded-xl p-3 px-4 ${isOwnMessage ? 'bg-primary text-primary-foreground' : 'bg-muted'}`}>
+                            {renderContent()}
+                            <p className={`text-xs mt-1 ${isOwnMessage ? 'text-primary-foreground/70' : 'text-muted-foreground'}`}>
+                                {formatDistanceToNow(new Date(message.timestamp), { addSuffix: true })}
+                                {message.isEdited && ' (edited)'}
+                            </p>
+                            {reactions.length > 0 && (
+                                <div className={`absolute -bottom-3 flex gap-1 ${isOwnMessage ? 'right-2' : 'left-2'}`}>
+                                    {reactions.map(([emoji, uids]) => (
+                                        <div key={emoji} className="bg-background border rounded-full px-1.5 py-0.5 text-xs flex items-center gap-1 shadow-sm">
+                                            <span>{emoji}</span>
+                                            <span>{uids.length}</span>
+                                        </div>
+                                    ))}
                                 </div>
-                            ))}
+                            )}
                         </div>
-                    )}
-                </div>
+                    </DropdownMenuTrigger>
+                    <DropdownMenuContent>
+                         <Popover>
+                            <PopoverTrigger asChild>
+                                <DropdownMenuItem onSelect={(e) => e.preventDefault()}>
+                                    <Smile className="mr-2 h-4 w-4" /> React
+                                </DropdownMenuItem>
+                            </PopoverTrigger>
+                            <PopoverContent className="p-0 border-0">
+                                <EmojiPicker onEmojiClick={handleReaction} />
+                            </PopoverContent>
+                        </Popover>
+                        {message.type === 'text' && (
+                             <DropdownMenuItem onClick={handleCopy}>
+                                <Copy className="mr-2 h-4 w-4" /> Copy
+                            </DropdownMenuItem>
+                        )}
+                        {isOwnMessage && message.type === 'text' && (
+                            <DropdownMenuItem onClick={() => setIsEditing(true)}>
+                                <Pencil className="mr-2 h-4 w-4" /> Edit
+                            </DropdownMenuItem>
+                        )}
+                         {isOwnMessage && (
+                            <DropdownMenuItem onClick={handleDelete} className="text-destructive">
+                                <Trash2 className="mr-2 h-4 w-4" /> Delete
+                            </DropdownMenuItem>
+                        )}
+                    </DropdownMenuContent>
+                </DropdownMenu>
             </div>
         </div>
     );

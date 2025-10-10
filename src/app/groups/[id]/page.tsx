@@ -17,7 +17,7 @@ import Link from "next/link";
 import { formatDistanceToNow } from "date-fns";
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from "@/components/ui/sheet";
 import { Popover, PopoverTrigger, PopoverContent } from "@/components/ui/popover";
-import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger, DropdownMenuPortal } from "@/components/ui/dropdown-menu";
 import EmojiPicker, { EmojiClickData } from "emoji-picker-react";
 import { Textarea } from "@/components/ui/textarea";
 
@@ -133,61 +133,58 @@ function MessageBubble({ message, isOwnMessage, groupId }: { message: Message; i
                 </Link>
             )}
              <div className={`flex items-center gap-2 ${isOwnMessage ? 'flex-row-reverse' : 'flex-row'}`}>
-                <div className="opacity-0 group-hover:opacity-100 transition-opacity">
-                    <DropdownMenu>
-                        <DropdownMenuTrigger asChild>
-                            <Button variant="ghost" size="icon" className="h-7 w-7">...</Button>
-                        </DropdownMenuTrigger>
-                        <DropdownMenuContent>
-                             <Popover>
-                                <PopoverTrigger asChild>
-                                    <DropdownMenuItem onSelect={(e) => e.preventDefault()}>
-                                        <Smile className="mr-2 h-4 w-4" /> React
-                                    </DropdownMenuItem>
-                                </PopoverTrigger>
-                                <PopoverContent className="p-0 border-0">
-                                    <EmojiPicker onEmojiClick={handleReaction} />
-                                </PopoverContent>
-                            </Popover>
-
-                            {message.type === 'text' && (
-                                 <DropdownMenuItem onClick={handleCopy}>
-                                    <Copy className="mr-2 h-4 w-4" /> Copy
-                                </DropdownMenuItem>
+                <DropdownMenu>
+                    <DropdownMenuTrigger asChild>
+                         <div className={`relative max-w-md rounded-xl p-3 px-4 ${isOwnMessage ? 'bg-primary text-primary-foreground' : 'bg-muted'}`}>
+                            {!isOwnMessage && (
+                                <p className="text-xs font-bold pb-1">{message.creatorName}</p>
                             )}
-                            {isOwnMessage && message.type === 'text' && (
-                                <DropdownMenuItem onClick={() => setIsEditing(true)}>
-                                    <Pencil className="mr-2 h-4 w-4" /> Edit
-                                </DropdownMenuItem>
-                            )}
-                             {isOwnMessage && (
-                                <DropdownMenuItem onClick={handleDelete} className="text-destructive">
-                                    <Trash2 className="mr-2 h-4 w-4" /> Delete
-                                </DropdownMenuItem>
-                            )}
-                        </DropdownMenuContent>
-                    </DropdownMenu>
-                </div>
-                <div className={`relative max-w-md rounded-xl p-3 px-4 ${isOwnMessage ? 'bg-primary text-primary-foreground' : 'bg-muted'}`}>
-                    {!isOwnMessage && (
-                        <p className="text-xs font-bold pb-1">{message.creatorName}</p>
-                    )}
-                    {renderContent()}
-                    <p className={`text-xs mt-1 ${isOwnMessage ? 'text-primary-foreground/70' : 'text-muted-foreground'}`}>
-                        {formatDistanceToNow(new Date(message.timestamp), { addSuffix: true })}
-                        {message.isEdited && ' (edited)'}
-                    </p>
-                    {reactions.length > 0 && (
-                        <div className={`absolute -bottom-3 flex gap-1 ${isOwnMessage ? 'right-2' : 'left-2'}`}>
-                            {reactions.map(([emoji, uids]) => (
-                                <div key={emoji} className="bg-background border rounded-full px-1.5 py-0.5 text-xs flex items-center gap-1 shadow-sm">
-                                    <span>{emoji}</span>
-                                    <span>{uids.length}</span>
+                            {renderContent()}
+                            <p className={`text-xs mt-1 ${isOwnMessage ? 'text-primary-foreground/70' : 'text-muted-foreground'}`}>
+                                {formatDistanceToNow(new Date(message.timestamp), { addSuffix: true })}
+                                {message.isEdited && ' (edited)'}
+                            </p>
+                            {reactions.length > 0 && (
+                                <div className={`absolute -bottom-3 flex gap-1 ${isOwnMessage ? 'right-2' : 'left-2'}`}>
+                                    {reactions.map(([emoji, uids]) => (
+                                        <div key={emoji} className="bg-background border rounded-full px-1.5 py-0.5 text-xs flex items-center gap-1 shadow-sm">
+                                            <span>{emoji}</span>
+                                            <span>{uids.length}</span>
+                                        </div>
+                                    ))}
                                 </div>
-                            ))}
+                            )}
                         </div>
-                    )}
-                </div>
+                    </DropdownMenuTrigger>
+                     <DropdownMenuContent>
+                         <Popover>
+                            <PopoverTrigger asChild>
+                                <DropdownMenuItem onSelect={(e) => e.preventDefault()}>
+                                    <Smile className="mr-2 h-4 w-4" /> React
+                                </DropdownMenuItem>
+                            </PopoverTrigger>
+                            <PopoverContent className="p-0 border-0">
+                                <EmojiPicker onEmojiClick={handleReaction} />
+                            </PopoverContent>
+                        </Popover>
+
+                        {message.type === 'text' && (
+                             <DropdownMenuItem onClick={handleCopy}>
+                                <Copy className="mr-2 h-4 w-4" /> Copy
+                            </DropdownMenuItem>
+                        )}
+                        {isOwnMessage && message.type === 'text' && (
+                            <DropdownMenuItem onClick={() => setIsEditing(true)}>
+                                <Pencil className="mr-2 h-4 w-4" /> Edit
+                            </DropdownMenuItem>
+                        )}
+                         {isOwnMessage && (
+                            <DropdownMenuItem onClick={handleDelete} className="text-destructive">
+                                <Trash2 className="mr-2 h-4 w-4" /> Delete
+                            </DropdownMenuItem>
+                        )}
+                    </DropdownMenuContent>
+                </DropdownMenu>
              </div>
         </div>
     );
