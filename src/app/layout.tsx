@@ -7,6 +7,9 @@ import { Toaster } from '@/components/ui/toaster';
 export const metadata: Metadata = {
   title: 'Unite - Learn and Earn',
   description: 'Create and sell courses, or advertise your business.',
+  icons: {
+    icon: 'https://raw.githubusercontent.com/Polokopule/UM/c75512e1eb1db9a842359e7e8d145755832a5d62/20250929_192455.png',
+  },
 };
 
 export default function RootLayout({
