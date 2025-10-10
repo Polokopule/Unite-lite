@@ -51,7 +51,7 @@ export const generateLinkPreviewFlow = ai.defineFlow(
           }
         });
 
-        const output = llmResponse.output();
+        const output = llmResponse.output;
         if (output) {
           return LinkPreviewOutputSchema.parse({ ...output, url: input.url });
         }
@@ -59,16 +59,12 @@ export const generateLinkPreviewFlow = ai.defineFlow(
         // Fallback for empty or malformed output
         return {
             url: input.url,
-            title: 'Unable to load preview',
-            description: 'Could not retrieve information for this link.',
         };
     } catch (e) {
       console.error("Failed to generate or parse link preview from LLM response", e);
       // Return a fallback empty preview on any error
       return {
           url: input.url,
-          title: 'Unable to load preview',
-          description: 'Could not retrieve information for this link.',
       }
     }
   }

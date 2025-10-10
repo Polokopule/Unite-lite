@@ -4,21 +4,22 @@
 
 import { useParams, useRouter } from "next/navigation";
 import { useAppContext } from "@/contexts/app-context";
-import { Conversation, Message, User as UserType, LinkPreview } from "@/lib/types";
+import { Conversation, Message, User as UserType, LinkPreview, Group } from "@/lib/types";
 import React, { useEffect, useState, useRef } from "react";
 import { Card, CardContent, CardHeader, CardTitle, CardFooter } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { useToast } from "@/hooks/use-toast";
-import { Loader2, Send, Paperclip, ArrowLeft, File as FileIcon, Mic, Square, Smile, Copy, Pencil, Trash2, Check, CheckCheck } from "lucide-react";
+import { Loader2, Send, Paperclip, ArrowLeft, File as FileIcon, Mic, Square, Smile, Copy, Pencil, Trash2, Check, CheckCheck, MoreVertical, ShieldCheck, ShieldOff, Lock, Unlock, Thumbtack, ThumbtackOff, UserX } from "lucide-react";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import Image from "next/image";
 import Link from "next/link";
 import { formatTimeAgo } from "@/lib/utils";
-import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger, DropdownMenuSeparator, DropdownMenuSub, DropdownMenuSubTrigger, DropdownMenuSubContent } from "@/components/ui/dropdown-menu";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import EmojiPicker, { EmojiClickData } from "emoji-picker-react";
 import { Textarea } from "@/components/ui/textarea";
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 
 function LinkPreviewCard({ preview }: { preview: LinkPreview }) {
     if (!preview.title) return null;
@@ -200,11 +201,53 @@ function useDebounce(value: any, delay: number) {
   return debouncedValue;
 }
 
+function SharedGroupsDialog({ otherUser, currentUser, children }: { otherUser: UserType, currentUser: UserType, children: React.ReactNode }) {
+    const { groups } = useAppContext();
+    const [open, setOpen] = useState(false);
+
+    const sharedGroups = React.useMemo(() => {
+        return groups.filter(group => 
+            group.members.includes(currentUser.uid) && group.members.includes(otherUser.uid)
+        );
+    }, [groups, currentUser, otherUser]);
+
+    return (
+        <Dialog open={open} onOpenChange={setOpen}>
+            <DialogTrigger asChild>{children}</DialogTrigger>
+            <DialogContent>
+                <DialogHeader>
+                    <DialogTitle>Shared Groups with {otherUser.name}</DialogTitle>
+                </DialogHeader>
+                <div className="py-4 max-h-[60vh] overflow-y-auto">
+                    {sharedGroups.length > 0 ? (
+                        <ul className="space-y-2">
+                            {sharedGroups.map(group => (
+                                <li key={group.id}>
+                                    <Link href={`/groups/${group.id}`} onClick={() => setOpen(false)} className="flex items-center gap-3 p-2 rounded-md hover:bg-muted">
+                                        <Avatar>
+                                            <AvatarImage src={group.photoURL} alt={group.name} />
+                                            <AvatarFallback>{group.name.substring(0, 2)}</AvatarFallback>
+                                        </Avatar>
+                                        <span>{group.name}</span>
+                                    </Link>
+                                </li>
+                            ))}
+                        </ul>
+                    ) : (
+                        <p className="text-muted-foreground">You have no groups in common.</p>
+                    )}
+                </div>
+            </DialogContent>
+        </Dialog>
+    );
+}
+
+
 export default function ConversationPage() {
     const params = useParams();
     const router = useRouter();
     const { id: conversationId } = params;
-    const { user, getConversationById, sendDirectMessage, loading, allUsers, markMessagesAsRead, updateTypingStatus } = useAppContext();
+    const { user, getConversationById, sendDirectMessage, loading, allUsers, groups, markMessagesAsRead, updateTypingStatus } = useAppContext();
     const { toast } = useToast();
 
     const [conversation, setConversation] = useState<Conversation | null>(null);
@@ -351,7 +394,7 @@ export default function ConversationPage() {
         return allUsers.find(u => u.uid === otherUid) || null;
     }
     
-    if (loading || !conversation) {
+    if (loading || !conversation || !user) {
         return (
             <div className="h-[calc(100vh-4rem-1px)] flex items-center justify-center">
                 <Loader2 className="animate-spin h-8 w-8" />
@@ -363,28 +406,62 @@ export default function ConversationPage() {
     const isTyping = conversation.typing && otherParticipant && conversation.typing[otherParticipant.uid];
 
     return (
-        <div className="h-[calc(100vh-4rem-1px)]">
+        <div className="fixed inset-0 top-16 bg-background z-10 md:static md:inset-auto md:z-auto md:h-[calc(100vh-4rem-1px)]">
              <Card className="flex flex-col h-full border-0 sm:border rounded-none sm:rounded-lg">
-                <CardHeader className="flex-row items-center border-b p-4">
-                    <Button variant="ghost" size="icon" className="mr-2" onClick={() => router.back()}>
-                        <ArrowLeft className="h-5 w-5" />
-                    </Button>
+                <CardHeader className="flex-row items-center justify-between border-b p-4">
+                    <div className="flex items-center gap-3">
+                        <Button variant="ghost" size="icon" className="mr-2" onClick={() => router.back()}>
+                            <ArrowLeft className="h-5 w-5" />
+                        </Button>
+                        {otherParticipant && (
+                            <Link href={`/profile/${otherParticipant.uid}`} className="flex items-center gap-3">
+                                <Avatar>
+                                    <AvatarImage src={otherParticipant.photoURL} alt={otherParticipant.name} />
+                                    <AvatarFallback>{otherParticipant.name?.substring(0,2)}</AvatarFallback>
+                                </Avatar>
+                                <div>
+                                    <CardTitle>{otherParticipant.name}</CardTitle>
+                                    <p className="text-xs text-muted-foreground">
+                                        {isTyping ? <span className="italic">typing...</span> : 
+                                        otherParticipant.presence?.state === 'online' ? 'Online' : 
+                                        otherParticipant.presence?.lastChanged ? `Last seen ${formatTimeAgo(otherParticipant.presence.lastChanged)}` : 'Offline'
+                                        }
+                                    </p>
+                                </div>
+                            </Link>
+                        )}
+                    </div>
                     {otherParticipant && (
-                        <Link href={`/profile/${otherParticipant.uid}`} className="flex items-center gap-3">
-                             <Avatar>
-                                <AvatarImage src={otherParticipant.photoURL} alt={otherParticipant.name} />
-                                <AvatarFallback>{otherParticipant.name?.substring(0,2)}</AvatarFallback>
-                            </Avatar>
-                            <div>
-                                <CardTitle>{otherParticipant.name}</CardTitle>
-                                <p className="text-xs text-muted-foreground">
-                                    {isTyping ? <span className="italic">typing...</span> : 
-                                     otherParticipant.presence?.state === 'online' ? 'Online' : 
-                                     otherParticipant.presence?.lastChanged ? `Last seen ${formatTimeAgo(otherParticipant.presence.lastChanged)}` : 'Offline'
-                                    }
-                                </p>
-                            </div>
-                        </Link>
+                        <DropdownMenu>
+                            <DropdownMenuTrigger asChild>
+                                <Button variant="ghost" size="icon">
+                                    <MoreVertical className="h-5 w-5" />
+                                </Button>
+                            </DropdownMenuTrigger>
+                            <DropdownMenuContent align="end">
+                                <DropdownMenuItem asChild>
+                                    <Link href={`/profile/${otherParticipant.uid}`}>
+                                        <FileIcon className="mr-2 h-4 w-4" /> View Profile
+                                    </Link>
+                                </DropdownMenuItem>
+                                <SharedGroupsDialog otherUser={otherParticipant} currentUser={user}>
+                                    <DropdownMenuItem onSelect={(e) => e.preventDefault()}>
+                                        <FileIcon className="mr-2 h-4 w-4" /> Shared Groups
+                                    </DropdownMenuItem>
+                                </SharedGroupsDialog>
+                                <DropdownMenuSeparator />
+                                <DropdownMenuItem disabled>
+                                    <Thumbtack className="mr-2 h-4 w-4" /> Pin to Top
+                                </DropdownMenuItem>
+                                <DropdownMenuItem disabled>
+                                    <Lock className="mr-2 h-4 w-4" /> Lock Chat
+                                </DropdownMenuItem>
+                                <DropdownMenuSeparator />
+                                <DropdownMenuItem className="text-destructive" disabled>
+                                    <UserX className="mr-2 h-4 w-4" /> Block
+                                </DropdownMenuItem>
+                            </DropdownMenuContent>
+                        </DropdownMenu>
                     )}
                 </CardHeader>
                 <CardContent className="flex-1 overflow-y-auto p-4 space-y-6">

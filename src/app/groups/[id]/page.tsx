@@ -17,7 +17,7 @@ import Link from "next/link";
 import { formatTimeAgo } from "@/lib/utils";
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from "@/components/ui/sheet";
 import { Popover, PopoverTrigger, PopoverContent } from "@/components/ui/popover";
-import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger, DropdownMenuSeparator, DropdownMenuPortal } from "@/components/ui/dropdown-menu";
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger, DropdownMenuSeparator, DropdownMenuPortal } from "@/componentsui/dropdown-menu";
 import EmojiPicker, { EmojiClickData } from "emoji-picker-react";
 import { Textarea } from "@/components/ui/textarea";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogTrigger, DialogFooter } from "@/components/ui/dialog";
@@ -372,7 +372,7 @@ function ChatArea({ groupId, messages, group, members, membersDetails }: { group
 
     return (
         <Card className="flex flex-col h-full border-0 sm:border rounded-none sm:rounded-lg">
-            <CardHeader className="flex flex-row items-center justify-between">
+            <CardHeader className="flex flex-row items-center justify-between p-4 border-b">
                 <div className="flex items-center gap-3">
                      <Button variant="ghost" size="icon" className="mr-2 lg:hidden" onClick={() => router.back()}>
                         <ArrowLeft className="h-5 w-5" />
@@ -656,7 +656,7 @@ export default function GroupPage() {
     }
 
     return (
-        <div className="h-[calc(100vh-4rem-1px)] flex">
+         <div className="fixed inset-0 top-16 bg-background z-10 md:static md:inset-auto md:z-auto md:h-[calc(100vh-4rem-1px)] flex">
             <div className="flex-1 h-full">
                  <ChatArea groupId={group.id} messages={group.messages || []} group={group} members={membersDetails} membersDetails={membersDetails} />
             </div>
@@ -673,4 +673,3 @@ export default function GroupPage() {
         </div>
     );
 }
-
