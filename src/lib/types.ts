@@ -112,13 +112,18 @@ export type Message = {
     creatorName: string;
     creatorPhotoURL: string;
     timestamp: number;
-    type: 'text' | 'image' | 'audio' | 'video' | 'file';
+    type: 'text' | 'image' | 'audio' | 'video' | 'file' | 'system';
     fileUrl?: string;
     fileName?: string;
     isEdited?: boolean;
     linkPreview?: LinkPreview | null;
     reactions?: { [emoji: string]: string[] }; // e.g. { '👍': ['user1', 'user2'] }
     readBy?: { [uid: string]: number };
+}
+
+export type GroupMemberInfo = {
+    joinedAt: number;
+    joinMethod: 'creator' | 'invite' | 'direct';
 }
 
 // Represents a user-created group
@@ -128,7 +133,7 @@ export type Group = {
     description: string;
     creatorUid: string;
     creatorName: string;
-    members: string[]; // Array of user UIDs
+    members: { [uid: string]: GroupMemberInfo };
     messages?: Message[];
     hasPin: boolean;
     pin: string | null;
@@ -150,6 +155,5 @@ export type Conversation = {
 
 // Represents either a Post or an Ad in a feed
 export type FeedItem = Post | Ad;
-
 
     

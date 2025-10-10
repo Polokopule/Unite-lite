@@ -1,5 +1,4 @@
 
-
 "use client";
 
 import { PlaceHolderImages } from "@/lib/placeholder-images";
@@ -66,7 +65,7 @@ interface AppContextType {
   updateGroupPin: (groupId: string, pin: string) => Promise<boolean>;
   deleteGroup: (groupId: string) => Promise<boolean>;
   joinGroup: (groupId: string, pin?: string) => Promise<boolean>;
-  sendMessage: (groupId: string, messageData: { content?: string; file?: File }) => Promise<boolean>;
+  sendMessage: (groupId: string, messageData: { content?: string; file?: File; type?: 'system' | 'text' }) => Promise<boolean>;
   editMessage: (groupId: string, messageId: string, newContent: string) => Promise<boolean>;
   deleteMessage: (groupId: string, messageId: string) => Promise<boolean>;
   reactToMessage: (groupId: string, messageId: string, reaction: string) => Promise<void>;
@@ -189,7 +188,7 @@ export function AppContextProvider({ children }: { children: React.ReactNode }) 
         const groupList: Group[] = Object.keys(data).map(key => ({
             id: key,
             ...data[key],
-            members: data[key].members ? Object.keys(data[key].members) : [],
+            members: data[key].members || {},
             messages: data[key].messages ? Object.values(data[key].messages).map(msg => ({...msg, reactions: msg.reactions ? Object.entries(msg.reactions).reduce((acc, [emoji, uidsObj]) => ({...acc, [emoji]: Object.keys(uidsObj)}), {}) : {}})) : []
         }));
         setGroups(groupList);
@@ -859,7 +858,13 @@ export function AppContextProvider({ children }: { children: React.ReactNode }) 
         };
         await set(newGroupRef, newGroup);
         // Automatically add creator as a member
-        await set(ref(db, `groups/${groupId}/members/${user.uid}`), true);
+        await set(ref(db, `groups/${groupId}/members/${user.uid}`), { joinedAt: serverTimestamp(), joinMethod: 'creator' });
+        
+        await sendMessage(groupId, {
+            content: `${user.name} created the group "${groupData.name}".`,
+            type: 'system'
+        });
+
         return groupId;
     } catch(e) {
         console.error(e)
@@ -925,7 +930,7 @@ export function AppContextProvider({ children }: { children: React.ReactNode }) 
       if (!group) return false;
 
       // Check if user is already a member
-      if (group.members?.includes(user.uid)) return true;
+      if (group.members && Object.keys(group.members).includes(user.uid)) return true;
 
       // Check PIN if the group is private
       if (group.hasPin && group.pin !== pin) {
@@ -934,15 +939,20 @@ export function AppContextProvider({ children }: { children: React.ReactNode }) 
 
       try {
           const memberRef = ref(db, `groups/${groupId}/members/${user.uid}`);
-          await set(memberRef, true);
+          await set(memberRef, { joinedAt: serverTimestamp(), joinMethod: 'direct' });
+          
+          await sendMessage(groupId, {
+            content: `${user.name} joined the group.`,
+            type: 'system'
+          });
+
           return true;
       } catch(e) {
           return false;
       }
   };
 
-  const sendMessage = async (groupId: string, messageData: { content?: string; file?: File }): Promise<boolean> => {
-    if (!user) return false;
+  const sendMessage = async (groupId: string, messageData: { content?: string; file?: File; type?: 'system' | 'text' }): Promise<boolean> => {
     
     const group = groups.find(g => g.id === groupId);
     if (!group) return false;
@@ -953,61 +963,79 @@ export function AppContextProvider({ children }: { children: React.ReactNode }) 
         const messagesRef = ref(db, `groups/${groupId}/messages`);
         const newMessageRef = push(messagesRef);
 
-        let messagePayload: Partial<Message> = {
-            id: newMessageRef.key!,
-            creatorUid: user.uid,
-            creatorName: user.name,
-            creatorPhotoURL: user.photoURL || '',
-            timestamp: serverTimestamp() as any,
-            linkPreview: null,
-        };
-
-        if (messageData.file) {
-            const file = messageData.file;
-            const fileRef = storageRef(storage, `group-files/${groupId}/${Date.now()}_${file.name}`);
-            const snapshot = await uploadBytes(fileRef, file);
-            const downloadURL = await getDownloadURL(snapshot.ref);
-            
+        let messagePayload: Partial<Message>;
+        
+        if (messageData.type === 'system') {
             messagePayload = {
-                ...messagePayload,
-                content: '',
-                type: getFileType(file),
-                fileUrl: downloadURL,
-                fileName: file.name,
+                id: newMessageRef.key!,
+                content: messageData.content!,
+                timestamp: serverTimestamp() as any,
+                type: 'system',
             };
-        } else if (messageData.content) {
-             messagePayload = {
-                ...messagePayload,
-                content: messageData.content,
-                type: 'text',
+        } else {
+            if (!user) return false;
+
+            messagePayload = {
+                id: newMessageRef.key!,
+                creatorUid: user.uid,
+                creatorName: user.name,
+                creatorPhotoURL: user.photoURL || '',
+                timestamp: serverTimestamp() as any,
+                linkPreview: null,
             };
+
+            if (messageData.file) {
+                const file = messageData.file;
+                const fileRef = storageRef(storage, `group-files/${groupId}/${Date.now()}_${file.name}`);
+                const snapshot = await uploadBytes(fileRef, file);
+                const downloadURL = await getDownloadURL(snapshot.ref);
+                
+                messagePayload = {
+                    ...messagePayload,
+                    content: '',
+                    type: getFileType(file),
+                    fileUrl: downloadURL,
+                    fileName: file.name,
+                };
+            } else if (messageData.content) {
+                 messagePayload = {
+                    ...messagePayload,
+                    content: messageData.content,
+                    type: 'text',
+                };
+            }
         }
         
         await set(newMessageRef, messagePayload);
 
-        const urlMatch = messageData.content?.match(urlRegex);
-        if (urlMatch) {
-            generateLinkPreviewFlow({ url: urlMatch[0] }).then(preview => {
-                if (preview.title) {
-                    update(newMessageRef, { linkPreview: preview });
-                }
-            }).catch(e => console.error("Link preview generation failed, but message was created.", e));
+        if (messageData.type !== 'system' && messageData.content) {
+            const urlMatch = messageData.content?.match(urlRegex);
+            if (urlMatch) {
+                generateLinkPreviewFlow({ url: urlMatch[0] }).then(preview => {
+                    if (preview.title) {
+                        update(newMessageRef, { linkPreview: preview });
+                    }
+                }).catch(e => console.error("Link preview generation failed, but message was created.", e));
+            }
         }
 
         // Create notifications for all other group members
-        const notificationPromises = group.members
-            .filter(memberId => memberId !== user.uid)
-            .map(memberId => createNotification({
-                recipientUid: memberId,
-                actorUid: user.uid,
-                actorName: user.name,
-                actorPhotoURL: user.photoURL,
-                type: 'new_group_message',
-                targetUrl: `/groups/${groupId}`,
-                targetId: groupId,
-                message: `sent a message in "${group.name}"`,
-            }));
-        await Promise.all(notificationPromises);
+        if (messageData.type !== 'system' && user) {
+            const memberIds = group.members ? Object.keys(group.members) : [];
+            const notificationPromises = memberIds
+                .filter(memberId => memberId !== user.uid)
+                .map(memberId => createNotification({
+                    recipientUid: memberId,
+                    actorUid: user.uid,
+                    actorName: user.name,
+                    actorPhotoURL: user.photoURL,
+                    type: 'new_group_message',
+                    targetUrl: `/groups/${groupId}`,
+                    targetId: groupId,
+                    message: `sent a message in "${group.name}"`,
+                }));
+            await Promise.all(notificationPromises);
+        }
         
         return true;
     } catch (e) {
@@ -1432,8 +1460,5 @@ export function useAppContext() {
   }
   return context;
 }
-
-
-    
 
     

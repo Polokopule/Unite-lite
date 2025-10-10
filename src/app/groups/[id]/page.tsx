@@ -10,7 +10,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
-import { Loader2, Lock, Users, Send, Paperclip, Image as ImageIcon, Download, File as FileIcon, Music, Video, Menu, Mic, Square, Smile, Copy, Pencil, Trash2, Check, CheckCheck, Share2, MoreVertical, ArrowLeft } from "lucide-react";
+import { Loader2, Lock, Users, Send, Paperclip, Image as ImageIcon, Download, File as FileIcon, Music, Video, Menu, Mic, Square, Smile, Copy, Pencil, Trash2, Check, CheckCheck, Share2, MoreVertical, ArrowLeft, Info } from "lucide-react";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import Image from "next/image";
 import Link from "next/link";
@@ -41,11 +41,27 @@ function LinkPreviewCard({ preview }: { preview: LinkPreview }) {
     )
 }
 
+function SystemMessage({ content }: { content: string }) {
+    return (
+        <div className="flex justify-center my-4">
+            <div className="text-xs text-muted-foreground bg-muted px-3 py-1 rounded-full flex items-center gap-2">
+                <Info className="h-3 w-3"/>
+                <span>{content}</span>
+            </div>
+        </div>
+    );
+}
+
+
 function MessageBubble({ message, isOwnMessage, groupId, memberCount }: { message: Message; isOwnMessage: boolean; groupId: string; memberCount: number; }) {
     const { toast } = useToast();
     const { user, editMessage, deleteMessage, reactToMessage } = useAppContext();
     const [isEditing, setIsEditing] = useState(false);
     const [editedContent, setEditedContent] = useState(message.content);
+
+    if (message.type === 'system') {
+        return <SystemMessage content={message.content} />;
+    }
 
     const handleCopy = () => {
         navigator.clipboard.writeText(message.content);
@@ -441,7 +457,7 @@ function ChatArea({ groupId, messages, group, members, membersDetails }: { group
                                 <DialogHeader>
                                     <DialogTitle>Members ({membersDetails.length})</DialogTitle>
                                 </DialogHeader>
-                                <MembersList members={membersDetails} />
+                                <MembersList members={membersDetails} group={group} />
                             </DialogContent>
                         </Dialog>
                         <DropdownMenuItem onClick={handleCopyInviteLink}>
@@ -512,7 +528,7 @@ function ChatArea({ groupId, messages, group, members, membersDetails }: { group
             <CardContent className="flex-1 overflow-y-auto p-4 space-y-6">
                 {messages && messages.length > 0 ? (
                      messages.sort((a,b) => a.timestamp - b.timestamp).map(msg => (
-                        <MessageBubble key={msg.id} message={msg} isOwnMessage={user?.uid === msg.creatorUid} groupId={groupId} memberCount={group?.members?.length || 1} />
+                        <MessageBubble key={msg.id} message={msg} isOwnMessage={user?.uid === msg.creatorUid} groupId={groupId} memberCount={Object.keys(group?.members || {}).length || 1} />
                     ))
                 ) : (
                     <div className="text-center text-muted-foreground h-full flex items-center justify-center">
@@ -584,7 +600,19 @@ const getInitials = (name: string) => {
     return name.substring(0, 2).toUpperCase();
 };
 
-function MembersList({ members }: { members: UserType[] }) {
+function MembersList({ members, group }: { members: UserType[], group: Group | null }) {
+    
+    const getJoinMethodText = (memberUid: string) => {
+        if (group?.creatorUid === memberUid) {
+            return "Group Creator";
+        }
+        const memberInfo = group?.members[memberUid];
+        if (memberInfo?.joinMethod === 'invite') {
+            return "Joined via invite link";
+        }
+        return "Joined from group list";
+    };
+
     return (
         <ul className="space-y-4 max-h-[calc(100vh-8rem)] overflow-y-auto">
             {members.map(member => (
@@ -597,11 +625,9 @@ function MembersList({ members }: { members: UserType[] }) {
                         </Avatar>
                         <div className="flex-1">
                             <span>{member.name}</span>
-                            {member.presence?.state === 'offline' && member.presence?.lastChanged && (
-                                <p className="text-xs text-muted-foreground">
-                                    Last seen {formatTimeAgo(member.presence.lastChanged)}
-                                </p>
-                            )}
+                            <p className="text-xs text-muted-foreground">
+                                {getJoinMethodText(member.uid)}
+                            </p>
                         </div>
                     </Link>
                 </li>
@@ -628,7 +654,7 @@ export default function GroupPage() {
         if (foundGroup) {
             setGroup(foundGroup);
             if (user) {
-                const member = foundGroup.members?.includes(user.uid) || false;
+                const member = Object.keys(foundGroup.members || {}).includes(user.uid);
                 setIsMember(member);
                 if (member) {
                     markMessagesAsRead(groupId as string);
@@ -651,7 +677,7 @@ export default function GroupPage() {
         }
     };
     
-    const membersDetails = group?.members?.map(memberId => allUsers.find(u => u.uid === memberId)).filter(Boolean) as UserType[] || [];
+    const membersDetails = group?.members ? Object.keys(group.members).map(memberId => allUsers.find(u => u.uid === memberId)).filter(Boolean) as UserType[] : [];
 
     if (loading || !group) {
         return <div className="container mx-auto py-8 flex items-center justify-center h-[calc(100vh-4rem)]"><Loader2 className="animate-spin h-8 w-8" /></div>;
@@ -706,3 +732,5 @@ export default function GroupPage() {
         </div>
     );
 }
+
+    
