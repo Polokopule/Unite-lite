@@ -6,7 +6,7 @@ import { useParams } from "next/navigation";
 import { useAppContext } from "@/contexts/app-context";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from "@/componentsui/card";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from "@/components/ui/card";
 import React, { useEffect, useState, useMemo } from "react";
 import { Post as PostType, Comment as CommentType, LinkPreview } from "@/lib/types";
 import { Loader2, MessageCircle, Heart, Send, File as FileIcon, Share2, Link2, SendToBack, Repeat, Trash, Pencil } from "lucide-react";
