@@ -37,7 +37,7 @@ export type User = {
   following?: string[];
   followers?: string[];
   photoURL?: string;
-  conversationIds?: string[];
+  conversationIds?: { [id: string]: boolean };
   presence?: UserPresence;
 };
 

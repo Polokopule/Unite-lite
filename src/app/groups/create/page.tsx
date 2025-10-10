@@ -11,7 +11,6 @@ import { useAppContext } from "@/contexts/app-context";
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import { Users, PlusCircle, Loader2, Upload } from "lucide-react";
-import Image from "next/image";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 
 export default function CreateGroupPage() {
@@ -52,15 +51,15 @@ export default function CreateGroupPage() {
     }
     
     setIsCreating(true);
-    const success = await createGroup({ name, description, pin, photoFile: groupImage });
+    const newGroupId = await createGroup({ name, description, pin, photoFile: groupImage });
     setIsCreating(false);
 
-    if(success) {
+    if(newGroupId) {
       toast({
         title: "Group Created!",
         description: `Your group "${name}" is now live.`
       });
-      router.push('/groups');
+      router.push(`/groups/${newGroupId}`);
     } else {
       toast({
         variant: "destructive",
