@@ -90,13 +90,19 @@ function MessageBubble({ message, isOwnMessage, groupId, memberCount }: { messag
             case 'image':
                 return (
                     <Dialog>
-                        <DialogTrigger>
-                            <div className="relative aspect-video max-w-xs rounded-lg overflow-hidden cursor-pointer">
-                                <Image src={message.fileUrl!} alt={message.fileName || 'Uploaded image'} fill className="object-cover" />
+                        <DialogTrigger asChild>
+                            <div className="relative max-w-xs cursor-pointer">
+                                <Image 
+                                    src={message.fileUrl!} 
+                                    alt={message.fileName || 'Uploaded image'} 
+                                    width={400} 
+                                    height={400} 
+                                    className="object-contain rounded-lg h-auto w-full"
+                                />
                             </div>
                         </DialogTrigger>
                         <DialogContent className="max-w-3xl p-2">
-                            <div className="relative aspect-video">
+                             <div className="relative aspect-video">
                                 <Image src={message.fileUrl!} alt={message.fileName || 'Uploaded image'} fill className="object-contain" />
                             </div>
                             <DialogFooter>
@@ -695,7 +701,7 @@ export default function GroupPage() {
     }
 
     return (
-         <div className="fixed inset-0 bg-background z-50 pt-0">
+         <div className="fixed inset-0 bg-background z-50">
              <ChatArea groupId={group.id} messages={group.messages || []} group={group} members={membersDetails} membersDetails={membersDetails} />
         </div>
     );

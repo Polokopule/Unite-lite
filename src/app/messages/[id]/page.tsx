@@ -88,16 +88,22 @@ function MessageBubble({ message, isOwnMessage, participant, conversationId, isL
         }
 
         switch (message.type) {
-            case 'image':
+             case 'image':
                 return (
-                     <Dialog>
-                        <DialogTrigger>
-                            <div className="relative aspect-video max-w-xs rounded-lg overflow-hidden cursor-pointer">
-                                <Image src={message.fileUrl!} alt={message.fileName || 'Uploaded image'} fill className="object-cover" />
+                    <Dialog>
+                        <DialogTrigger asChild>
+                            <div className="relative max-w-xs cursor-pointer">
+                                <Image 
+                                    src={message.fileUrl!} 
+                                    alt={message.fileName || 'Uploaded image'} 
+                                    width={400} 
+                                    height={400} 
+                                    className="object-contain rounded-lg h-auto w-full"
+                                />
                             </div>
                         </DialogTrigger>
                         <DialogContent className="max-w-3xl p-2">
-                            <div className="relative aspect-video">
+                             <div className="relative aspect-video">
                                 <Image src={message.fileUrl!} alt={message.fileName || 'Uploaded image'} fill className="object-contain" />
                             </div>
                             <DialogFooter>
@@ -586,7 +592,7 @@ export default function ConversationPage() {
     const isOtherUserBlocked = user.blockedUsers?.includes(otherParticipant?.uid || '');
 
     return (
-        <div className="fixed inset-0 bg-background z-50 pt-0">
+        <div className="fixed inset-0 bg-background z-50">
              <Card className="flex flex-col h-[100vh] border-0 sm:border rounded-none sm:rounded-lg">
                 <CardHeader className="flex-row items-center justify-between border-b p-4">
                     <div className="flex items-center gap-3">
