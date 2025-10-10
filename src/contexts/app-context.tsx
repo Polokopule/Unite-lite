@@ -236,6 +236,7 @@ export function AppContextProvider({ children }: { children: React.ReactNode }) 
             .filter(c => !(user.deletedConversations && user.deletedConversations[c.id]))
             .map(c => ({
               ...c, 
+              participantUids: c.participantUids ? Object.keys(c.participantUids) : [],
               messages: c.messages ? Object.values(c.messages).map(msg => ({...msg, reactions: msg.reactions ? Object.entries(msg.reactions).reduce((acc, [emoji, uidsObj]) => ({...acc, [emoji]: Object.keys(uidsObj)}), {}) : {}})) : [] 
             }))
             .sort((a, b) => {
@@ -1052,9 +1053,14 @@ export function AppContextProvider({ children }: { children: React.ReactNode }) 
         const otherUser = allUsers.find(u => u.uid === otherUserId);
         if (!otherUser) return null;
 
-        const newConversation: Omit<Conversation, 'messages'> = {
+        const participantUids = {
+            [user.uid]: true,
+            [otherUserId]: true,
+        };
+
+        const newConversation: Omit<Conversation, 'messages' | 'participantUids'> & { participantUids: { [key: string]: boolean } } = {
             id: conversationId,
-            participantUids: [user.uid, otherUserId],
+            participantUids: participantUids,
             participants: {
                 [user.uid]: { name: user.name, photoURL: user.photoURL || '' },
                 [otherUserId]: { name: otherUser.name, photoURL: otherUser.photoURL || '' },
@@ -1065,12 +1071,6 @@ export function AppContextProvider({ children }: { children: React.ReactNode }) 
 
         try {
             await set(conversationRef, newConversation);
-            await update(ref(db), {
-                [`users/${user.uid}/conversationIds/${conversationId}`]: true,
-                [`users/${otherUserId}/conversationIds/${conversationId}`]: true,
-                [`conversations/${conversationId}/participantUids/${user.uid}`]: true,
-                [`conversations/${conversationId}/participantUids/${otherUserId}`]: true
-            });
             return conversationId;
         } catch (error) {
             console.error("Error starting conversation:", error);
