@@ -12,6 +12,7 @@ import { useAppContext } from '@/contexts/app-context';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { useRouter } from 'next/navigation';
 import { AIChatMessage } from '@/lib/types';
+import { Textarea } from '@/components/ui/textarea';
 
 export default function AiChatPage() {
   const { user, updateAIChatHistory } = useAppContext();
@@ -84,8 +85,8 @@ export default function AiChatPage() {
 
   return (
     <div className="fixed inset-0 bg-background z-50 h-[100vh] sm:h-[100vh]">
-        <Card className="flex flex-col h-full border-0 sm:border rounded-none sm:rounded-lg">
-          <CardHeader className="flex-row items-center justify-between border-b p-4">
+        <div className="relative h-full">
+          <header className="absolute top-0 left-0 right-0 z-10 flex items-center justify-between border-b p-4 bg-background">
              <div className="flex items-center gap-3">
                 <Button variant="ghost" size="icon" className="mr-2" onClick={() => router.back()}>
                     <ArrowLeft className="h-5 w-5" />
@@ -94,11 +95,11 @@ export default function AiChatPage() {
                     <Avatar className="h-10 w-10">
                         <AvatarFallback><Bot /></AvatarFallback>
                     </Avatar>
-                    <CardTitle>AI Assistant</CardTitle>
+                    <h2 className="font-semibold">AI Assistant</h2>
                 </div>
             </div>
-          </CardHeader>
-          <ScrollArea className="flex-1" ref={scrollAreaRef}>
+          </header>
+          <ScrollArea className="h-full pt-20 pb-24" ref={scrollAreaRef}>
             <div className="p-4 space-y-4">
               {history.map((message, index) => (
                 <div
@@ -147,26 +148,28 @@ export default function AiChatPage() {
               )}
             </div>
           </ScrollArea>
-          <CardFooter className="border-t p-4">
+          <footer className="absolute bottom-0 left-0 right-0 z-10 border-t p-4 bg-background">
             <div className="flex w-full items-center gap-2">
-              <Input
+              <Textarea
                 placeholder="Ask a question about Unite..."
                 value={question}
-                onChange={(e) => setQuestion(e.target.value)}
                 onKeyDown={(e) => {
                   if (e.key === 'Enter' && !e.shiftKey) {
                     e.preventDefault();
                     handleSend();
                   }
                 }}
+                onChange={(e) => setQuestion(e.target.value)}
                 disabled={isLoading}
+                rows={1}
+                className="max-h-24 resize-none"
               />
               <Button onClick={handleSend} disabled={isLoading || !question.trim()}>
                 <Send className="h-4 w-4" />
               </Button>
             </div>
-          </CardFooter>
-        </Card>
+          </footer>
+        </div>
     </div>
   );
 }

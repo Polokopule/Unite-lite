@@ -1,5 +1,4 @@
 
-
 "use client";
 
 import { useParams, useRouter } from "next/navigation";
@@ -22,6 +21,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger, DialogFooter } from "@/components/ui/dialog";
 import { AlertDialog, AlertDialogTrigger, AlertDialogContent, AlertDialogHeader, AlertDialogTitle, AlertDialogDescription, AlertDialogFooter, AlertDialogCancel, AlertDialogAction } from "@/components/ui/alert-dialog";
 import { Label } from "@/components/ui/label";
+import { ScrollArea } from "@/components/ui/scroll-area";
 
 function LinkPreviewCard({ preview }: { preview: LinkPreview }) {
     if (!preview.title) return null;
@@ -376,7 +376,7 @@ export default function ConversationPage() {
     const [text, setText] = useState("");
     const [isSending, setIsSending] = useState(false);
     const fileInputRef = useRef<HTMLInputElement>(null);
-    const messagesEndRef = useRef<HTMLDivElement>(null);
+    const scrollAreaRef = useRef<HTMLDivElement>(null);
     
     const [recordingState, setRecordingState] = useState<'idle' | 'recording' | 'previewing'>('idle');
     const [recordedAudio, setRecordedAudio] = useState<{ url: string; blob: Blob } | null>(null);
@@ -421,7 +421,12 @@ export default function ConversationPage() {
     }, [conversationId, getConversationById, user, loading, router, toast, markMessagesAsRead, lockedConversations, isLocked]);
 
     useEffect(() => {
-        messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+        if (scrollAreaRef.current) {
+            const viewport = scrollAreaRef.current.querySelector('[data-radix-scroll-area-viewport]');
+            if (viewport) {
+                viewport.scrollTop = viewport.scrollHeight;
+            }
+        }
     }, [conversation?.messages, isLocked]);
     
     useEffect(() => {
@@ -612,9 +617,9 @@ export default function ConversationPage() {
     const isOtherUserBlocked = user.blockedUsers?.includes(otherParticipant?.uid || '');
 
     return (
-        <div className="fixed inset-0 bg-background z-50 h-[85vh] sm:h-[85vh]">
-             <Card className="flex flex-col h-full border-0 sm:border rounded-none sm:rounded-lg">
-                <CardHeader className="flex-row items-center justify-between border-b p-4">
+        <div className="fixed inset-0 bg-background z-50 h-[100vh] sm:h-[100vh]">
+            <div className="relative h-full">
+                <header className="absolute top-0 left-0 right-0 z-10 flex items-center justify-between border-b p-4 bg-background">
                     <div className="flex items-center gap-3">
                         <Button variant="ghost" size="icon" className="mr-2" onClick={() => router.back()}>
                             <ArrowLeft className="h-5 w-5" />
@@ -626,7 +631,7 @@ export default function ConversationPage() {
                                     <AvatarFallback>{otherParticipant.name?.substring(0,2)}</AvatarFallback>
                                 </Avatar>
                                 <div>
-                                    <CardTitle>{otherParticipant.name}</CardTitle>
+                                    <h2 className="font-semibold leading-none">{otherParticipant.name}</h2>
                                     <p className="text-xs text-muted-foreground">
                                         {isTyping ? <span className="italic">typing...</span> : 
                                         otherParticipant.presence?.state === 'online' ? 'Online' : 
@@ -693,10 +698,10 @@ export default function ConversationPage() {
                             </DropdownMenuContent>
                         </DropdownMenu>
                     )}
-                </CardHeader>
+                </header>
 
                 {isLocked ? (
-                    <div className="flex flex-col flex-1 items-center justify-center gap-4 p-4 text-center">
+                    <div className="flex flex-col flex-1 items-center justify-center gap-4 p-4 text-center h-full">
                         <Lock className="h-12 w-12 text-muted-foreground" />
                         <h2 className="text-xl font-semibold">This chat is locked</h2>
                         <p className="text-muted-foreground">Enter your PIN to unlock the conversation.</p>
@@ -713,27 +718,28 @@ export default function ConversationPage() {
                     </div>
                 ) : (
                     <>
-                         <CardContent className="flex-1 overflow-y-auto p-4 space-y-6">
-                            {conversation.messages && conversation.messages.length > 0 ? (
-                                conversation.messages.sort((a,b) => a.timestamp - b.timestamp).map((msg, idx) => (
-                                    <MessageBubble
-                                        key={msg.id}
-                                        message={msg}
-                                        isOwnMessage={user?.uid === msg.creatorUid}
-                                        participant={conversation.participants[msg.creatorUid]}
-                                        conversationId={conversation.id}
-                                        isLastMessage={idx === conversation.messages!.length - 1}
-                                        otherParticipant={otherParticipant}
-                                    />
-                                ))
-                            ) : (
-                                <div className="text-center text-muted-foreground h-full flex items-center justify-center">
-                                    <p>This is the beginning of your conversation.</p>
-                                </div>
-                            )}
-                            <div ref={messagesEndRef} />
-                        </CardContent>
-                        <CardFooter className="border-t p-4">
+                        <ScrollArea className="h-full pt-20 pb-24" ref={scrollAreaRef}>
+                            <div className="p-4 space-y-6">
+                                {conversation.messages && conversation.messages.length > 0 ? (
+                                    conversation.messages.sort((a,b) => a.timestamp - b.timestamp).map((msg, idx) => (
+                                        <MessageBubble
+                                            key={msg.id}
+                                            message={msg}
+                                            isOwnMessage={user?.uid === msg.creatorUid}
+                                            participant={conversation.participants[msg.creatorUid]}
+                                            conversationId={conversation.id}
+                                            isLastMessage={idx === conversation.messages!.length - 1}
+                                            otherParticipant={otherParticipant}
+                                        />
+                                    ))
+                                ) : (
+                                    <div className="text-center text-muted-foreground h-full flex items-center justify-center">
+                                        <p>This is the beginning of your conversation.</p>
+                                    </div>
+                                )}
+                            </div>
+                        </ScrollArea>
+                        <footer className="absolute bottom-0 left-0 right-0 z-10 border-t p-4 bg-background">
                            {amIBlocked || isOtherUserBlocked ? (
                                 <div className="w-full text-center text-sm text-muted-foreground p-2 bg-muted rounded-md">
                                     {isOtherUserBlocked ? `You have blocked ${otherParticipant?.name}. You cannot send messages.` : `You have been blocked by ${otherParticipant?.name}.`}
@@ -757,6 +763,12 @@ export default function ConversationPage() {
                                             <Textarea
                                                 placeholder="Type a message..."
                                                 value={text}
+                                                onKeyDown={(e) => {
+                                                  if (e.key === 'Enter' && !e.shiftKey) {
+                                                    e.preventDefault();
+                                                    handleSendText();
+                                                  }
+                                                }}
                                                 onChange={(e) => setText(e.target.value)}
                                                 disabled={isSending}
                                                 rows={1}
@@ -788,10 +800,10 @@ export default function ConversationPage() {
                                     </Button>
                                 </div>
                            )}
-                        </CardFooter>
+                        </footer>
                     </>
                 )}
-            </Card>
+            </div>
         </div>
     );
 }

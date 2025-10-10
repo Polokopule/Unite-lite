@@ -1,5 +1,4 @@
 
-
 "use client";
 
 import { useParams, useRouter } from "next/navigation";
@@ -23,6 +22,7 @@ import EmojiPicker, { EmojiClickData } from "emoji-picker-react";
 import { Textarea } from "@/components/ui/textarea";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogTrigger, DialogFooter } from "@/components/ui/dialog";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
+import { ScrollArea } from "@/components/ui/scroll-area";
 
 function LinkPreviewCard({ preview }: { preview: LinkPreview }) {
     if (!preview.title) return null;
@@ -277,7 +277,7 @@ function ChatArea({ groupId, messages, group, members, membersDetails }: { group
     const [text, setText] = useState("");
     const [isSending, setIsSending] = useState(false);
     const fileInputRef = useRef<HTMLInputElement>(null);
-    const messagesEndRef = useRef<HTMLDivElement>(null);
+    const scrollAreaRef = useRef<HTMLDivElement>(null);
     
     const [recordingState, setRecordingState] = useState<'idle' | 'recording' | 'previewing'>('idle');
     const [recordedAudio, setRecordedAudio] = useState<{ url: string; blob: Blob } | null>(null);
@@ -292,7 +292,12 @@ function ChatArea({ groupId, messages, group, members, membersDetails }: { group
     const [isSavingPin, setIsSavingPin] = useState(false);
 
     useEffect(() => {
-        messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+        if (scrollAreaRef.current) {
+            const viewport = scrollAreaRef.current.querySelector('[data-radix-scroll-area-viewport]');
+            if (viewport) {
+                viewport.scrollTop = viewport.scrollHeight;
+            }
+        }
     }, [messages]);
 
     useEffect(() => {
@@ -442,8 +447,8 @@ function ChatArea({ groupId, messages, group, members, membersDetails }: { group
     };
 
     return (
-        <Card className="flex flex-col h-full border-0 sm:border rounded-none sm:rounded-lg">
-            <CardHeader className="flex flex-row items-center justify-between p-4 border-b">
+        <div className="relative h-full">
+            <header className="absolute top-0 left-0 right-0 z-10 flex items-center justify-between p-4 border-b bg-background">
                 <div className="flex items-center gap-3">
                      <Button variant="ghost" size="icon" className="mr-2" onClick={() => router.back()}>
                         <ArrowLeft className="h-5 w-5" />
@@ -545,20 +550,23 @@ function ChatArea({ groupId, messages, group, members, membersDetails }: { group
                         )}
                     </DropdownMenuContent>
                 </DropdownMenu>
-            </CardHeader>
-            <CardContent className="flex-1 overflow-y-auto p-4 space-y-6">
-                {messages && messages.length > 0 ? (
-                     messages.sort((a,b) => a.timestamp - b.timestamp).map(msg => (
-                        <MessageBubble key={msg.id} message={msg} isOwnMessage={user?.uid === msg.creatorUid} groupId={groupId} memberCount={Object.keys(group?.members || {}).length || 1} />
-                    ))
-                ) : (
-                    <div className="text-center text-muted-foreground h-full flex items-center justify-center">
-                        <p>No messages yet. Be the first to say something!</p>
-                    </div>
-                )}
-                 <div ref={messagesEndRef} />
-            </CardContent>
-            <CardFooter className="border-t p-4 flex flex-col items-start gap-2">
+            </header>
+            
+            <ScrollArea className="h-full pt-20 pb-24" ref={scrollAreaRef}>
+                 <div className="p-4 space-y-6">
+                    {messages && messages.length > 0 ? (
+                         messages.sort((a,b) => a.timestamp - b.timestamp).map(msg => (
+                            <MessageBubble key={msg.id} message={msg} isOwnMessage={user?.uid === msg.creatorUid} groupId={groupId} memberCount={Object.keys(group?.members || {}).length || 1} />
+                        ))
+                    ) : (
+                        <div className="text-center text-muted-foreground h-full flex items-center justify-center">
+                            <p>No messages yet. Be the first to say something!</p>
+                        </div>
+                    )}
+                 </div>
+            </ScrollArea>
+           
+            <footer className="absolute bottom-0 left-0 right-0 z-10 border-t p-4 bg-background">
                  <div className="flex items-center gap-2 w-full">
                     {recordingState === 'previewing' && recordedAudio ? (
                         <>
@@ -577,6 +585,12 @@ function ChatArea({ groupId, messages, group, members, membersDetails }: { group
                             <Textarea
                                 placeholder="Type a message..."
                                 value={text}
+                                onKeyDown={(e) => {
+                                  if (e.key === 'Enter' && !e.shiftKey) {
+                                    e.preventDefault();
+                                    handleSendText();
+                                  }
+                                }}
                                 onChange={(e) => setText(e.target.value)}
                                 disabled={isSending}
                                 rows={1}
@@ -607,8 +621,8 @@ function ChatArea({ groupId, messages, group, members, membersDetails }: { group
                         }
                     </Button>
                 </div>
-            </CardFooter>
-        </Card>
+            </footer>
+        </div>
     );
 }
 
@@ -748,7 +762,7 @@ export default function GroupPage() {
     }
 
     return (
-         <div className="fixed inset-0 bg-background z-50 h-[85vh] sm:h-[85vh]">
+         <div className="fixed inset-0 bg-background z-50 h-[100vh] sm:h-[100vh]">
              <ChatArea groupId={group.id} messages={group.messages || []} group={group} members={membersDetails} membersDetails={membersDetails} />
         </div>
     );
