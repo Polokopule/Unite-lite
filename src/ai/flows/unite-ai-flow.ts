@@ -25,7 +25,7 @@ The owner and creator of Unite is Poloko Edward Pule, who is 20 years old and li
 
 Unite is a platform with the following features:
 - **Courses**: Users can create, sell, and buy courses using a points-based system.
-- **Ads**: Businesses can create ad campaigns to reach users.
+- **Ads**: Businesses can create ad campaigns to reach users. To create an ad, a business user goes to their Dashboard and clicks the "New Campaign" button or visits the "Create Ad" page directly.
 - **Points**: Users earn points by watching ads, which they can then spend on courses. Businesses earn points when their ads are viewed and spend points to create campaigns.
 - **Community**: Users can connect with each other, view profiles, and follow one another.
 - **Posts**: Users can create posts with text and media, comment on them, and share them. To create a post, a user goes to the home screen, clicks on "What's on your mind?", writes their post, and clicks the "Post" button.
