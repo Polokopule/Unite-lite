@@ -93,11 +93,11 @@ function MessageBubble({ message, isOwnMessage, participant, conversationId, isL
                     <Dialog>
                         <DialogTrigger asChild>
                             <div className="relative max-w-xs cursor-pointer">
-                                <Image 
-                                    src={message.fileUrl!} 
-                                    alt={message.fileName || 'Uploaded image'} 
-                                    width={400} 
-                                    height={400} 
+                                <Image
+                                    src={message.fileUrl!}
+                                    alt={message.fileName || 'Uploaded image'}
+                                    width={400}
+                                    height={400}
                                     className="object-contain rounded-lg h-auto w-full"
                                 />
                             </div>
@@ -231,7 +231,7 @@ function SharedGroupsDialog({ otherUser, currentUser, children }: { otherUser: U
 
     const sharedGroups = React.useMemo(() => {
         return groups.filter(group => 
-            group.members.includes(currentUser.uid) && group.members.includes(otherUser.uid)
+            Object.keys(group.members).includes(currentUser.uid) && Object.keys(group.members).includes(otherUser.uid)
         );
     }, [groups, currentUser, otherUser]);
 
@@ -592,8 +592,8 @@ export default function ConversationPage() {
     const isOtherUserBlocked = user.blockedUsers?.includes(otherParticipant?.uid || '');
 
     return (
-        <div className="fixed inset-0 bg-background z-50">
-             <Card className="flex flex-col h-[100vh] border-0 sm:border rounded-none sm:rounded-lg">
+        <div className="fixed inset-0 bg-background z-50 h-[75svh]">
+             <Card className="flex flex-col h-full border-0 sm:border rounded-none sm:rounded-lg">
                 <CardHeader className="flex-row items-center justify-between border-b p-4">
                     <div className="flex items-center gap-3">
                         <Button variant="ghost" size="icon" className="mr-2" onClick={() => router.back()}>
