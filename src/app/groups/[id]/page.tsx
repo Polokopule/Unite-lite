@@ -89,9 +89,25 @@ function MessageBubble({ message, isOwnMessage, groupId, memberCount }: { messag
         switch (message.type) {
             case 'image':
                 return (
-                    <div className="relative aspect-video max-w-xs rounded-lg overflow-hidden">
-                        <Image src={message.fileUrl!} alt={message.fileName || 'Uploaded image'} fill className="object-cover" />
-                    </div>
+                    <Dialog>
+                        <DialogTrigger>
+                            <div className="relative aspect-video max-w-xs rounded-lg overflow-hidden cursor-pointer">
+                                <Image src={message.fileUrl!} alt={message.fileName || 'Uploaded image'} fill className="object-cover" />
+                            </div>
+                        </DialogTrigger>
+                        <DialogContent className="max-w-3xl p-2">
+                            <div className="relative aspect-video">
+                                <Image src={message.fileUrl!} alt={message.fileName || 'Uploaded image'} fill className="object-contain" />
+                            </div>
+                            <DialogFooter>
+                                <Button asChild variant="outline">
+                                    <a href={message.fileUrl} download={message.fileName || 'image'}>
+                                        <Download className="mr-2 h-4 w-4" /> Download
+                                    </a>
+                                </Button>
+                            </DialogFooter>
+                        </DialogContent>
+                    </Dialog>
                 );
             case 'video':
                 return (
@@ -383,7 +399,7 @@ function ChatArea({ groupId, messages, group, members, membersDetails }: { group
     };
 
     return (
-        <Card className="flex flex-col h-screen border-0 sm:border rounded-none sm:rounded-lg">
+        <Card className="flex flex-col h-[100vh] border-0 sm:border rounded-none sm:rounded-lg">
             <CardHeader className="flex flex-row items-center justify-between p-4 border-b">
                 <div className="flex items-center gap-3">
                      <Button variant="ghost" size="icon" className="mr-2" onClick={() => router.back()}>
@@ -679,16 +695,8 @@ export default function GroupPage() {
     }
 
     return (
-         <div className="fixed inset-0 bg-background z-50">
+         <div className="fixed inset-0 bg-background z-50 pt-0">
              <ChatArea groupId={group.id} messages={group.messages || []} group={group} members={membersDetails} membersDetails={membersDetails} />
         </div>
     );
 }
-
-    
-
-    
-
-
-
-    

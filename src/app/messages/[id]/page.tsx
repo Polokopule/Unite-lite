@@ -10,7 +10,7 @@ import { Card, CardContent, CardHeader, CardTitle, CardFooter } from "@/componen
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { useToast } from "@/hooks/use-toast";
-import { Loader2, Send, Paperclip, ArrowLeft, File as FileIcon, Mic, Square, Smile, Copy, Pencil, Trash2, Check, CheckCheck, MoreVertical, ShieldCheck, ShieldOff, Lock, Unlock, Pin, PinOff, UserX, User } from "lucide-react";
+import { Loader2, Send, Paperclip, ArrowLeft, File as FileIcon, Mic, Square, Smile, Copy, Pencil, Trash2, Check, CheckCheck, MoreVertical, ShieldCheck, ShieldOff, Lock, Unlock, Pin, PinOff, UserX, User, Download } from "lucide-react";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import Image from "next/image";
 import Link from "next/link";
@@ -90,9 +90,25 @@ function MessageBubble({ message, isOwnMessage, participant, conversationId, isL
         switch (message.type) {
             case 'image':
                 return (
-                    <div className="relative aspect-video max-w-xs rounded-lg overflow-hidden">
-                        <Image src={message.fileUrl!} alt={message.fileName || 'Uploaded image'} fill className="object-cover" />
-                    </div>
+                     <Dialog>
+                        <DialogTrigger>
+                            <div className="relative aspect-video max-w-xs rounded-lg overflow-hidden cursor-pointer">
+                                <Image src={message.fileUrl!} alt={message.fileName || 'Uploaded image'} fill className="object-cover" />
+                            </div>
+                        </DialogTrigger>
+                        <DialogContent className="max-w-3xl p-2">
+                            <div className="relative aspect-video">
+                                <Image src={message.fileUrl!} alt={message.fileName || 'Uploaded image'} fill className="object-contain" />
+                            </div>
+                            <DialogFooter>
+                                <Button asChild variant="outline">
+                                    <a href={message.fileUrl} download={message.fileName || 'image'}>
+                                        <Download className="mr-2 h-4 w-4" /> Download
+                                    </a>
+                                </Button>
+                            </DialogFooter>
+                        </DialogContent>
+                    </Dialog>
                 );
             case 'video':
                 return <video controls src={message.fileUrl!} className="max-w-xs rounded-lg" />;
@@ -570,8 +586,8 @@ export default function ConversationPage() {
     const isOtherUserBlocked = user.blockedUsers?.includes(otherParticipant?.uid || '');
 
     return (
-        <div className="fixed inset-0 bg-background z-50">
-             <Card className="flex flex-col h-screen border-0 sm:border rounded-none sm:rounded-lg">
+        <div className="fixed inset-0 bg-background z-50 pt-0">
+             <Card className="flex flex-col h-[100vh] border-0 sm:border rounded-none sm:rounded-lg">
                 <CardHeader className="flex-row items-center justify-between border-b p-4">
                     <div className="flex items-center gap-3">
                         <Button variant="ghost" size="icon" className="mr-2" onClick={() => router.back()}>
@@ -753,11 +769,3 @@ export default function ConversationPage() {
         </div>
     );
 }
-
-    
-
-    
-
-
-
-    
