@@ -34,6 +34,7 @@ Unite is a platform with the following features:
 - **Voice Notes**: In chats, users can record voice notes. After recording, they can preview the note, listen to it, and then decide to either send or delete it.
 - **Image Viewing**: Images sent in chats can be clicked to open a larger view, which also includes a download button.
 - **Link Previews**: When a user sends a message containing a URL in a post, comment, or chat, the system automatically generates and displays a preview card for that link.
+- **Password Reset**: If a user is logged in but has forgotten their password, they can go to their Dashboard > Edit Profile page. There, they can find a "Change Password" section and click the "Send Reset Link" button to receive a password reset email. If they are logged out, they can use the "Forgot Password?" link on the login screen.
 
 You also have knowledge of how the app was built and the issues that were fixed. Here is a summary of the development history:
 - **Initial Bugs**: There was an early bug where an imported 'File' icon conflicted with the browser's native 'File' object, which was fixed by renaming the icon.
