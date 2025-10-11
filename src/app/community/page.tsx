@@ -5,9 +5,14 @@ import { useAppContext } from "@/contexts/app-context";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { User, Users } from "lucide-react";
+import { User, Users, ShieldCheck } from "lucide-react";
 import Link from "next/link";
 import { getAuth } from "firebase/auth";
+import { User as UserType } from "@/lib/types";
+
+const isVerified = (user: UserType) => {
+    return user.email === 'polokopule91@gmail.com' || (user.followers && user.followers.length >= 1000000);
+}
 
 export default function CommunityPage() {
     const { allUsers, loading } = useAppContext();
@@ -50,7 +55,10 @@ export default function CommunityPage() {
                             </Avatar>
                         </CardHeader>
                         <CardContent>
-                            <CardTitle className="text-lg">{user.name}</CardTitle>
+                            <CardTitle className="text-lg flex items-center justify-center gap-1">
+                                <span>{user.name}</span>
+                                {isVerified(user) && <ShieldCheck className="h-5 w-5 text-primary" />}
+                            </CardTitle>
                             <p className="text-sm text-muted-foreground capitalize">{user.type}</p>
                             <Button asChild variant="outline" className="mt-4 w-full">
                                 <Link href={`/profile/${user.uid}`}>

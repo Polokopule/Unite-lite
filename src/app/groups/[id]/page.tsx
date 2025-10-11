@@ -10,7 +10,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
-import { Loader2, Lock, Users, Send, Paperclip, Image as ImageIcon, Download, File as FileIcon, Music, Video, Menu, Mic, Square, Smile, Copy, Pencil, Trash2, Check, CheckCheck, Share2, MoreVertical, ArrowLeft, Info } from "lucide-react";
+import { Loader2, Lock, Users, Send, Paperclip, Image as ImageIcon, Download, File as FileIcon, Music, Video, Menu, Mic, Square, Smile, Copy, Pencil, Trash2, Check, CheckCheck, Share2, MoreVertical, ArrowLeft, Info, ShieldCheck } from "lucide-react";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import Image from "next/image";
 import Link from "next/link";
@@ -53,12 +53,17 @@ function SystemMessage({ content }: { content: string }) {
     );
 }
 
+const isVerified = (user: UserType) => {
+    return user.email === 'polokopule91@gmail.com' || (user.followers && user.followers.length >= 1000000);
+}
 
 function MessageBubble({ message, isOwnMessage, groupId, memberCount }: { message: Message; isOwnMessage: boolean; groupId: string; memberCount: number; }) {
     const { toast } = useToast();
-    const { user, editMessage, deleteMessage, reactToMessage } = useAppContext();
+    const { user, allUsers, editMessage, deleteMessage, reactToMessage } = useAppContext();
     const [isEditing, setIsEditing] = useState(false);
     const [editedContent, setEditedContent] = useState(message.content);
+    
+    const creator = allUsers.find(u => u.uid === message.creatorUid);
 
     if (message.type === 'system') {
         return <SystemMessage content={message.content} />;
@@ -231,7 +236,10 @@ function MessageBubble({ message, isOwnMessage, groupId, memberCount }: { messag
                     className={`relative max-w-md rounded-xl p-3 px-4 ${isOwnMessage ? 'bg-primary text-primary-foreground' : 'bg-muted'}`}
                 >
                     {!isOwnMessage && (
-                        <p className="text-xs font-bold pb-1">{message.creatorName}</p>
+                        <p className="text-xs font-bold pb-1 flex items-center gap-1">
+                            <span>{message.creatorName}</span>
+                            {creator && isVerified(creator) && <ShieldCheck className="h-3 w-3 text-primary" />}
+                        </p>
                     )}
                     {renderContent()}
                     <div className={`flex items-center justify-end gap-1.5 text-xs mt-1 ${isOwnMessage ? 'text-primary-foreground/70' : 'text-muted-foreground'}`}>
@@ -445,7 +453,7 @@ function ChatArea({ groupId, messages, group, members, membersDetails }: { group
 
     return (
         <div className="flex flex-col h-screen bg-background">
-            <header className="relative z-10 flex-shrink-0 flex items-center justify-between p-4 border-b bg-background">
+            <header className="relative z-50 flex-shrink-0 flex items-center justify-between p-4 border-b bg-background">
                 <div className="flex items-center gap-3">
                      <Button variant="ghost" size="icon" className="mr-2" onClick={() => router.back()}>
                         <ArrowLeft className="h-5 w-5" />
@@ -656,7 +664,10 @@ function MembersList({ members, group }: { members: UserType[], group: Group | n
                             {member.presence?.state === 'online' && <div className="absolute bottom-0 right-0 w-2.5 h-2.5 bg-green-500 rounded-full border-2 border-background" />}
                         </Avatar>
                         <div className="flex-1">
-                            <span>{member.name}</span>
+                            <span className="flex items-center gap-1">
+                                {member.name}
+                                {isVerified(member) && <ShieldCheck className="h-4 w-4 text-primary" />}
+                            </span>
                             <p className="text-xs text-muted-foreground">
                                 {getJoinMethodText(member.uid)}
                             </p>

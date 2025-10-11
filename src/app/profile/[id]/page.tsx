@@ -9,7 +9,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from "@/components/ui/card";
 import React, { useEffect, useState, useMemo } from "react";
 import { User as UserType, Post as PostType, Comment as CommentType, LinkPreview } from "@/lib/types";
-import { Loader2, UserPlus, UserMinus, MessageCircle, Heart, Send, File as FileIcon, Share2, Link2, SendToBack, Repeat } from "lucide-react";
+import { Loader2, UserPlus, UserMinus, MessageCircle, Heart, Send, File as FileIcon, Share2, Link2, SendToBack, Repeat, ShieldCheck } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import Link from "next/link";
 import { formatTimeAgo } from "@/lib/utils";
@@ -60,12 +60,17 @@ function CommentForm({ postId, parentId = null, onCommentPosted }: { postId: str
     );
 }
 
+const isVerified = (user: UserType) => {
+    return user.email === 'polokopule91@gmail.com' || (user.followers && user.followers.length >= 1000000);
+}
+
 // --- Comment ---
 function CommentItem({ comment, postId }: { comment: CommentType; postId: string }) {
-    const { user, likeComment } = useAppContext();
+    const { user, allUsers, likeComment } = useAppContext();
     const [showReplyForm, setShowReplyForm] = useState(false);
     
     const isLiked = user ? comment.likes.includes(user.uid) : false;
+    const creator = allUsers.find(u => u.uid === comment.creatorUid);
 
     const handleLike = () => {
         if (!user) return;
@@ -80,7 +85,10 @@ function CommentItem({ comment, postId }: { comment: CommentType; postId: string
             </Avatar>
             <div className="w-full">
                  <div className="bg-muted rounded-lg p-2 px-3 text-sm w-full">
-                    <Link href={`/profile/${comment.creatorUid}`} className="font-semibold hover:underline">{comment.creatorName}</Link>
+                    <div className="flex items-center gap-1">
+                        <Link href={`/profile/${comment.creatorUid}`} className="font-semibold hover:underline">{comment.creatorName}</Link>
+                        {creator && isVerified(creator) && <ShieldCheck className="h-4 w-4 text-primary" />}
+                    </div>
                     <p className="whitespace-pre-wrap break-words">{comment.content}</p>
                 </div>
                 <div className="flex items-center gap-2 text-xs text-muted-foreground px-2 pt-1">
@@ -197,6 +205,8 @@ function PostCard({ post }: { post: PostType }) {
         return allUsers.filter(user => post.likes?.includes(user.uid));
     }, [allUsers, post.likes]);
 
+    const creator = allUsers.find(u => u.uid === post.creatorUid);
+
     useEffect(() => {
         if(user) {
             setIsLiked(post.likes?.includes(user.uid));
@@ -230,7 +240,10 @@ function PostCard({ post }: { post: PostType }) {
                         </Avatar>
                     </Link>
                     <div>
-                        <Link href={`/profile/${post.creatorUid}`} className="font-semibold hover:underline">{post.creatorName}</Link>
+                        <div className="flex items-center gap-1">
+                            <Link href={`/profile/${post.creatorUid}`} className="font-semibold hover:underline">{post.creatorName}</Link>
+                            {creator && isVerified(creator) && <ShieldCheck className="h-4 w-4 text-primary" />}
+                        </div>
                         <p className="text-xs text-muted-foreground">
                             {formatTimeAgo(new Date(post.timestamp).getTime())}
                         </p>
@@ -381,7 +394,10 @@ export default function ProfilePage() {
                             {getInitials(profileUser.name)}
                         </AvatarFallback>
                     </Avatar>
-                    <CardTitle className="text-3xl font-headline">{profileUser.name}</CardTitle>
+                    <CardTitle className="text-3xl font-headline flex items-center gap-2">
+                        <span>{profileUser.name}</span>
+                        {isVerified(profileUser) && <ShieldCheck className="h-7 w-7 text-primary" />}
+                    </CardTitle>
                     <CardDescription>{profileUser.email}</CardDescription>
                 </CardHeader>
                 <CardContent>

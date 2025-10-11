@@ -9,7 +9,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from "@/components/ui/card";
 import React, { useEffect, useState, useMemo } from "react";
 import { Post as PostType, Comment as CommentType, LinkPreview } from "@/lib/types";
-import { Loader2, MessageCircle, Heart, Send, File as FileIcon, Share2, Link2, SendToBack, Repeat, Trash, Pencil } from "lucide-react";
+import { Loader2, MessageCircle, Heart, Send, File as FileIcon, Share2, Link2, SendToBack, Repeat, Trash, Pencil, ShieldCheck } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import Link from "next/link";
 import { formatTimeAgo } from "@/lib/utils";
@@ -260,10 +260,15 @@ function LinkPreviewCard({ preview }: { preview: LinkPreview }) {
     )
 }
 
+const isVerified = (user: UserType) => {
+    return user.email === 'polokopule91@gmail.com' || (user.followers && user.followers.length >= 1000000);
+}
+
 function CommentItem({ comment, postId }: { comment: CommentType; postId: string }) {
-    const { user, likeComment } = useAppContext();
+    const { user, allUsers, likeComment } = useAppContext();
     const [showReplyForm, setShowReplyForm] = useState(false);
     
+    const creator = allUsers.find(u => u.uid === comment.creatorUid);
     const isLiked = user ? comment.likes.includes(user.uid) : false;
 
     const handleLike = () => {
@@ -299,7 +304,10 @@ function CommentItem({ comment, postId }: { comment: CommentType; postId: string
             </Avatar>
             <div className="w-full">
                  <div className="bg-muted rounded-lg p-2 px-3 text-sm w-full">
-                    <Link href={`/profile/${comment.creatorUid}`} className="font-semibold hover:underline">{comment.creatorName}</Link>
+                    <div className="flex items-center gap-1">
+                        <Link href={`/profile/${comment.creatorUid}`} className="font-semibold hover:underline">{comment.creatorName}</Link>
+                        {creator && isVerified(creator) && <ShieldCheck className="h-4 w-4 text-primary" />}
+                    </div>
                     <p className="whitespace-pre-wrap break-words">{renderContentWithMentions(comment.content)}</p>
                     {comment.linkPreview && <LinkPreviewCard preview={comment.linkPreview} />}
                 </div>
@@ -397,6 +405,8 @@ function PostCard({ post }: { post: PostType }) {
         return allUsers.filter(user => post.likes?.includes(user.uid));
     }, [allUsers, post.likes]);
 
+    const creator = allUsers.find(u => u.uid === post.creatorUid);
+
     useEffect(() => {
         if(user) {
             setIsLiked(post.likes?.includes(user.uid));
@@ -480,7 +490,10 @@ function PostCard({ post }: { post: PostType }) {
                             </Avatar>
                         </Link>
                         <div>
-                            <Link href={`/profile/${post.creatorUid}`} className="font-semibold hover:underline">{post.creatorName}</Link>
+                            <div className="flex items-center gap-1">
+                                <Link href={`/profile/${post.creatorUid}`} className="font-semibold hover:underline">{post.creatorName}</Link>
+                                {creator && isVerified(creator) && <ShieldCheck className="h-4 w-4 text-primary" />}
+                            </div>
                             <p className="text-xs text-muted-foreground">
                                 {formatTimeAgo(new Date(post.timestamp).getTime())}
                             </p>
