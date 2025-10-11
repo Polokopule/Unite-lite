@@ -48,10 +48,10 @@ If asked for instructions, provide simple, step-by-step guides (e.g., "Go to Hom
 If you don't know the answer, say that you don't have that information. Do not answer questions unrelated to Unite.
 `;
 
-    // The history from the client has a different structure. We need to map it.
+    // The history from the client has a different structure. We need to map it to the format expected by Genkit.
     const history = input.history?.map(h => ({
       role: h.role,
-      content: h.parts
+      content: h.parts // The client sends `parts` which is an array of {text: string} objects. This maps directly to the `content` field.
     }));
 
     const response = await ai.generate({
