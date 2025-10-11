@@ -128,6 +128,8 @@ export function AppContextProvider({ children }: { children: React.ReactNode }) 
                 const fullUserData: User = {
                     ...userData,
                     photoURL: currentFirebaseUser.photoURL || userData.photoURL || '',
+                    followers: userData.followers ? Object.keys(userData.followers) : [],
+                    following: userData.following ? Object.keys(userData.following) : [],
                     blockedUsers: userData.blockedUsers ? Object.keys(userData.blockedUsers) : [],
                     aiChatHistory: userData.aiChatHistory ? Object.values(userData.aiChatHistory) : [],
                 };
@@ -170,7 +172,13 @@ export function AppContextProvider({ children }: { children: React.ReactNode }) 
 
     const usersListener = onValue(usersRef, (snapshot) => {
         const data = snapshot.val();
-        const userList: User[] = data ? Object.keys(data).map(uid => ({ ...data[uid], uid, blockedUsers: data[uid].blockedUsers ? Object.keys(data[uid].blockedUsers) : [] })) : [];
+        const userList: User[] = data ? Object.keys(data).map(uid => ({ 
+            ...data[uid], 
+            uid, 
+            followers: data[uid].followers ? Object.keys(data[uid].followers) : [],
+            following: data[uid].following ? Object.keys(data[uid].following) : [],
+            blockedUsers: data[uid].blockedUsers ? Object.keys(data[uid].blockedUsers) : [] 
+        })) : [];
         setAllUsers(userList);
     });
     
@@ -1475,3 +1483,4 @@ export function useAppContext() {
     
 
     
+
