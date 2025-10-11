@@ -63,6 +63,8 @@ If you don't know the answer, say that you don't have that information. Do not a
       system: systemPrompt,
     });
     
-    return response.text || "I'm sorry, I couldn't come up with a response.";
+    return response.text;
   }
 );
+
+    

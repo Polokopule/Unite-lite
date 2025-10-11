@@ -444,8 +444,8 @@ function ChatArea({ groupId, messages, group, members, membersDetails }: { group
     };
 
     return (
-        <div className="flex flex-col h-screen">
-            <header className="relative z-[10000] flex-shrink-0 flex items-center justify-between p-4 border-b bg-background">
+        <div className="flex flex-col h-screen bg-background">
+            <header className="relative z-10 flex-shrink-0 flex items-center justify-between p-4 border-b bg-background">
                 <div className="flex items-center gap-3">
                      <Button variant="ghost" size="icon" className="mr-2" onClick={() => router.back()}>
                         <ArrowLeft className="h-5 w-5" />
@@ -764,6 +764,8 @@ export default function GroupPage() {
         </div>
     );
 }
+
+    
 
     
 

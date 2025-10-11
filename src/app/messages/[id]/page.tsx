@@ -614,196 +614,196 @@ export default function ConversationPage() {
     const isOtherUserBlocked = user.blockedUsers?.includes(otherParticipant?.uid || '');
 
     return (
-        <div className="h-screen bg-background">
-            <div className="flex flex-col h-screen">
-                <header className="relative z-[10000] flex-shrink-0 flex items-center justify-between border-b p-4 bg-background">
-                    <div className="flex items-center gap-3">
-                        <Button variant="ghost" size="icon" className="mr-2" onClick={() => router.back()}>
-                            <ArrowLeft className="h-5 w-5" />
-                        </Button>
-                        {otherParticipant && (
-                            <Link href={`/profile/${otherParticipant.uid}`} className="flex items-center gap-3">
-                                <Avatar>
-                                    <AvatarImage src={otherParticipant.photoURL} alt={otherParticipant.name} />
-                                    <AvatarFallback>{otherParticipant.name?.substring(0,2)}</AvatarFallback>
-                                </Avatar>
-                                <div>
-                                    <h2 className="font-semibold leading-none">{otherParticipant.name}</h2>
-                                    <p className="text-xs text-muted-foreground">
-                                        {isTyping ? <span className="italic">typing...</span> : 
-                                        otherParticipant.presence?.state === 'online' ? 'Online' : 
-                                        otherParticipant.presence?.lastChanged ? `Last seen ${formatTimeAgo(otherParticipant.presence.lastChanged)}` : 'Offline'
-                                        }
-                                    </p>
-                                </div>
-                            </Link>
-                        )}
-                    </div>
+        <div className="flex flex-col h-screen bg-background">
+            <header className="relative z-10 flex-shrink-0 flex items-center justify-between border-b p-4 bg-background">
+                <div className="flex items-center gap-3">
+                    <Button variant="ghost" size="icon" className="mr-2" onClick={() => router.back()}>
+                        <ArrowLeft className="h-5 w-5" />
+                    </Button>
                     {otherParticipant && (
-                        <DropdownMenu>
-                            <DropdownMenuTrigger asChild>
-                                <Button variant="ghost" size="icon">
-                                    <MoreVertical className="h-5 w-5" />
-                                </Button>
-                            </DropdownMenuTrigger>
-                            <DropdownMenuContent align="end">
-                                <DropdownMenuItem asChild>
-                                    <Link href={`/profile/${otherParticipant.uid}`}>
-                                        <User className="mr-2 h-4 w-4" /> View Profile
-                                    </Link>
-                                </DropdownMenuItem>
-                                <SharedGroupsDialog otherUser={otherParticipant} currentUser={user}>
-                                    <DropdownMenuItem onSelect={(e) => e.preventDefault()}>
-                                        <FileIcon className="mr-2 h-4 w-4" /> Shared Groups
-                                    </DropdownMenuItem>
-                                </SharedGroupsDialog>
-                                <DropdownMenuSeparator />
-                                <DropdownMenuItem onClick={handlePinToggle}>
-                                    {isPinned ? <PinOff className="mr-2 h-4 w-4" /> : <Pin className="mr-2 h-4 w-4" />}
-                                    {isPinned ? 'Unpin from Top' : 'Pin to Top'}
-                                </DropdownMenuItem>
-                                <LockChatDialog conversationId={conversation.id} isLocked={isLocked}>
-                                     <DropdownMenuItem onSelect={(e) => e.preventDefault()}>
-                                        {isLocked ? <Unlock className="mr-2 h-4 w-4" /> : <Lock className="mr-2 h-4 w-4" />}
-                                        {isLocked ? 'Unlock Chat' : 'Lock Chat'}
-                                    </DropdownMenuItem>
-                                </LockChatDialog>
-                                <DropdownMenuSeparator />
-                                <DropdownMenuItem onClick={handleToggleBlock} className="text-destructive">
-                                    {isOtherUserBlocked ? <UserX className="mr-2 h-4 w-4" /> : <UserX className="mr-2 h-4 w-4" />}
-                                    {isOtherUserBlocked ? 'Unblock' : 'Block'}
-                                </DropdownMenuItem>
-                                 <AlertDialog>
-                                    <AlertDialogTrigger asChild>
-                                        <DropdownMenuItem className="text-destructive" onSelect={(e) => e.preventDefault()}>
-                                            <Trash2 className="mr-2 h-4 w-4" /> Delete Chat
-                                        </DropdownMenuItem>
-                                    </AlertDialogTrigger>
-                                    <AlertDialogContent>
-                                        <AlertDialogHeader>
-                                            <AlertDialogTitle>Delete Conversation?</AlertDialogTitle>
-                                            <AlertDialogDescription>
-                                                This will only delete the conversation for you. The other person will still see the messages. This action cannot be undone.
-                                            </AlertDialogDescription>
-                                        </AlertDialogHeader>
-                                        <AlertDialogFooter>
-                                            <AlertDialogCancel>Cancel</AlertDialogCancel>
-                                            <AlertDialogAction onClick={handleDeleteConversation}>Delete</AlertDialogAction>
-                                        </AlertDialogFooter>
-                                    </AlertDialogContent>
-                                </AlertDialog>
-                            </DropdownMenuContent>
-                        </DropdownMenu>
-                    )}
-                </header>
-
-                {isLocked ? (
-                    <div className="flex flex-col flex-1 items-center justify-center gap-4 p-4 text-center">
-                        <Lock className="h-12 w-12 text-muted-foreground" />
-                        <h2 className="text-xl font-semibold">This chat is locked</h2>
-                        <p className="text-muted-foreground">Enter your PIN to unlock the conversation.</p>
-                        <div className="flex gap-2">
-                             <Input 
-                                type="password"
-                                maxLength={4}
-                                value={pinInput}
-                                onChange={(e) => setPinInput(e.target.value)}
-                                placeholder="PIN"
-                             />
-                             <Button onClick={handleUnlock}>Unlock</Button>
-                        </div>
-                    </div>
-                ) : (
-                    <>
-                        <ScrollArea className="flex-1 bg-muted/20" viewportRef={scrollViewportRef}>
-                            <div className="p-4 space-y-6">
-                                {conversation.messages && conversation.messages.length > 0 ? (
-                                    conversation.messages.sort((a,b) => a.timestamp - b.timestamp).map((msg, idx) => (
-                                        <MessageBubble
-                                            key={msg.id}
-                                            message={msg}
-                                            isOwnMessage={user?.uid === msg.creatorUid}
-                                            participant={conversation.participants[msg.creatorUid]}
-                                            conversationId={conversation.id}
-                                            isLastMessage={idx === conversation.messages!.length - 1}
-                                            otherParticipant={otherParticipant}
-                                        />
-                                    ))
-                                ) : (
-                                    <div className="text-center text-muted-foreground h-full flex items-center justify-center">
-                                        <p>This is the beginning of your conversation.</p>
-                                    </div>
-                                )}
+                        <Link href={`/profile/${otherParticipant.uid}`} className="flex items-center gap-3">
+                            <Avatar>
+                                <AvatarImage src={otherParticipant.photoURL} alt={otherParticipant.name} />
+                                <AvatarFallback>{otherParticipant.name?.substring(0,2)}</AvatarFallback>
+                            </Avatar>
+                            <div>
+                                <h2 className="font-semibold leading-none">{otherParticipant.name}</h2>
+                                <p className="text-xs text-muted-foreground">
+                                    {isTyping ? <span className="italic">typing...</span> : 
+                                    otherParticipant.presence?.state === 'online' ? 'Online' : 
+                                    otherParticipant.presence?.lastChanged ? `Last seen ${formatTimeAgo(otherParticipant.presence.lastChanged)}` : 'Offline'
+                                    }
+                                </p>
                             </div>
-                        </ScrollArea>
-                        <footer className="flex-shrink-0 border-t p-4 bg-background">
-                           {amIBlocked || isOtherUserBlocked ? (
-                                <div className="w-full text-center text-sm text-muted-foreground p-2 bg-muted rounded-md">
-                                    {isOtherUserBlocked ? `You have blocked ${otherParticipant?.name}. You cannot send messages.` : `You have been blocked by ${otherParticipant?.name}.`}
-                                </div>
-                           ) : (
-                                <div className="flex items-center gap-2 w-full">
-                                    {recordingState === 'previewing' && recordedAudio ? (
-                                        <>
-                                            <Button variant="destructive" size="icon" onClick={handleDeleteAudio} disabled={isSending}>
-                                                <Trash2 className="h-4 w-4" />
-                                            </Button>
-                                            <audio controls src={recordedAudio.url} className="flex-1" />
-                                        </>
-                                    ) : recordingState === 'recording' ? (
-                                        <div className="flex-1 flex items-center gap-2 bg-muted p-2 rounded-lg">
-                                            <Mic className="h-5 w-5 text-destructive animate-pulse" />
-                                            <p className="text-sm text-muted-foreground">Recording...</p>
-                                        </div>
-                                    ) : (
-                                        <>
-                                            <Textarea
-                                                placeholder="Type a message..."
-                                                value={text}
-                                                onKeyDown={(e) => {
-                                                  if (e.key === 'Enter' && !e.shiftKey) {
-                                                    e.preventDefault();
-                                                    handleSendText();
-                                                  }
-                                                }}
-                                                onChange={(e) => setText(e.target.value)}
-                                                disabled={isSending}
-                                                rows={1}
-                                                className="max-h-24 resize-none"
-                                            />
-                                            <input
-                                                type="file"
-                                                ref={fileInputRef}
-                                                onChange={handleFileChange}
-                                                accept="image/*,video/*,audio/*,application/pdf,.doc,.docx,.xls,.xlsx,.ppt,.pptx"
-                                                className="hidden"
-                                            />
-                                            <Button size="icon" variant="outline" onClick={() => fileInputRef.current?.click()} disabled={isSending}>
-                                                <Paperclip className="h-4 w-4" />
-                                            </Button>
-                                        </>
-                                    )}
-                                    <Button
-                                        size="icon"
-                                        variant={recordingState === 'recording' ? "destructive" : "default"}
-                                        onClick={handlePrimaryAction}
-                                        disabled={isSending}
-                                    >
-                                        {text.trim() && recordingState === 'idle' ? <Send className="h-4 w-4" />
-                                        : recordingState === 'recording' ? <Square className="h-4 w-4" />
-                                        : recordingState === 'previewing' ? <Send className="h-4 w-4" />
-                                        : <Mic className="h-4 w-4" />
-                                        }
-                                    </Button>
-                                </div>
-                           )}
-                        </footer>
-                    </>
+                        </Link>
+                    )}
+                </div>
+                {otherParticipant && (
+                    <DropdownMenu>
+                        <DropdownMenuTrigger asChild>
+                            <Button variant="ghost" size="icon">
+                                <MoreVertical className="h-5 w-5" />
+                            </Button>
+                        </DropdownMenuTrigger>
+                        <DropdownMenuContent align="end">
+                            <DropdownMenuItem asChild>
+                                <Link href={`/profile/${otherParticipant.uid}`}>
+                                    <User className="mr-2 h-4 w-4" /> View Profile
+                                </Link>
+                            </DropdownMenuItem>
+                            <SharedGroupsDialog otherUser={otherParticipant} currentUser={user}>
+                                <DropdownMenuItem onSelect={(e) => e.preventDefault()}>
+                                    <FileIcon className="mr-2 h-4 w-4" /> Shared Groups
+                                </DropdownMenuItem>
+                            </SharedGroupsDialog>
+                            <DropdownMenuSeparator />
+                            <DropdownMenuItem onClick={handlePinToggle}>
+                                {isPinned ? <PinOff className="mr-2 h-4 w-4" /> : <Pin className="mr-2 h-4 w-4" />}
+                                {isPinned ? 'Unpin from Top' : 'Pin to Top'}
+                            </DropdownMenuItem>
+                            <LockChatDialog conversationId={conversation.id} isLocked={isLocked}>
+                                 <DropdownMenuItem onSelect={(e) => e.preventDefault()}>
+                                    {isLocked ? <Unlock className="mr-2 h-4 w-4" /> : <Lock className="mr-2 h-4 w-4" />}
+                                    {isLocked ? 'Unlock Chat' : 'Lock Chat'}
+                                </DropdownMenuItem>
+                            </LockChatDialog>
+                            <DropdownMenuSeparator />
+                            <DropdownMenuItem onClick={handleToggleBlock} className="text-destructive">
+                                {isOtherUserBlocked ? <UserX className="mr-2 h-4 w-4" /> : <UserX className="mr-2 h-4 w-4" />}
+                                {isOtherUserBlocked ? 'Unblock' : 'Block'}
+                            </DropdownMenuItem>
+                             <AlertDialog>
+                                <AlertDialogTrigger asChild>
+                                    <DropdownMenuItem className="text-destructive" onSelect={(e) => e.preventDefault()}>
+                                        <Trash2 className="mr-2 h-4 w-4" /> Delete Chat
+                                    </DropdownMenuItem>
+                                </AlertDialogTrigger>
+                                <AlertDialogContent>
+                                    <AlertDialogHeader>
+                                        <AlertDialogTitle>Delete Conversation?</AlertDialogTitle>
+                                        <AlertDialogDescription>
+                                            This will only delete the conversation for you. The other person will still see the messages. This action cannot be undone.
+                                        </AlertDialogDescription>
+                                    </AlertDialogHeader>
+                                    <AlertDialogFooter>
+                                        <AlertDialogCancel>Cancel</AlertDialogCancel>
+                                        <AlertDialogAction onClick={handleDeleteConversation}>Delete</AlertDialogAction>
+                                    </AlertDialogFooter>
+                                </AlertDialogContent>
+                            </AlertDialog>
+                        </DropdownMenuContent>
+                    </DropdownMenu>
                 )}
-            </div>
+            </header>
+
+            {isLocked ? (
+                <div className="flex flex-col flex-1 items-center justify-center gap-4 p-4 text-center">
+                    <Lock className="h-12 w-12 text-muted-foreground" />
+                    <h2 className="text-xl font-semibold">This chat is locked</h2>
+                    <p className="text-muted-foreground">Enter your PIN to unlock the conversation.</p>
+                    <div className="flex gap-2">
+                         <Input 
+                            type="password"
+                            maxLength={4}
+                            value={pinInput}
+                            onChange={(e) => setPinInput(e.target.value)}
+                            placeholder="PIN"
+                         />
+                         <Button onClick={handleUnlock}>Unlock</Button>
+                    </div>
+                </div>
+            ) : (
+                <>
+                    <ScrollArea className="flex-1 bg-muted/20" viewportRef={scrollViewportRef}>
+                        <div className="p-4 space-y-6">
+                            {conversation.messages && conversation.messages.length > 0 ? (
+                                conversation.messages.sort((a,b) => a.timestamp - b.timestamp).map((msg, idx) => (
+                                    <MessageBubble
+                                        key={msg.id}
+                                        message={msg}
+                                        isOwnMessage={user?.uid === msg.creatorUid}
+                                        participant={conversation.participants[msg.creatorUid]}
+                                        conversationId={conversation.id}
+                                        isLastMessage={idx === conversation.messages!.length - 1}
+                                        otherParticipant={otherParticipant}
+                                    />
+                                ))
+                            ) : (
+                                <div className="text-center text-muted-foreground h-full flex items-center justify-center">
+                                    <p>This is the beginning of your conversation.</p>
+                                </div>
+                            )}
+                        </div>
+                    </ScrollArea>
+                    <footer className="flex-shrink-0 border-t p-4 bg-background">
+                       {amIBlocked || isOtherUserBlocked ? (
+                            <div className="w-full text-center text-sm text-muted-foreground p-2 bg-muted rounded-md">
+                                {isOtherUserBlocked ? `You have blocked ${otherParticipant?.name}. You cannot send messages.` : `You have been blocked by ${otherParticipant?.name}.`}
+                            </div>
+                       ) : (
+                            <div className="flex items-center gap-2 w-full">
+                                {recordingState === 'previewing' && recordedAudio ? (
+                                    <>
+                                        <Button variant="destructive" size="icon" onClick={handleDeleteAudio} disabled={isSending}>
+                                            <Trash2 className="h-4 w-4" />
+                                        </Button>
+                                        <audio controls src={recordedAudio.url} className="flex-1" />
+                                    </>
+                                ) : recordingState === 'recording' ? (
+                                    <div className="flex-1 flex items-center gap-2 bg-muted p-2 rounded-lg">
+                                        <Mic className="h-5 w-5 text-destructive animate-pulse" />
+                                        <p className="text-sm text-muted-foreground">Recording...</p>
+                                    </div>
+                                ) : (
+                                    <>
+                                        <Textarea
+                                            placeholder="Type a message..."
+                                            value={text}
+                                            onKeyDown={(e) => {
+                                              if (e.key === 'Enter' && !e.shiftKey) {
+                                                e.preventDefault();
+                                                handleSendText();
+                                              }
+                                            }}
+                                            onChange={(e) => setText(e.target.value)}
+                                            disabled={isSending}
+                                            rows={1}
+                                            className="max-h-24 resize-none"
+                                        />
+                                        <input
+                                            type="file"
+                                            ref={fileInputRef}
+                                            onChange={handleFileChange}
+                                            accept="image/*,video/*,audio/*,application/pdf,.doc,.docx,.xls,.xlsx,.ppt,.pptx"
+                                            className="hidden"
+                                        />
+                                        <Button size="icon" variant="outline" onClick={() => fileInputRef.current?.click()} disabled={isSending}>
+                                            <Paperclip className="h-4 w-4" />
+                                        </Button>
+                                    </>
+                                )}
+                                <Button
+                                    size="icon"
+                                    variant={recordingState === 'recording' ? "destructive" : "default"}
+                                    onClick={handlePrimaryAction}
+                                    disabled={isSending}
+                                >
+                                    {text.trim() && recordingState === 'idle' ? <Send className="h-4 w-4" />
+                                    : recordingState === 'recording' ? <Square className="h-4 w-4" />
+                                    : recordingState === 'previewing' ? <Send className="h-4 w-4" />
+                                    : <Mic className="h-4 w-4" />
+                                    }
+                                </Button>
+                            </div>
+                       )}
+                    </footer>
+                </>
+            )}
         </div>
     );
 }
+
+    
 
     
 
