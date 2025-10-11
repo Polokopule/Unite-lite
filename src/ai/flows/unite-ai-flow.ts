@@ -66,5 +66,3 @@ If you don't know the answer, say that you don't have that information. Do not a
     return response.text;
   }
 );
-
-    
