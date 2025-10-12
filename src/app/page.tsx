@@ -19,7 +19,7 @@ import { useRouter, usePathname } from "next/navigation";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Input } from "@/components/ui/input";
 import { PostCard } from "@/components/post-card";
-import { isVerified } from "@/lib/utils";
+import { isVerified, formatTimeAgo } from "@/lib/utils";
 
 
 function AdCard({ ad }: { ad: Ad }) {
