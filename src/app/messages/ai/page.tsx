@@ -6,7 +6,7 @@ import { Button } from '@/components/ui/button';
 import { Bot, Loader2, Send, ArrowLeft } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle, CardFooter } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
-import { uniteAIFlow } from '@/ai/flows/unite-ai-flow';
+import { askUniteAI } from '@/ai/flows/unite-ai-flow';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { useAppContext } from '@/contexts/app-context';
 import { ScrollArea } from '@/components/ui/scroll-area';
@@ -51,7 +51,7 @@ export default function AiChatPage() {
     setIsLoading(true);
 
     try {
-      const response = await uniteAIFlow({
+      const response = await askUniteAI({
         history: newHistory,
         question: question,
       });
@@ -170,9 +170,3 @@ export default function AiChatPage() {
     </div>
   );
 }
-
-    
-
-    
-
-    

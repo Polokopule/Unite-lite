@@ -1,8 +1,7 @@
 // This is a placeholder file. The logic will be handled by a Genkit flow.
 'use server';
-import { generateLinkPreviewFlow } from '@/ai/flows/generate-link-preview';
-import { LinkPreview } from '@/lib/types';
+import { generateLinkPreview, LinkPreviewInput, LinkPreviewOutput } from '@/ai/flows/generate-link-preview';
 
-export async function generateLinkPreview(input: { url: string }): Promise<LinkPreview> {
-  return await generateLinkPreviewFlow(input);
+export async function generateLinkPreviewService(input: LinkPreviewInput): Promise<LinkPreviewOutput> {
+  return await generateLinkPreview(input);
 }

@@ -1,9 +1,14 @@
 
 'use server';
+/**
+ * @fileOverview A chatbot AI flow for the Unite platform.
+ *
+ * - askUniteAI - A function that handles the chat process.
+ * - UniteAIInput - The input type for the askUniteAI function.
+ */
 
 import { ai } from '@/ai/genkit';
 import { z } from 'zod';
-import { AIChatMessage } from '@/lib/types';
 
 const UniteAIInputSchema = z.object({
   history: z.array(z.object({
@@ -12,6 +17,8 @@ const UniteAIInputSchema = z.object({
   })),
   question: z.string(),
 });
+export type UniteAIInput = z.infer<typeof UniteAIInputSchema>;
+
 
 const uniteAIPrompt = ai.definePrompt({
   name: 'uniteAIPrompt',
@@ -32,7 +39,7 @@ const uniteAIPrompt = ai.definePrompt({
   `,
 });
 
-export const uniteAIFlow = ai.defineFlow(
+const uniteAIFlow = ai.defineFlow(
   {
     name: 'uniteAIFlow',
     inputSchema: UniteAIInputSchema,
@@ -45,3 +52,7 @@ export const uniteAIFlow = ai.defineFlow(
     return output!;
   }
 );
+
+export async function askUniteAI(input: UniteAIInput): Promise<string> {
+    return uniteAIFlow(input);
+}

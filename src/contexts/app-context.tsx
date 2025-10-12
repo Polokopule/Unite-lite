@@ -9,7 +9,7 @@ import { db, auth, storage } from "@/lib/firebase";
 import { ref, onValue, set, get, update, remove, push, serverTimestamp, query, orderByChild, equalTo } from "firebase/database";
 import { onAuthStateChanged, signOut, User as FirebaseUser, updateProfile as updateFirebaseProfile } from "firebase/auth";
 import { ref as storageRef, uploadBytes, getDownloadURL } from "firebase/storage";
-import { generateLinkPreviewFlow } from '@/ai/flows/generate-link-preview';
+import { generateLinkPreview } from '@/ai/flows/generate-link-preview';
 
 type AddCourseData = {
     title: string;
@@ -652,7 +652,7 @@ export function AppContextProvider({ children }: { children: React.ReactNode }) 
         // Then, asynchronously generate and update the link preview if a URL exists
         const urlMatch = content.match(urlRegex);
         if (urlMatch) {
-            generateLinkPreviewFlow({ url: urlMatch[0] }).then(preview => {
+            generateLinkPreview({ url: urlMatch[0] }).then(preview => {
                 if (preview.title) {
                     update(newPostRef, { linkPreview: preview });
                 }
@@ -773,7 +773,7 @@ export function AppContextProvider({ children }: { children: React.ReactNode }) 
 
             const urlMatch = content.match(urlRegex);
             if (urlMatch) {
-                generateLinkPreviewFlow({ url: urlMatch[0] }).then(preview => {
+                generateLinkPreview({ url: urlMatch[0] }).then(preview => {
                     if(preview.title) {
                         update(newCommentRef, { linkPreview: preview });
                     }
@@ -1023,7 +1023,7 @@ export function AppContextProvider({ children }: { children: React.ReactNode }) 
         if (messageData.type !== 'system' && messageData.content) {
             const urlMatch = messageData.content.match(urlRegex);
             if (urlMatch) {
-                generateLinkPreviewFlow({ url: urlMatch[0] }).then(preview => {
+                generateLinkPreview({ url: urlMatch[0] }).then(preview => {
                     if (preview.title) {
                         update(newMessageRef, { linkPreview: preview });
                     }
@@ -1066,7 +1066,7 @@ export function AppContextProvider({ children }: { children: React.ReactNode }) 
 
                 const urlMatch = newContent.match(urlRegex);
                 if (urlMatch) {
-                    generateLinkPreviewFlow({ url: urlMatch[0] }).then(preview => {
+                    generateLinkPreview({ url: urlMatch[0] }).then(preview => {
                         update(messageRef, { linkPreview: preview.title ? preview : null });
                     }).catch(e => console.error("Link preview update failed.", e));
                 } else {
@@ -1209,7 +1209,7 @@ export function AppContextProvider({ children }: { children: React.ReactNode }) 
 
         const urlMatch = messageData.content?.match(urlRegex);
         if (urlMatch) {
-             generateLinkPreviewFlow({ url: urlMatch[0] }).then(preview => {
+             generateLinkPreview({ url: urlMatch[0] }).then(preview => {
                 if (preview.title) {
                     update(newMessageRef, { linkPreview: preview });
                 }
@@ -1254,7 +1254,7 @@ export function AppContextProvider({ children }: { children: React.ReactNode }) 
 
                 const urlMatch = newContent.match(urlRegex);
                 if (urlMatch) {
-                     generateLinkPreviewFlow({ url: urlMatch[0] }).then(preview => {
+                     generateLinkPreview({ url: urlMatch[0] }).then(preview => {
                         update(messageRef, { linkPreview: preview.title ? preview : null });
                     }).catch(e => console.error("Link preview update failed.", e));
                 } else {
@@ -1479,8 +1479,3 @@ export function useAppContext() {
   }
   return context;
 }
-
-    
-
-    
-

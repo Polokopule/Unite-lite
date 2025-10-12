@@ -1,13 +1,21 @@
 
 'use server';
+/**
+ * @fileOverview A link preview generation AI flow.
+ *
+ * - generateLinkPreview - A function that handles generating a link preview.
+ * - LinkPreviewInput - The input type for the generateLinkPreview function.
+ * - LinkPreviewOutput - The return type for the generateLinkPreview function.
+ */
 
 import { ai } from '@/ai/genkit';
 import { z } from 'zod';
-import { LinkPreview } from '@/lib/types';
 
 const LinkPreviewInputSchema = z.object({
   url: z.string().url(),
 });
+export type LinkPreviewInput = z.infer<typeof LinkPreviewInputSchema>;
+
 
 const LinkPreviewOutputSchema = z.object({
   url: z.string().url().describe('The original URL.'),
@@ -15,6 +23,8 @@ const LinkPreviewOutputSchema = z.object({
   description: z.string().optional().describe('A brief description of the page content.'),
   imageUrl: z.string().url().optional().describe('A relevant image URL from the page.'),
 });
+export type LinkPreviewOutput = z.infer<typeof LinkPreviewOutputSchema>;
+
 
 const linkPreviewPrompt = ai.definePrompt({
   name: 'linkPreviewPrompt',
@@ -29,7 +39,7 @@ const linkPreviewPrompt = ai.definePrompt({
   `,
 });
 
-export const generateLinkPreviewFlow = ai.defineFlow(
+const generateLinkPreviewFlow = ai.defineFlow(
   {
     name: 'generateLinkPreviewFlow',
     inputSchema: LinkPreviewInputSchema,
@@ -40,3 +50,7 @@ export const generateLinkPreviewFlow = ai.defineFlow(
     return output!;
   }
 );
+
+export async function generateLinkPreview(input: LinkPreviewInput): Promise<LinkPreviewOutput> {
+    return generateLinkPreviewFlow(input);
+}
