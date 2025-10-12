@@ -5,7 +5,7 @@
 import { useAppContext } from "@/contexts/app-context";
 import { Ad, Post as PostType, FeedItem, Course, Group, User as UserType, Notification, Conversation } from "@/lib/types";
 import { Button } from "@/components/ui/button";
-import { Loader2, ShoppingBag, CheckCircle, PlusCircle, Home as HomeIcon, Bell, Users, MessageSquare, User as UserIconLucide, Search, Wallet, Bot, ShieldCheck as ShieldCheck } from "lucide-react";
+import { Loader2, ShoppingBag, CheckCircle, PlusCircle, Home as HomeIcon, Bell, Users, MessageSquare, User as UserIconLucide, Search, Bot, Wallet, Lock, ShieldCheck as ShieldCheck } from "lucide-react";
 import Link from "next/link";
 import { useMemo, useState, useEffect } from "react";
 import { useToast } from "@/hooks/use-toast";
@@ -231,7 +231,7 @@ function GroupsContent() {
                             <CardContent className="flex-grow">
                                 <div className="flex items-center text-sm text-muted-foreground gap-2">
                                     <Users className="h-4 w-4" />
-                                    <span>{group.members?.length || 0} members</span>
+                                    <span>{Object.keys(group.members || {}).length} members</span>
                                 </div>
                             </CardContent>
                             <CardFooter>
