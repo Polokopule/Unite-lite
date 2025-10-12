@@ -5,7 +5,7 @@
 import { useAppContext } from "@/contexts/app-context";
 import { Ad, Post as PostType, FeedItem, Course, Group, User as UserType, Notification, Conversation } from "@/lib/types";
 import { Button } from "@/components/ui/button";
-import { Loader2, ShoppingBag, CheckCircle, PlusCircle, Home as HomeIcon, Bell, Users, MessageSquare, User as UserIconLucide, Search } from "lucide-react";
+import { Loader2, ShoppingBag, CheckCircle, PlusCircle, Home as HomeIcon, Bell, Users, MessageSquare, User as UserIconLucide, Search, Wallet, Bot, ShieldCheck as ShieldCheck } from "lucide-react";
 import Link from "next/link";
 import { useMemo, useState, useEffect } from "react";
 import { useToast } from "@/hooks/use-toast";
