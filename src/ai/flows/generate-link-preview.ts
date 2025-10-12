@@ -4,7 +4,7 @@
  * @fileOverview A Genkit flow to generate link previews.
  */
 
-import { ai } from '@/ai/genkit';
+import { ai, geminiPro } from '@/ai/genkit';
 import { z } from 'genkit';
 import { LinkPreview } from '@/lib/types';
 
@@ -43,7 +43,7 @@ export const generateLinkPreviewFlow = ai.defineFlow(
     try {
         const llmResponse = await ai.generate({
           prompt: prompt,
-          model: 'googleai/gemini-pro',
+          model: geminiPro,
           config: {
             temperature: 0,
           },

@@ -51,12 +51,13 @@ If you don't know the answer, say that you don't have that information. Do not a
     // The history from the client has a different structure. We need to map it to the format expected by Genkit.
     const history = input.history?.map(h => ({
       role: h.role,
-      content: h.parts // The client sends `parts` which is an array of {text: string} objects. This maps directly to the `content` field.
+      content: h.parts
     }));
 
     const response = await ai.generate({
       prompt: input.question,
       history: history,
+      model: 'googleai/gemini-pro',
       config: {
         temperature: 0.5,
       },
