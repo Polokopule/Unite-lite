@@ -24,6 +24,12 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, Di
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
 import { ScrollArea } from "@/components/ui/scroll-area";
 
+// This function is needed for static export
+export async function generateStaticParams() {
+  return [];
+}
+
+
 function LinkPreviewCard({ preview }: { preview: LinkPreview }) {
     if (!preview.title) return null;
     return (

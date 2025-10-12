@@ -12,6 +12,12 @@ import { Loader2, Save, BookText } from "lucide-react";
 import { Post } from "@/lib/types";
 import { Textarea } from "@/components/ui/textarea";
 
+// This function is needed for static export
+export async function generateStaticParams() {
+  return [];
+}
+
+
 export default function EditPostPage() {
   const { user, posts, updatePost, loading } = useAppContext();
   const router = useRouter();

@@ -14,6 +14,11 @@ import { Users, Loader2, Upload, Save } from "lucide-react";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Group } from "@/lib/types";
 
+// This function is needed for static export
+export async function generateStaticParams() {
+  return [];
+}
+
 export default function EditGroupPage() {
   const { user, groups, updateGroup, loading } = useAppContext();
   const router = useRouter();
