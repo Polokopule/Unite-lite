@@ -1,13 +1,3 @@
-import {genkit} from 'genkit';
-import {googleAI} from '@genkit-ai/google-genai';
-import 'dotenv/config';
-
-export const ai = genkit({
-  plugins: [
-    googleAI({
-      apiKey: process.env.GEMINI_API_KEY,
-    }),
-  ],
-});
-
-export const geminiPro = 'googleai/gemini-pro';
+// This file is temporarily empty to resolve dependency issues.
+// Genkit initialization will be restored after the project build is stable.
+export {};
