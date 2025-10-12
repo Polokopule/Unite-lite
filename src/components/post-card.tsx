@@ -1,10 +1,11 @@
 
+
 "use client";
 
 import { useAppContext } from "@/contexts/app-context";
 import { Post as PostType, LinkPreview, Comment as CommentType, User as UserType } from "@/lib/types";
 import { Button } from "@/components/ui/button";
-import { Loader2, MessageCircle, Heart, Send, File as FileIcon, Share2, Link2, SendToBack, Repeat, Trash, Pencil, ShieldCheck } from "lucide-react";
+import { Loader2, MessageSquare, Heart, Send, File as FileIcon, Share2, Link2, SendToBack, Repeat, Trash, Pencil, ShieldCheck, Trash2 } from "lucide-react";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { formatTimeAgo, isVerified } from "@/lib/utils";
 import Link from "next/link";
@@ -256,7 +257,7 @@ function LinkPreviewCard({ preview }: { preview: LinkPreview }) {
 }
 
 function CommentItem({ comment, postId }: { comment: CommentType; postId: string }) {
-    const { user, allUsers, likeComment } = useAppContext();
+    const { user, allUsers, likeComment, deleteComment } = useAppContext();
     const [showReplyForm, setShowReplyForm] = useState(false);
     
     const creator = allUsers.find(u => u.uid === comment.creatorUid);
@@ -266,6 +267,10 @@ function CommentItem({ comment, postId }: { comment: CommentType; postId: string
         if (!user) return;
         likeComment(postId, comment.id);
     }
+
+    const handleDelete = async () => {
+        await deleteComment(postId, comment.id);
+    };
     
     const renderContentWithMentions = (content: string) => {
         // Simple regex to find mentions like @[User Name](userId)
@@ -304,13 +309,34 @@ function CommentItem({ comment, postId }: { comment: CommentType; postId: string
                 </div>
                 <div className="flex items-center gap-2 text-xs text-muted-foreground px-2 pt-1">
                     <span>{formatTimeAgo(new Date(comment.timestamp).getTime())}</span>
-                    <button onClick={handleLike} disabled={!user} className={`font-semibold hover:underline ${isLiked ? 'text-primary' : ''}`}>Like</button>
-                    <button onClick={() => setShowReplyForm(!showReplyForm)} className="font-semibold hover:underline">Reply</button>
+                    <Button onClick={handleLike} disabled={!user} variant="ghost" size="icon" className={`h-6 w-6 ${isLiked ? 'text-primary' : ''}`}>
+                        <Heart className="h-3 w-3" />
+                    </Button>
+                    <Button onClick={() => setShowReplyForm(!showReplyForm)} variant="ghost" size="icon" className="h-6 w-6">
+                        <MessageSquare className="h-3 w-3" />
+                    </Button>
                      {comment.likes.length > 0 && (
                         <span className="flex items-center gap-1">
                             <Heart className="h-3 w-3 text-red-500 fill-red-500" />
                             {comment.likes.length}
                         </span>
+                    )}
+                    {user?.uid === comment.creatorUid && (
+                         <AlertDialog>
+                            <AlertDialogTrigger asChild>
+                                <Button variant="ghost" size="icon" className="h-6 w-6 text-destructive">
+                                    <Trash2 className="h-3 w-3" />
+                                </Button>
+                            </AlertDialogTrigger>
+                            <AlertDialogContent>
+                                <AlertDialogHeader><AlertDialogTitle>Delete Comment?</AlertDialogTitle></AlertDialogHeader>
+                                <AlertDialogDescription>This action cannot be undone.</AlertDialogDescription>
+                                <AlertDialogFooter>
+                                    <AlertDialogCancel>Cancel</AlertDialogCancel>
+                                    <AlertDialogAction onClick={handleDelete}>Delete</AlertDialogAction>
+                                </AlertDialogFooter>
+                            </AlertDialogContent>
+                        </AlertDialog>
                     )}
                 </div>
                  {showReplyForm && user && (
@@ -339,7 +365,7 @@ function CommentList({ comments, postId }: { comments: CommentType[]; postId: st
         <div className="space-y-4 pt-4 border-t mt-4">
             {topLevelComments.map((comment) => (
                 <div key={comment.id}>
-                    <CommentItem comment={comment} postId={comment.id} />
+                    <CommentItem comment={comment} postId={postId} />
                     <div className="pl-11 mt-2 space-y-3 border-l-2 ml-4">
                         {getReplies(comment.id).map(reply => (
                             <CommentItem key={reply.id} comment={reply} postId={postId} />
@@ -566,7 +592,7 @@ export function PostCard({ post }: { post: PostType }) {
                         <Separator orientation="vertical" className="h-4 mx-2" />
                         
                         <Button variant="ghost" size="sm" className="flex items-center gap-2" onClick={() => setShowComments(!showComments)}>
-                            <MessageCircle className="h-4 w-4" />
+                            <MessageSquare className="h-4 w-4" />
                             <span>{post.comments?.length || 0}</span>
                         </Button>
                         

@@ -7,8 +7,10 @@
  * - UniteAIInput - The input type for the askUniteAI function.
  */
 
-import { ai } from '@/ai/genkit';
+import {ai} from '@/ai/genkit';
 import { z } from 'zod';
+import { MessageData } from 'genkit';
+
 
 const UniteAIInputSchema = z.object({
   history: z.array(z.object({
@@ -19,12 +21,7 @@ const UniteAIInputSchema = z.object({
 });
 export type UniteAIInput = z.infer<typeof UniteAIInputSchema>;
 
-
-const uniteAIPrompt = ai.definePrompt({
-  name: 'uniteAIPrompt',
-  input: { schema: z.object({ question: z.string() }) },
-  output: { format: 'text' },
-  prompt: `
+const systemPrompt = `
     You are Unite AI, a helpful assistant for the Unite platform.
     Your purpose is to answer questions about the platform's features, which include:
     - Users can create and sell courses.
@@ -34,10 +31,7 @@ const uniteAIPrompt = ai.definePrompt({
     - The platform has a community feed, groups, and direct messaging.
     
     Keep your answers concise and helpful.
-
-    Question: {{{question}}}
-  `,
-});
+  `;
 
 const uniteAIFlow = ai.defineFlow(
   {
@@ -46,9 +40,20 @@ const uniteAIFlow = ai.defineFlow(
     outputSchema: z.string(),
   },
   async (input) => {
-    // Note: The history is available in `input.history`, but this basic prompt doesn't use it yet.
-    // A more advanced version could pass the history to the model.
-    const { output } = await uniteAIPrompt({ question: input.question });
+    const history: MessageData[] = [
+        ...input.history,
+        { role: 'user', content: [{ text: input.question }] }
+    ];
+
+    const { output } = await ai.generate({
+        model: 'googleai/gemini-pro',
+        prompt: input.question,
+        history,
+        config: {
+            // You can add safety settings or other configurations here
+        },
+        system: systemPrompt,
+    });
     return output!;
   }
 );

@@ -9,7 +9,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from "@/components/ui/card";
 import React, { useEffect, useState, useMemo } from "react";
 import { Post as PostType, Comment as CommentType, LinkPreview } from "@/lib/types";
-import { Loader2, MessageCircle, Heart, Send, File as FileIcon, Share2, Link2, SendToBack, Repeat, Trash, Pencil, ShieldCheck } from "lucide-react";
+import { Loader2, MessageSquare, Heart, Send, File as FileIcon, Share2, Link2, SendToBack, Repeat, Trash, Pencil, ShieldCheck, Trash2 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import Link from "next/link";
 import { formatTimeAgo } from "@/lib/utils";
@@ -265,7 +265,7 @@ const isVerified = (user: UserType) => {
 }
 
 function CommentItem({ comment, postId }: { comment: CommentType; postId: string }) {
-    const { user, allUsers, likeComment } = useAppContext();
+    const { user, allUsers, likeComment, deleteComment } = useAppContext();
     const [showReplyForm, setShowReplyForm] = useState(false);
     
     const creator = allUsers.find(u => u.uid === comment.creatorUid);
@@ -275,6 +275,10 @@ function CommentItem({ comment, postId }: { comment: CommentType; postId: string
         if (!user) return;
         likeComment(postId, comment.id);
     }
+
+    const handleDelete = async () => {
+        await deleteComment(postId, comment.id);
+    };
     
     const renderContentWithMentions = (content: string) => {
         // Simple regex to find mentions like @[User Name](userId)
@@ -313,13 +317,34 @@ function CommentItem({ comment, postId }: { comment: CommentType; postId: string
                 </div>
                 <div className="flex items-center gap-2 text-xs text-muted-foreground px-2 pt-1">
                     <span>{formatTimeAgo(new Date(comment.timestamp).getTime())}</span>
-                    <button onClick={handleLike} disabled={!user} className={`font-semibold hover:underline ${isLiked ? 'text-primary' : ''}`}>Like</button>
-                    <button onClick={() => setShowReplyForm(!showReplyForm)} className="font-semibold hover:underline">Reply</button>
+                    <Button onClick={handleLike} disabled={!user} variant="ghost" size="icon" className={`h-6 w-6 ${isLiked ? 'text-primary' : ''}`}>
+                        <Heart className="h-3 w-3" />
+                    </Button>
+                    <Button onClick={() => setShowReplyForm(!showReplyForm)} variant="ghost" size="icon" className="h-6 w-6">
+                        <MessageSquare className="h-3 w-3" />
+                    </Button>
                      {comment.likes.length > 0 && (
                         <span className="flex items-center gap-1">
                             <Heart className="h-3 w-3 text-red-500 fill-red-500" />
                             {comment.likes.length}
                         </span>
+                    )}
+                    {user?.uid === comment.creatorUid && (
+                         <AlertDialog>
+                            <AlertDialogTrigger asChild>
+                                <Button variant="ghost" size="icon" className="h-6 w-6 text-destructive">
+                                    <Trash2 className="h-3 w-3" />
+                                </Button>
+                            </AlertDialogTrigger>
+                            <AlertDialogContent>
+                                <AlertDialogHeader><AlertDialogTitle>Delete Comment?</AlertDialogTitle></AlertDialogHeader>
+                                <AlertDialogDescription>This action cannot be undone.</AlertDialogDescription>
+                                <AlertDialogFooter>
+                                    <AlertDialogCancel>Cancel</AlertDialogCancel>
+                                    <AlertDialogAction onClick={handleDelete}>Delete</AlertDialogAction>
+                                </AlertDialogFooter>
+                            </AlertDialogContent>
+                        </AlertDialog>
                     )}
                 </div>
                  {showReplyForm && user && (

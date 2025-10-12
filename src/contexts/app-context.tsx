@@ -60,6 +60,7 @@ interface AppContextType {
   likePost: (postId: string) => Promise<void>;
   addComment: (postId: string, content: string, parentId?: string | null) => Promise<boolean>;
   likeComment: (postId: string, commentId: string) => Promise<void>;
+  deleteComment: (postId: string, commentId: string) => Promise<boolean>;
   createGroup: (groupData: { name: string; description: string; pin?: string, photoFile?: File | null }) => Promise<string | null>;
   updateGroup: (groupId: string, groupData: { name: string; description: string }, photoFile: File | null) => Promise<boolean>;
   updateGroupPin: (groupId: string, pin: string) => Promise<boolean>;
@@ -842,6 +843,29 @@ export function AppContextProvider({ children }: { children: React.ReactNode }) 
             }
         }
     };
+    
+    const deleteComment = async (postId: string, commentId: string): Promise<boolean> => {
+        if (!user) return false;
+        try {
+            const commentRef = ref(db, `posts/${postId}/comments/${commentId}`);
+            const commentSnapshot = await get(commentRef);
+            if (commentSnapshot.exists() && commentSnapshot.val().creatorUid === user.uid) {
+                await remove(commentRef);
+                // Also remove replies to this comment
+                const post = posts.find(p => p.id === postId);
+                const replies = post?.comments?.filter(c => c.parentId === commentId) || [];
+                for (const reply of replies) {
+                    const replyRef = ref(db, `posts/${postId}/comments/${reply.id}`);
+                    await remove(replyRef);
+                }
+                return true;
+            }
+            return false;
+        } catch (e) {
+            console.error("Error deleting comment:", e);
+            return false;
+        }
+    };
 
 
   const createGroup = async (groupData: { name: string; description: string; pin?: string, photoFile?: File | null }): Promise<string | null> => {
@@ -1436,6 +1460,7 @@ export function AppContextProvider({ children }: { children: React.ReactNode }) 
     likePost,
     addComment,
     likeComment,
+    deleteComment,
     createGroup,
     updateGroup,
     updateGroupPin,
