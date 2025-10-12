@@ -14,11 +14,6 @@ import Image from "next/image";
 import { Editor, EditorProvider } from 'react-simple-wysiwyg';
 import { Course } from "@/lib/types";
 
-// This function is needed for static export
-export async function generateStaticParams() {
-  return [];
-}
-
 function RichTextEditor({ value, onChange }: { value: string, onChange: (value: string) => void }) {
   return (
     <EditorProvider>

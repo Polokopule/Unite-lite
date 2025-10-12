@@ -13,11 +13,6 @@ import { useEffect, useState } from "react";
 import { Megaphone, Save, Loader2 } from "lucide-react";
 import { Ad } from "@/lib/types";
 
-// This function is needed for static export
-export async function generateStaticParams() {
-  return [];
-}
-
 export default function EditAdPage() {
   const { user, ads, updateAd, loading } = useAppContext();
   const router = useRouter();

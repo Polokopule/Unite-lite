@@ -23,11 +23,6 @@ import { AlertDialog, AlertDialogTrigger, AlertDialogContent, AlertDialogHeader,
 import { Label } from "@/components/ui/label";
 import { ScrollArea } from "@/components/ui/scroll-area";
 
-// This function is needed for static export
-export async function generateStaticParams() {
-  return [];
-}
-
 function LinkPreviewCard({ preview }: { preview: LinkPreview }) {
     if (!preview.title) return null;
     return (
@@ -813,3 +808,4 @@ export default function ConversationPage() {
     
 
     
+
