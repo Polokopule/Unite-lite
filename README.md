@@ -8,3 +8,5 @@ npm install @genkit-ai/google-genai
 
 
 ls node_modules/@genkit-ai
+
+npm install genkit @genkit-ai/google
