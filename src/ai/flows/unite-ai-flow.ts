@@ -41,17 +41,13 @@ const uniteAIFlow = ai.defineFlow(
   },
   async (input) => {
     const history: MessageData[] = [
-        ...input.history,
-        { role: 'user', content: [{ text: input.question }] }
+        ...input.history.map(m => ({ role: m.role, content: m.parts.map(p => ({text: p.text}))})),
     ];
 
     const { output } = await ai.generate({
         model: 'googleai/gemini-pro',
         prompt: input.question,
         history,
-        config: {
-            // You can add safety settings or other configurations here
-        },
         system: systemPrompt,
     });
     return output!;
