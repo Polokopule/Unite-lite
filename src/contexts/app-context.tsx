@@ -257,22 +257,6 @@ export function AppContextProvider({ children }: { children: React.ReactNode }) 
         notificationsListener = onValue(notificationsRef, (snapshot) => {
             const data = snapshot.val() || {};
             const newNotifications: Notification[] = Object.values(data).sort((a: any, b: any) => b.timestamp - a.timestamp);
-            
-            // --- WebView Bridge Logic ---
-            const latestOldNotif = notifications[0];
-            const latestNewNotif = newNotifications[0];
-
-            if (latestNewNotif && (!latestOldNotif || latestNewNotif.id !== latestOldNotif.id)) {
-              if (latestNewNotif.actorUid !== user.uid) { // Don't notify for own actions
-                  postToWebView({
-                      title: latestNewNotif.actorName,
-                      body: latestNewNotif.message ? `${latestNewNotif.actorName} ${latestNewNotif.message}` : `Sent you a notification`,
-                      url: latestNewNotif.targetUrl
-                  });
-              }
-            }
-            // --- End WebView Bridge Logic ---
-
             setNotifications(newNotifications);
         });
 
@@ -667,16 +651,23 @@ export function AppContextProvider({ children }: { children: React.ReactNode }) 
     const targetUserRef = ref(db, `users/${targetUserId}/followers/${user.uid}`);
     await set(targetUserRef, true);
         
-    // Create notification
-    await createNotification({
+    const notificationPayload = {
         recipientUid: targetUserId,
         actorUid: user.uid,
         actorName: user.name,
         actorPhotoURL: user.photoURL,
-        type: 'new_follower',
+        type: 'new_follower' as const,
         targetUrl: `/profile/${user.uid}`,
         targetId: user.uid,
+    };
+    await createNotification(notificationPayload);
+
+    postToWebView({
+        title: user.name,
+        body: 'started following you.',
+        url: notificationPayload.targetUrl
     });
+
     toast.success(`You are now following them!`);
   };
 
@@ -714,15 +705,21 @@ export function AppContextProvider({ children }: { children: React.ReactNode }) 
         }
 
         for (const uid of mentionedUids) {
-            await createNotification({
+            const notificationPayload = {
                 recipientUid: uid,
                 actorUid: user.uid,
                 actorName: user.name,
                 actorPhotoURL: user.photoURL,
-                type: 'mention',
+                type: 'mention' as const,
                 targetUrl: `/posts/${postId}${commentId ? `#comment-${commentId}` : ''}`,
                 targetId: commentId || postId,
                 message: commentId ? 'a comment' : 'a post',
+            };
+            await createNotification(notificationPayload);
+             postToWebView({
+                title: user.name,
+                body: `mentioned you in ${notificationPayload.message}.`,
+                url: notificationPayload.targetUrl,
             });
         }
     };
@@ -781,15 +778,21 @@ export function AppContextProvider({ children }: { children: React.ReactNode }) 
         }
         
         if (repostedFrom && repostedFrom.creatorUid !== user.uid) {
-            await createNotification({
+            const notificationPayload = {
                 recipientUid: repostedFrom.creatorUid,
                 actorUid: user.uid,
                 actorName: user.name,
                 actorPhotoURL: user.photoURL,
-                type: 'repost',
+                type: 'repost' as const,
                 targetUrl: `/posts/${postId}`,
                 targetId: postId,
                 message: "reposted your post.",
+            };
+            await createNotification(notificationPayload);
+            postToWebView({
+                title: user.name,
+                body: notificationPayload.message,
+                url: notificationPayload.targetUrl,
             });
         }
       }
@@ -858,14 +861,20 @@ export function AppContextProvider({ children }: { children: React.ReactNode }) 
         } else {
             await set(postLikeRef, true);
              if (post.creatorUid !== user.uid) {
-                await createNotification({
+                const notificationPayload = {
                     recipientUid: post.creatorUid,
                     actorUid: user.uid,
                     actorName: user.name,
                     actorPhotoURL: user.photoURL,
-                    type: 'post_like',
+                    type: 'post_like' as const,
                     targetUrl: `/posts/${post.id}`,
                     targetId: postId,
+                };
+                await createNotification(notificationPayload);
+                postToWebView({
+                    title: user.name,
+                    body: "liked your post.",
+                    url: notificationPayload.targetUrl,
                 });
             }
         }
@@ -915,28 +924,40 @@ export function AppContextProvider({ children }: { children: React.ReactNode }) 
 
             const post = posts.find(p => p.id === postId);
             if (post && post.creatorUid !== user.uid) {
-                 await createNotification({
+                 const notificationPayload = {
                     recipientUid: post.creatorUid,
                     actorUid: user.uid,
                     actorName: user.name,
                     actorPhotoURL: user.photoURL,
-                    type: parentId ? 'new_reply' : 'new_comment',
+                    type: (parentId ? 'new_reply' : 'new_comment') as 'new_reply' | 'new_comment',
                     targetUrl: `/posts/${postId}#comment-${commentId}`,
                     targetId: postId,
+                };
+                await createNotification(notificationPayload);
+                postToWebView({
+                    title: user.name,
+                    body: `commented on your post.`,
+                    url: notificationPayload.targetUrl,
                 });
             }
             // Also notify parent comment author if it's a reply and not their own comment
             if (parentId) {
                 const parentComment = post?.comments?.find(c => c.id === parentId);
                 if (parentComment && parentComment.creatorUid !== user.uid && parentComment.creatorUid !== post?.creatorUid) {
-                     await createNotification({
+                     const replyNotificationPayload = {
                         recipientUid: parentComment.creatorUid,
                         actorUid: user.uid,
                         actorName: user.name,
                         actorPhotoURL: user.photoURL,
-                        type: 'new_reply',
+                        type: 'new_reply' as const,
                         targetUrl: `/posts/${postId}#comment-${commentId}`,
                         targetId: postId,
+                    };
+                    await createNotification(replyNotificationPayload);
+                    postToWebView({
+                        title: user.name,
+                        body: `replied to your comment.`,
+                        url: replyNotificationPayload.targetUrl,
                     });
                 }
             }
@@ -960,14 +981,20 @@ export function AppContextProvider({ children }: { children: React.ReactNode }) 
             } else {
                 await set(commentLikeRef, true);
                 if (comment.creatorUid !== user.uid) {
-                    await createNotification({
+                    const notificationPayload = {
                         recipientUid: comment.creatorUid,
                         actorUid: user.uid,
                         actorName: user.name,
                         actorPhotoURL: user.photoURL,
-                        type: 'comment_like',
+                        type: 'comment_like' as const,
                         targetUrl: `/posts/${postId}#comment-${commentId}`,
                         targetId: postId,
+                    };
+                    await createNotification(notificationPayload);
+                    postToWebView({
+                        title: user.name,
+                        body: "liked your comment.",
+                        url: notificationPayload.targetUrl,
                     });
                 }
             }
@@ -1223,16 +1250,24 @@ export function AppContextProvider({ children }: { children: React.ReactNode }) 
             const memberIds = group.members ? Object.keys(group.members) : [];
             const notificationPromises = memberIds
                 .filter(memberId => memberId !== user.uid)
-                .map(memberId => createNotification({
-                    recipientUid: memberId,
-                    actorUid: user.uid,
-                    actorName: user.name,
-                    actorPhotoURL: user.photoURL,
-                    type: 'new_group_message',
-                    targetUrl: `/groups/${groupId}`,
-                    targetId: groupId,
-                    message: `sent a message in "${group.name}"`,
-                }));
+                .map(memberId => {
+                     const notificationPayload = {
+                        recipientUid: memberId,
+                        actorUid: user.uid,
+                        actorName: user.name,
+                        actorPhotoURL: user.photoURL,
+                        type: 'new_group_message' as const,
+                        targetUrl: `/groups/${groupId}`,
+                        targetId: groupId,
+                        message: `sent a message in "${group.name}"`,
+                    };
+                    postToWebView({
+                        title: user.name,
+                        body: notificationPayload.message,
+                        url: notificationPayload.targetUrl
+                    });
+                    return createNotification(notificationPayload);
+                });
             await Promise.all(notificationPromises);
         }
         
@@ -1413,15 +1448,21 @@ export function AppContextProvider({ children }: { children: React.ReactNode }) 
         // Notify the other participant
         const otherUserId = conversation.participantUids.find(uid => uid !== user.uid);
         if (otherUserId) {
-            await createNotification({
+             const notificationPayload = {
                 recipientUid: otherUserId,
                 actorUid: user.uid,
                 actorName: user.name,
                 actorPhotoURL: user.photoURL,
-                type: 'new_direct_message',
+                type: 'new_direct_message' as const,
                 targetUrl: `/messages/${conversationId}`,
                 targetId: conversationId,
                 message: "sent you a new message.",
+            };
+            await createNotification(notificationPayload);
+            postToWebView({
+                title: user.name,
+                body: "sent you a new message.",
+                url: notificationPayload.targetUrl,
             });
         }
         
