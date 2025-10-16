@@ -9,7 +9,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from "@/components/ui/card";
 import React, { useEffect, useState, useMemo } from "react";
 import { Post as PostType, Comment as CommentType, LinkPreview } from "@/lib/types";
-import { Loader2, MessageSquare, Heart, Send, File as FileIcon, Share2, Link2, SendToBack, Repeat, Trash, Pencil, ShieldCheck, Trash2 } from "lucide-react";
+import { Loader2, MessageSquare, Heart, Send, File as FileIcon, Share2, Link2, SendToBack, Repeat, Trash, Pencil, ShieldCheck, Trash2, MessageCircle } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import Link from "next/link";
 import { formatTimeAgo } from "@/lib/utils";
@@ -714,3 +714,5 @@ export default function PostViewer({ postId }: { postId: string }) {
         </div>
     );
 }
+
+    
