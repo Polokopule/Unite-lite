@@ -9,7 +9,6 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter }
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { useToast } from "@/hooks/use-toast";
 import { Loader2, Lock, Users, Send, Paperclip, Image as ImageIcon, Download, File as FileIcon, Music, Video, Menu, Mic, Square, Smile, Copy, Pencil, Trash2, Check, CheckCheck, Share2, MoreVertical, ArrowLeft, Info, ShieldCheck } from "lucide-react";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import Image from "next/image";
@@ -23,6 +22,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogTrigger, DialogFooter } from "@/components/ui/dialog";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
 import { ScrollArea } from "@/components/ui/scroll-area";
+import toast from "react-hot-toast";
 
 function LinkPreviewCard({ preview }: { preview: LinkPreview }) {
     if (!preview.title) return null;
@@ -58,7 +58,6 @@ const isVerified = (user: UserType) => {
 }
 
 function MessageBubble({ message, isOwnMessage, groupId, memberCount }: { message: Message; isOwnMessage: boolean; groupId: string; memberCount: number; }) {
-    const { toast } = useToast();
     const { user, allUsers, editMessage, deleteMessage, reactToMessage } = useAppContext();
     const [isEditing, setIsEditing] = useState(false);
     const [editedContent, setEditedContent] = useState(message.content);
@@ -71,7 +70,7 @@ function MessageBubble({ message, isOwnMessage, groupId, memberCount }: { messag
 
     const handleCopy = () => {
         navigator.clipboard.writeText(message.content);
-        toast({ title: "Copied to clipboard!" });
+        toast.success("Copied to clipboard!");
     };
 
     const handleEdit = async () => {
@@ -79,16 +78,13 @@ function MessageBubble({ message, isOwnMessage, groupId, memberCount }: { messag
         const success = await editMessage(groupId, message.id, editedContent);
         if (success) {
             setIsEditing(false);
-            toast({ title: "Message updated" });
-        } else {
-            toast({ variant: 'destructive', title: "Failed to edit message" });
         }
     };
     
     const handleDelete = async () => {
         const success = await deleteMessage(groupId, message.id);
          if (!success) {
-            toast({ variant: 'destructive', title: "Failed to delete message" });
+            toast.error("Failed to delete message");
         }
     };
 
@@ -280,7 +276,6 @@ function useDebounce(value: any, delay: number) {
 
 function ChatArea({ groupId, messages, group, members, membersDetails }: { groupId: string; messages: Message[], group: Group | null, members: UserType[], membersDetails: UserType[] }) {
     const { user, sendMessage, updateTypingStatus, deleteGroup, updateGroupPin } = useAppContext();
-    const { toast } = useToast();
     const router = useRouter();
     const [text, setText] = useState("");
     const [isSending, setIsSending] = useState(false);
@@ -338,7 +333,7 @@ function ChatArea({ groupId, messages, group, members, membersDetails }: { group
         if (success) {
             setText("");
         } else {
-            toast({ variant: 'destructive', title: "Failed to send message" });
+            toast.error("Failed to send message");
         }
         setIsSending(false);
     };
@@ -348,10 +343,11 @@ function ChatArea({ groupId, messages, group, members, membersDetails }: { group
         if (!file) return;
 
         setIsSending(true);
-        toast({ title: 'Uploading...', description: `Sending ${file.name}`});
+        const loadingToast = toast.loading(`Sending ${file.name}...`);
         const success = await sendMessage(groupId, { file });
+        toast.dismiss(loadingToast);
         if (!success) {
-            toast({ variant: 'destructive', title: `Failed to upload file` });
+            toast.error(`Failed to upload file`);
         }
         setIsSending(false);
         if (e.target) e.target.value = '';
@@ -375,7 +371,7 @@ function ChatArea({ groupId, messages, group, members, membersDetails }: { group
             mediaRecorderRef.current.start();
             setRecordingState('recording');
         } catch (error) {
-            toast({ variant: 'destructive', title: 'Microphone access denied', description: 'Please allow microphone access in your browser settings.' });
+            toast.error('Please allow microphone access in your browser settings.');
         }
     };
 
@@ -388,11 +384,12 @@ function ChatArea({ groupId, messages, group, members, membersDetails }: { group
     const handleSendAudio = async () => {
         if (!recordedAudio) return;
         setIsSending(true);
-        toast({ title: 'Uploading...', description: 'Sending voice note' });
+        const loadingToast = toast.loading('Sending voice note...');
         const audioFile = new window.File([recordedAudio.blob], `voice-note-${Date.now()}.webm`, { type: 'audio/webm' });
         const success = await sendMessage(groupId, { file: audioFile });
+        toast.dismiss(loadingToast);
         if (!success) {
-            toast({ variant: 'destructive', title: 'Failed to send voice note' });
+            toast.error('Failed to send voice note');
         }
         setIsSending(false);
         setRecordedAudio(null);
@@ -422,7 +419,7 @@ function ChatArea({ groupId, messages, group, members, membersDetails }: { group
     const handleCopyInviteLink = () => {
         const inviteLink = `${window.location.origin}/groups/${groupId}`;
         navigator.clipboard.writeText(inviteLink);
-        toast({ title: "Invite link copied to clipboard!" });
+        toast.success("Invite link copied to clipboard!");
     };
 
     const isCreator = user?.uid === group?.creatorUid;
@@ -431,10 +428,7 @@ function ChatArea({ groupId, messages, group, members, membersDetails }: { group
         if (!group) return;
         const success = await deleteGroup(group.id);
         if (success) {
-            toast({ title: "Group Deleted" });
             router.push('/groups');
-        } else {
-            toast({ variant: 'destructive', title: "Failed to delete group" });
         }
     };
 
@@ -443,10 +437,7 @@ function ChatArea({ groupId, messages, group, members, membersDetails }: { group
         setIsSavingPin(true);
         const success = await updateGroupPin(group.id, newPin);
         if (success) {
-            toast({ title: "PIN Updated", description: "The group's privacy settings have been changed." });
             setIsPinDialogOpen(false);
-        } else {
-            toast({ variant: 'destructive', title: "Failed to update PIN" });
         }
         setIsSavingPin(false);
     };
@@ -684,7 +675,6 @@ export default function GroupPage() {
     const params = useParams();
     const { id: groupId } = params;
     const { user, groups, joinGroup, allUsers, loading, markMessagesAsRead } = useAppContext();
-    const { toast } = useToast();
 
     const [group, setGroup] = useState<Group | null>(null);
     const [isMember, setIsMember] = useState(false);
@@ -713,10 +703,7 @@ export default function GroupPage() {
         setIsJoining(false);
 
         if (success) {
-            toast({ title: `Welcome to ${group.name}!` });
             setPin("");
-        } else {
-            toast({ variant: "destructive", title: "Failed to join group", description: "The PIN may be incorrect or you may already be a member." });
         }
     };
     
@@ -781,4 +768,3 @@ export default function GroupPage() {
     
 
     
-

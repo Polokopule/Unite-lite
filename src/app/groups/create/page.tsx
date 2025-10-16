@@ -6,17 +6,16 @@ import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle }
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-import { useToast } from "@/hooks/use-toast";
 import { useAppContext } from "@/contexts/app-context";
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import { Users, PlusCircle, Loader2, Upload } from "lucide-react";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import toast from "react-hot-toast";
 
 export default function CreateGroupPage() {
   const { user, createGroup, loading } = useAppContext();
   const router = useRouter();
-  const { toast } = useToast();
 
   const [name, setName] = useState("");
   const [description, setDescription] = useState("");
@@ -27,10 +26,10 @@ export default function CreateGroupPage() {
 
   useEffect(() => {
     if (!loading && !user) {
-      toast({ variant: 'destructive', title: 'Unauthorized', description: 'You must be logged in to create a group.' });
+      toast.error('You must be logged in to create a group.');
       router.push('/login-user');
     }
-  }, [user, loading, router, toast]);
+  }, [user, loading, router]);
 
   const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -42,11 +41,7 @@ export default function CreateGroupPage() {
 
   const handleCreate = async () => {
     if (!name || !description) {
-      toast({
-        variant: "destructive",
-        title: "Missing Information",
-        description: "Please provide a name and description for your group.",
-      });
+      toast.error("Please provide a name and description for your group.");
       return;
     }
     
@@ -55,17 +50,7 @@ export default function CreateGroupPage() {
     setIsCreating(false);
 
     if(newGroupId) {
-      toast({
-        title: "Group Created!",
-        description: `Your group "${name}" is now live.`
-      });
       router.push(`/groups/${newGroupId}`);
-    } else {
-      toast({
-        variant: "destructive",
-        title: "Error",
-        description: "Could not create the group. Please try again.",
-      });
     }
   };
 

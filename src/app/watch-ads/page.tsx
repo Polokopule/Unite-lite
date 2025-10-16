@@ -5,27 +5,26 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { Progress } from "@/components/ui/progress";
-import { useToast } from "@/hooks/use-toast";
 import { useAppContext } from "@/contexts/app-context";
 import { Ad } from "@/lib/types";
 import { Eye } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
+import toast from "react-hot-toast";
 
 export default function WatchAdsPage() {
   const { user, ads, watchAd, loading } = useAppContext();
   const router = useRouter();
-  const { toast } = useToast();
   
   const [watchingAd, setWatchingAd] = useState<Ad | null>(null);
   const [progress, setProgress] = useState(0);
 
   useEffect(() => {
     if (!loading && (!user || user.type !== 'user')) {
-      toast({ variant: 'destructive', title: 'Unauthorized', description: 'You must be logged in as a user to watch ads.'})
+      toast.error('You must be logged in as a user to watch ads.');
       router.push('/login-user');
     }
-  }, [user, loading, router, toast]);
+  }, [user, loading, router]);
   
   useEffect(() => {
     let timer: NodeJS.Timeout;
@@ -52,10 +51,6 @@ export default function WatchAdsPage() {
   const handleAdWatched = () => {
     if (watchingAd) {
       watchAd(watchingAd.id);
-      toast({
-        title: "Points Earned!",
-        description: `You've earned 10 points for watching the ad.`,
-      });
     }
     setWatchingAd(null);
     setProgress(0);

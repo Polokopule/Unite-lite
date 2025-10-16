@@ -1,5 +1,4 @@
 
-
 "use client";
 
 import { useAppContext } from "@/contexts/app-context";
@@ -8,7 +7,6 @@ import { Button } from "@/components/ui/button";
 import { Loader2, ShoppingBag, CheckCircle, PlusCircle, Home as HomeIcon, Bell, Users, MessageSquare, User as UserIconLucide, Search, Bot, Wallet, Lock, ShieldCheck as ShieldCheck, Settings } from "lucide-react";
 import Link from "next/link";
 import { useMemo, useState, useEffect } from "react";
-import { useToast } from "@/hooks/use-toast";
 import Image from "next/image";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -21,6 +19,7 @@ import { Input } from "@/components/ui/input";
 import { PostCard } from "@/components/post-card";
 import { isVerified, formatTimeAgo } from "@/lib/utils";
 import SettingsPage from "@/app/settings/page";
+import toast from "react-hot-toast";
 
 
 function AdCard({ ad }: { ad: Ad }) {
@@ -102,25 +101,12 @@ function FeedContent() {
 
 function CoursesContent() {
   const { courses, user, purchaseCourse, purchasedCourses } = useAppContext();
-  const { toast } = useToast();
   const [purchasingId, setPurchasingId] = useState<string | null>(null);
 
   const handlePurchase = async (courseId: string, title: string) => {
     setPurchasingId(courseId);
-    const success = await purchaseCourse(courseId);
+    await purchaseCourse(courseId);
     setPurchasingId(null);
-    if (success) {
-      toast({
-        title: "Purchase Successful!",
-        description: `You have successfully purchased "${title}".`,
-      });
-    } else {
-      toast({
-        variant: "destructive",
-        title: "Purchase Failed",
-        description: "You may not have enough points or already own this course.",
-      });
-    }
   };
 
   return (
@@ -337,15 +323,9 @@ function MessagesContent() {
         if (conversationId) {
             router.push(`/messages/${conversationId}`);
         } else {
-            toast({
-                variant: "destructive",
-                title: "Error",
-                description: "Could not start conversation.",
-            });
+            toast.error("Could not start conversation.");
         }
     };
-    
-    const { toast } = useToast();
     
     const getInitials = (name: string) => {
         if (!name) return '??';

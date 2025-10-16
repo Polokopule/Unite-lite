@@ -1,5 +1,4 @@
 
-
 "use client";
 
 import { Button } from "@/components/ui/button";
@@ -12,11 +11,11 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useEffect, useState, useMemo } from "react";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
-import { useToast } from "@/hooks/use-toast";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { formatDistanceToNow } from "date-fns";
 import { Input } from "@/components/ui/input";
+import toast from "react-hot-toast";
 
 
 export default function DashboardPage() {
@@ -79,7 +78,6 @@ export default function DashboardPage() {
 
 function UserPostsDashboard() {
     const { user, posts, deletePost } = useAppContext();
-    const { toast } = useToast();
     const [deletingId, setDeletingId] = useState<string|null>(null);
 
     if (!user) return null;
@@ -88,13 +86,8 @@ function UserPostsDashboard() {
 
     const handleDeletePost = async (postId: string) => {
         setDeletingId(postId);
-        const success = await deletePost(postId);
+        await deletePost(postId);
         setDeletingId(null);
-        if (success) {
-            toast({ title: "Post Deleted", description: "Your post has been removed." });
-        } else {
-            toast({ variant: 'destructive', title: "Error", description: "Failed to delete the post." });
-        }
     }
 
     return (
@@ -151,7 +144,6 @@ function UserPostsDashboard() {
 
 function UserCoursesDashboard() {
     const { user, courses, purchasedCourses, deleteCourse } = useAppContext();
-    const { toast } = useToast();
     const [deletingId, setDeletingId] = useState<string|null>(null);
     
     if (!user) return null;
@@ -161,13 +153,8 @@ function UserCoursesDashboard() {
 
     const handleDeleteCourse = async (courseId: string, courseTitle: string) => {
       setDeletingId(courseId);
-      const success = await deleteCourse(courseId);
+      await deleteCourse(courseId);
       setDeletingId(null);
-      if (success) {
-        toast({ title: "Course Deleted", description: `"${courseTitle}" has been removed.` });
-      } else {
-        toast({ variant: 'destructive', title: "Error", description: "Failed to delete the course." });
-      }
     }
 
   return (
@@ -276,7 +263,6 @@ function UserCoursesDashboard() {
 
 function BusinessDashboard() {
     const { user, ads, deleteAd } = useAppContext();
-    const { toast } = useToast();
     const [deletingId, setDeletingId] = useState<string | null>(null);
 
     if(!user) return null;
@@ -286,13 +272,8 @@ function BusinessDashboard() {
     
     const handleDeleteAd = async (adId: string, campaignName: string) => {
         setDeletingId(adId);
-        const success = await deleteAd(adId);
+        await deleteAd(adId);
         setDeletingId(null);
-        if (success) {
-            toast({ title: "Ad Campaign Deleted", description: `"${campaignName}" has been removed.`});
-        } else {
-            toast({ variant: 'destructive', title: "Error", description: "Failed to delete the ad campaign." });
-        }
     }
 
   return (

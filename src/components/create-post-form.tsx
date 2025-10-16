@@ -1,17 +1,16 @@
 
-
 "use client";
 
 import { useState, useRef, useEffect } from "react";
 import { useAppContext } from "@/contexts/app-context";
 import { Button } from "@/components/ui/button";
 import { Loader2, Paperclip, X, Image as ImageIcon, File as FileIcon } from "lucide-react";
-import { useToast } from "@/hooks/use-toast";
 import { Avatar, AvatarFallback, AvatarImage } from "./ui/avatar";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogTrigger } from "@/components/ui/dialog";
 import { LinkPreview as LinkPreviewType } from "@/lib/types";
 import Image from "next/image";
 import { Textarea } from "./ui/textarea";
+import toast from "react-hot-toast";
 
 
 function FilePreview({ file, onRemove }: { file: File, onRemove: () => void }) {
@@ -61,7 +60,6 @@ function PostForm({ onPostSuccess, initialFile }: { onPostSuccess: () => void, i
     const [file, setFile] = useState<File | null>(initialFile || null);
     const [isPosting, setIsPosting] = useState(false);
     const fileInputRef = useRef<HTMLInputElement>(null);
-    const { toast } = useToast();
     
     useEffect(() => {
         if(initialFile) {
@@ -91,9 +89,6 @@ function PostForm({ onPostSuccess, initialFile }: { onPostSuccess: () => void, i
 
         if (success) {
             onPostSuccess();
-            toast({ title: "Post created!" });
-        } else {
-            toast({ variant: "destructive", title: "Failed to create post." });
         }
     };
     

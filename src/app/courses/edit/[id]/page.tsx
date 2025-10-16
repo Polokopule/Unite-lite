@@ -5,7 +5,6 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { useToast } from "@/hooks/use-toast";
 import { useAppContext } from "@/contexts/app-context";
 import { useRouter, useParams } from "next/navigation";
 import { useEffect, useState } from "react";
@@ -13,6 +12,7 @@ import { BookOpen, CreditCard, Image as ImageIcon, Upload, Loader2, Save } from 
 import Image from "next/image";
 import { Editor, EditorProvider } from 'react-simple-wysiwyg';
 import { Course } from "@/lib/types";
+import toast from "react-hot-toast";
 
 function RichTextEditor({ value, onChange }: { value: string, onChange: (value: string) => void }) {
   return (
@@ -31,7 +31,6 @@ export default function EditCoursePage() {
   const { user, courses, updateCourse, loading } = useAppContext();
   const router = useRouter();
   const params = useParams();
-  const { toast } = useToast();
 
   const [course, setCourse] = useState<Course | null>(null);
   const [title, setTitle] = useState("");
@@ -56,24 +55,20 @@ export default function EditCoursePage() {
             setCoverImageUrl(foundCourse.imageUrl);
             setIsAuthorized(true);
         } else {
-             toast({ variant: 'destructive', title: 'Unauthorized', description: 'You are not the creator of this course.'});
+             toast.error('You are not the creator of this course.');
              router.push('/dashboard');
         }
     } else if(!loading) {
-         toast({ variant: 'destructive', title: 'Not Found', description: 'This course does not exist.'});
+         toast.error('This course does not exist.');
          router.push('/dashboard');
     }
 
-  }, [user, loading, courses, params.id, router, toast]);
+  }, [user, loading, courses, params.id, router]);
   
 
   const handleSave = async () => {
     if (!course || !title || !content || price <= 0) {
-        toast({
-            variant: "destructive",
-            title: "Missing Information",
-            description: "Please fill out all fields.",
-        });
+        toast.error("Please fill out all fields.");
         return;
     }
     
@@ -82,17 +77,7 @@ export default function EditCoursePage() {
     setIsSaving(false);
 
     if(success) {
-        toast({
-            title: "Course Updated!",
-            description: `Your course "${title}" has been saved.`
-        });
         router.push('/dashboard');
-    } else {
-        toast({
-            variant: "destructive",
-            title: "Error",
-            description: "Could not update the course. Please try again.",
-        });
     }
   };
 

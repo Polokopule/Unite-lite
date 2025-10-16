@@ -11,9 +11,9 @@ import { getAuth } from "firebase/auth";
 import { User as UserType } from "@/lib/types";
 import { useState, useMemo } from "react";
 import { useRouter } from "next/navigation";
-import { useToast } from "@/hooks/use-toast";
 import { Input } from "@/components/ui/input";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
+import toast from "react-hot-toast";
 
 const isVerified = (user: UserType) => {
     return user.email === 'polokopule91@gmail.com' || (user.followers && user.followers.length >= 1000000);
@@ -24,29 +24,22 @@ type SortOrder = "name-asc" | "name-desc";
 export default function CommunityPage() {
     const { allUsers, loading, startConversation, user: currentUser } = useAppContext();
     const router = useRouter();
-    const { toast } = useToast();
     const auth = getAuth();
     const [searchTerm, setSearchTerm] = useState("");
     const [sortOrder, setSortOrder] = useState<SortOrder>("name-asc");
 
     const handleStartConversation = async (otherUser: UserType) => {
         if (!currentUser) {
-            toast({
-                variant: "destructive",
-                title: "Please log in",
-                description: "You need to be logged in to send a message.",
-            });
+            toast.error("You need to be logged in to send a message.");
             return;
         }
+        const loadingToast = toast.loading("Starting conversation...");
         const conversationId = await startConversation(otherUser.uid);
+        toast.dismiss(loadingToast);
         if (conversationId) {
             router.push(`/messages/${conversationId}`);
         } else {
-            toast({
-                variant: "destructive",
-                title: "Error",
-                description: "Could not start conversation.",
-            });
+            toast.error("Could not start conversation.");
         }
     };
 

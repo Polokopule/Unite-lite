@@ -5,7 +5,6 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { useToast } from "@/hooks/use-toast";
 import { useAppContext } from "@/contexts/app-context";
 import { useRouter } from "next/navigation";
 import { useEffect, useState, useRef } from "react";
@@ -14,11 +13,11 @@ import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
 import { sendPasswordResetEmail } from "firebase/auth";
 import { auth } from "@/lib/firebase";
 import { Separator } from "@/components/ui/separator";
+import toast from "react-hot-toast";
 
 export default function EditProfilePage() {
     const { user, updateUserProfile, loading } = useAppContext();
     const router = useRouter();
-    const { toast } = useToast();
 
     const [name, setName] = useState("");
     const [profileImage, setProfileImage] = useState<File | null>(null);
@@ -33,11 +32,11 @@ export default function EditProfilePage() {
                 setName(user.name);
                 setProfileImageUrl(user.photoURL || null);
             } else {
-                toast({ variant: 'destructive', title: 'Unauthorized', description: 'You must be logged in to edit your profile.' });
+                toast.error('You must be logged in to edit your profile.');
                 router.push('/');
             }
         }
-    }, [user, loading, router, toast]);
+    }, [user, loading, router]);
 
     const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
         const file = e.target.files?.[0];
@@ -49,19 +48,13 @@ export default function EditProfilePage() {
 
     const handleSave = async () => {
         if (!name.trim()) {
-            toast({ variant: "destructive", title: "Name is required" });
+            toast.error("Name is required");
             return;
         }
 
         setIsSaving(true);
-        const success = await updateUserProfile(name, profileImage);
+        await updateUserProfile(name, profileImage);
         setIsSaving(false);
-
-        if (success) {
-            toast({ title: "Profile Updated!", description: "Your changes have been saved." });
-        } else {
-            toast({ variant: "destructive", title: "Update Failed", description: "Could not update your profile. Please try again." });
-        }
     };
 
     const handleChangePassword = async () => {
@@ -69,16 +62,9 @@ export default function EditProfilePage() {
         setIsSendingReset(true);
         try {
             await sendPasswordResetEmail(auth, user.email);
-            toast({
-                title: "Password Reset Email Sent",
-                description: `An email has been sent to ${user.email} with instructions to reset your password.`,
-            });
+            toast.success(`A password reset link has been sent to ${user.email}.`);
         } catch (error) {
-             toast({
-                variant: "destructive",
-                title: "Error",
-                description: "Could not send password reset email. Please try again later.",
-            });
+             toast.error("Could not send password reset email.");
         } finally {
             setIsSendingReset(false);
         }

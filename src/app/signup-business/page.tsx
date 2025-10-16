@@ -11,11 +11,10 @@ import Link from "next/link";
 import { useState } from "react";
 import { createUserWithEmailAndPassword, updateProfile } from "firebase/auth";
 import { auth } from "@/lib/firebase";
-import { useToast } from "@/hooks/use-toast";
+import toast from "react-hot-toast";
 
 export default function SignUpBusinessPage() {
   const { login } = useAppContext();
-  const { toast } = useToast();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [companyName, setCompanyName] = useState("");
@@ -26,16 +25,14 @@ export default function SignUpBusinessPage() {
     if (!email || !password || !companyName) return;
 
     setIsLoading(true);
+    const loadingToast = toast.loading("Creating account...");
     try {
       const userCredential = await createUserWithEmailAndPassword(auth, email, password);
       await updateProfile(userCredential.user, { displayName: companyName });
       await login(email, 'business');
+      toast.dismiss(loadingToast);
     } catch (error: any) {
-      toast({
-        variant: "destructive",
-        title: "Sign Up Failed",
-        description: "This email might already be in use or the password is too weak.",
-      });
+      toast.error("This email might already be in use or the password is too weak.", { id: loadingToast });
     } finally {
       setIsLoading(false);
     }

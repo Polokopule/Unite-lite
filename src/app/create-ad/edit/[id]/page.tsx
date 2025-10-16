@@ -6,18 +6,17 @@ import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle }
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-import { useToast } from "@/hooks/use-toast";
 import { useAppContext } from "@/contexts/app-context";
 import { useRouter, useParams } from "next/navigation";
 import { useEffect, useState } from "react";
 import { Megaphone, Save, Loader2 } from "lucide-react";
 import { Ad } from "@/lib/types";
+import toast from "react-hot-toast";
 
 export default function EditAdPage() {
   const { user, ads, updateAd, loading } = useAppContext();
   const router = useRouter();
   const params = useParams();
-  const { toast } = useToast();
 
   const [ad, setAd] = useState<Ad | null>(null);
   const [campaignName, setCampaignName] = useState("");
@@ -38,22 +37,18 @@ export default function EditAdPage() {
         setContent(foundAd.content);
         setIsAuthorized(true);
       } else {
-        toast({ variant: 'destructive', title: 'Unauthorized', description: 'You are not the creator of this ad campaign.' });
+        toast.error('You are not the creator of this ad campaign.');
         router.push('/dashboard');
       }
     } else if(!loading) {
-      toast({ variant: 'destructive', title: 'Not Found', description: 'This ad campaign does not exist.' });
+      toast.error('This ad campaign does not exist.');
       router.push('/dashboard');
     }
-  }, [user, loading, ads, params.id, router, toast]);
+  }, [user, loading, ads, params.id, router]);
 
   const handleSave = async () => {
     if (!ad || !campaignName || !content) {
-      toast({
-        variant: "destructive",
-        title: "Missing Information",
-        description: "Please fill out all fields.",
-      });
+      toast.error("Please fill out all fields.");
       return;
     }
     
@@ -62,17 +57,7 @@ export default function EditAdPage() {
     setIsSaving(false);
 
     if(success) {
-      toast({
-        title: "Ad Campaign Updated!",
-        description: `Your campaign "${campaignName}" has been saved.`
-      });
       router.push('/dashboard');
-    } else {
-      toast({
-        variant: "destructive",
-        title: "Update Failed",
-        description: "Could not update the ad campaign. Please try again.",
-      });
     }
   };
 

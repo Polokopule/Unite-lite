@@ -4,19 +4,18 @@
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Label } from "@/components/ui/label";
-import { useToast } from "@/hooks/use-toast";
 import { useAppContext } from "@/contexts/app-context";
 import { useRouter, useParams } from "next/navigation";
 import { useEffect, useState } from "react";
 import { Loader2, Save, BookText } from "lucide-react";
 import { Post } from "@/lib/types";
 import { Textarea } from "@/components/ui/textarea";
+import toast from "react-hot-toast";
 
 export default function EditPostPage() {
   const { user, posts, updatePost, loading } = useAppContext();
   const router = useRouter();
   const params = useParams();
-  const { toast } = useToast();
 
   const [post, setPost] = useState<Post | null>(null);
   const [content, setContent] = useState("");
@@ -35,24 +34,20 @@ export default function EditPostPage() {
             setContent(foundPost.content || "");
             setIsAuthorized(true);
         } else {
-             toast({ variant: 'destructive', title: 'Unauthorized', description: 'You are not the creator of this post.'});
+             toast.error('You are not the creator of this post.');
              router.push('/dashboard');
         }
     } else if(!loading) {
-         toast({ variant: 'destructive', title: 'Not Found', description: 'This post does not exist.'});
+         toast.error('This post does not exist.');
          router.push('/dashboard');
     }
 
-  }, [user, loading, posts, params.id, router, toast]);
+  }, [user, loading, posts, params.id, router]);
   
 
   const handleSave = async () => {
     if (!post || !content.trim()) {
-        toast({
-            variant: "destructive",
-            title: "Missing Content",
-            description: "Post content cannot be empty.",
-        });
+        toast.error("Post content cannot be empty.");
         return;
     }
     
@@ -61,17 +56,7 @@ export default function EditPostPage() {
     setIsSaving(false);
 
     if(success) {
-        toast({
-            title: "Post Updated!",
-            description: `Your post has been saved.`
-        });
         router.push('/dashboard');
-    } else {
-        toast({
-            variant: "destructive",
-            title: "Error",
-            description: "Could not update the post. Please try again.",
-        });
     }
   };
 

@@ -6,17 +6,16 @@ import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle }
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-import { useToast } from "@/hooks/use-toast";
 import { useAppContext } from "@/contexts/app-context";
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import { Megaphone, CreditCard, Loader2 } from "lucide-react";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
+import toast from "react-hot-toast";
 
 export default function CreateAdPage() {
   const { user, createAd, loading } = useAppContext();
   const router = useRouter();
-  const { toast } = useToast();
 
   const [campaignName, setCampaignName] = useState("");
   const [content, setContent] = useState("");
@@ -24,18 +23,14 @@ export default function CreateAdPage() {
 
   useEffect(() => {
     if (!loading && (!user || user.type !== 'business')) {
-      toast({ variant: 'destructive', title: 'Unauthorized', description: 'You must be logged in as a business to create an ad.'});
+      toast.error('You must be logged in as a business to create an ad.');
       router.push('/login-business');
     }
-  }, [user, loading, router, toast]);
+  }, [user, loading, router]);
 
   const handlePublish = async () => {
     if (!campaignName || !content) {
-      toast({
-        variant: "destructive",
-        title: "Missing Information",
-        description: "Please fill out all fields.",
-      });
+      toast.error("Please fill out all fields.");
       return;
     }
     
@@ -44,17 +39,7 @@ export default function CreateAdPage() {
     setIsPublishing(false);
 
     if(success) {
-      toast({
-        title: "Ad Campaign Created!",
-        description: `Your campaign "${campaignName}" is now live.`
-      });
       router.push('/dashboard');
-    } else {
-      toast({
-        variant: "destructive",
-        title: "Creation Failed",
-        description: "You may not have enough points to pay for the ad campaign.",
-      });
     }
   };
 

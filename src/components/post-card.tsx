@@ -1,5 +1,4 @@
 
-
 "use client";
 
 import { useAppContext } from "@/contexts/app-context";
@@ -10,7 +9,6 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { formatTimeAgo, isVerified } from "@/lib/utils";
 import Link from "next/link";
 import { useMemo, useState, useEffect, useRef } from "react";
-import { useToast } from "@/hooks/use-toast";
 import Image from "next/image";
 import { Card, CardHeader, CardContent, CardFooter } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
@@ -19,6 +17,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, Di
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
 import { Textarea } from "@/components/ui/textarea";
 import { Input } from "./ui/input";
+import toast from "react-hot-toast";
 
 function MentionTextarea({
   value,
@@ -99,7 +98,6 @@ function MentionTextarea({
 
 function SharePostDialog({ post, children }: { post: PostType, children: React.ReactNode }) {
     const { user, allUsers, startConversation, sendDirectMessage } = useAppContext();
-    const { toast } = useToast();
     const [open, setOpen] = useState(false);
     const [searchTerm, setSearchTerm] = useState("");
     const [selectedUser, setSelectedUser] = useState<UserType | null>(null);
@@ -136,9 +134,9 @@ function SharePostDialog({ post, children }: { post: PostType, children: React.R
                 content: `Check out this post: ${postUrl}`,
                 type: 'text'
             });
-            toast({ title: "Post Shared!", description: `Successfully shared with ${selectedUser.name}.` });
+            toast.success(`Successfully shared with ${selectedUser.name}.`);
         } else {
-            toast({ variant: 'destructive', title: "Failed to share post." });
+            toast.error("Failed to share post.");
         }
         setIsSharing(false);
         handleOpenChange(false);
@@ -198,7 +196,6 @@ function CommentForm({ postId, parentId = null, onCommentPosted }: { postId: str
     const { user, addComment, allUsers } = useAppContext();
     const [comment, setComment] = useState("");
     const [isCommenting, setIsCommenting] = useState(false);
-    const { toast } = useToast();
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
@@ -209,8 +206,6 @@ function CommentForm({ postId, parentId = null, onCommentPosted }: { postId: str
         if (success) {
             setComment("");
             if (onCommentPosted) onCommentPosted();
-        } else {
-            toast({ variant: "destructive", title: "Failed to add comment." });
         }
     };
     
@@ -415,7 +410,6 @@ export function PostCard({ post }: { post: PostType }) {
     const { user, allUsers, likePost, loading, deletePost, addPost } = useAppContext();
     const [isLiked, setIsLiked] = useState(false);
     const [showComments, setShowComments] = useState(false);
-    const { toast } = useToast();
     const [deletingId, setDeletingId] = useState<string|null>(null);
 
     const likers = useMemo(() => {
@@ -441,7 +435,7 @@ export function PostCard({ post }: { post: PostType }) {
     const handleCopyLink = () => {
         const postUrl = `${window.location.origin}/posts/${post.id}`;
         navigator.clipboard.writeText(postUrl);
-        toast({ title: "Link Copied!", description: "The post link has been copied to your clipboard." });
+        toast.success("Link copied to clipboard!");
     };
 
     const handleShareAsPost = async () => {
@@ -456,7 +450,6 @@ export function PostCard({ post }: { post: PostType }) {
             fileType: post.fileType,
             linkPreview: post.linkPreview,
         });
-        toast({ title: "Post Shared!", description: "You have shared this post to your feed." });
     }
 
     const renderContentWithMentions = (content: string) => {
@@ -480,13 +473,8 @@ export function PostCard({ post }: { post: PostType }) {
     
     const handleDeletePost = async (postId: string) => {
         setDeletingId(postId);
-        const success = await deletePost(postId);
+        await deletePost(postId);
         setDeletingId(null);
-        if (success) {
-            toast({ title: "Post Deleted", description: "Your post has been removed." });
-        } else {
-            toast({ variant: 'destructive', title: "Error", description: "Failed to delete the post." });
-        }
     }
 
     return (

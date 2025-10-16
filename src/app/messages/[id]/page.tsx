@@ -5,10 +5,8 @@ import { useParams, useRouter } from "next/navigation";
 import { useAppContext } from "@/contexts/app-context";
 import { Conversation, Message, User as UserType, LinkPreview, Group } from "@/lib/types";
 import React, { useEffect, useState, useRef } from "react";
-import { Card, CardContent, CardHeader, CardTitle, CardFooter } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { useToast } from "@/hooks/use-toast";
 import { Loader2, Send, Paperclip, ArrowLeft, File as FileIcon, Mic, Square, Smile, Copy, Pencil, Trash2, Check, CheckCheck, MoreVertical, ShieldCheck, ShieldOff, Lock, Unlock, Pin, PinOff, UserX, User, Download } from "lucide-react";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import Image from "next/image";
@@ -22,6 +20,7 @@ import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, Di
 import { AlertDialog, AlertDialogTrigger, AlertDialogContent, AlertDialogHeader, AlertDialogTitle, AlertDialogDescription, AlertDialogFooter, AlertDialogCancel, AlertDialogAction } from "@/components/ui/alert-dialog";
 import { Label } from "@/components/ui/label";
 import { ScrollArea } from "@/components/ui/scroll-area";
+import toast from "react-hot-toast";
 
 function LinkPreviewCard({ preview }: { preview: LinkPreview }) {
     if (!preview.title) return null;
@@ -42,14 +41,13 @@ function LinkPreviewCard({ preview }: { preview: LinkPreview }) {
 }
 
 function MessageBubble({ message, isOwnMessage, participant, conversationId, isLastMessage, otherParticipant }: { message: Message; isOwnMessage: boolean, participant: { name: string, photoURL: string } | undefined, conversationId: string, isLastMessage: boolean, otherParticipant: UserType | null }) {
-    const { toast } = useToast();
     const { user, editDirectMessage, deleteDirectMessage, reactToDirectMessage } = useAppContext();
     const [isEditing, setIsEditing] = useState(false);
     const [editedContent, setEditedContent] = useState(message.content);
     
     const handleCopy = () => {
         navigator.clipboard.writeText(message.content);
-        toast({ title: "Copied to clipboard!" });
+        toast.success("Copied to clipboard!");
     };
 
     const handleEdit = async () => {
@@ -57,17 +55,11 @@ function MessageBubble({ message, isOwnMessage, participant, conversationId, isL
         const success = await editDirectMessage(conversationId, message.id, editedContent);
         if (success) {
             setIsEditing(false);
-            toast({ title: "Message updated" });
-        } else {
-            toast({ variant: 'destructive', title: "Failed to edit message" });
         }
     };
     
     const handleDelete = async () => {
-        const success = await deleteDirectMessage(conversationId, message.id);
-        if (!success) {
-            toast({ variant: 'destructive', title: "Failed to delete message" });
-        }
+        await deleteDirectMessage(conversationId, message.id);
     };
 
     const handleReaction = (emoji: EmojiClickData) => {
@@ -288,7 +280,6 @@ function SharedGroupsDialog({ otherUser, currentUser, children }: { otherUser: U
 
 function LockChatDialog({ conversationId, isLocked, children }: { conversationId: string, isLocked: boolean, children: React.ReactNode }) {
     const { lockConversation, unlockConversation } = useAppContext();
-    const { toast } = useToast();
     const [open, setOpen] = useState(false);
     const [pin, setPin] = useState("");
     const [confirmPin, setConfirmPin] = useState("");
@@ -296,11 +287,11 @@ function LockChatDialog({ conversationId, isLocked, children }: { conversationId
 
     const handleLock = async () => {
         if (pin.length !== 4) {
-            toast({ variant: 'destructive', title: "PIN must be 4 digits" });
+            toast.error("PIN must be 4 digits");
             return;
         }
         if (pin !== confirmPin) {
-            toast({ variant: 'destructive', title: "PINs do not match" });
+            toast.error("PINs do not match");
             return;
         }
         setIsSaving(true);
@@ -308,13 +299,13 @@ function LockChatDialog({ conversationId, isLocked, children }: { conversationId
         setIsSaving(false);
         setPin("");
         setConfirmPin("");
-        toast({ title: "Chat Locked" });
+        toast.success("Chat Locked");
         setOpen(false);
     }
     
     const handleUnlock = () => {
         unlockConversation(conversationId);
-        toast({ title: "Chat Unlocked" });
+        toast.success("Chat Unlocked");
         setOpen(false);
     }
 
@@ -370,7 +361,6 @@ export default function ConversationPage() {
     const router = useRouter();
     const { id: conversationId } = params;
     const { user, getConversationById, sendDirectMessage, loading, allUsers, groups, markMessagesAsRead, updateTypingStatus, togglePinConversation, deleteConversationForUser, lockedConversations, unlockConversation, toggleBlockUser } = useAppContext();
-    const { toast } = useToast();
 
     const [conversation, setConversation] = useState<Conversation | null>(null);
     const [text, setText] = useState("");
@@ -410,7 +400,7 @@ export default function ConversationPage() {
                  markMessagesAsRead(convoId, true);
             }
         } else if (!loading) {
-            toast({ variant: "destructive", title: "Conversation not found." });
+            toast.error("Conversation not found.");
             router.push('/#messages');
         }
          return () => {
@@ -418,7 +408,7 @@ export default function ConversationPage() {
                  markMessagesAsRead(convoId, true);
             }
          }
-    }, [conversationId, getConversationById, user, loading, router, toast, markMessagesAsRead, lockedConversations, isLocked]);
+    }, [conversationId, getConversationById, user, loading, router, markMessagesAsRead, lockedConversations, isLocked]);
 
     useEffect(() => {
         if (scrollViewportRef.current) {
@@ -450,11 +440,11 @@ export default function ConversationPage() {
         if (!text.trim() || !user || !otherParticipant) return;
         
         if(user.blockedUsers?.includes(otherParticipant.uid)) {
-            toast({ variant: 'destructive', title: "Message not sent", description: `You have blocked ${otherParticipant.name}.` });
+            toast.error(`You have blocked ${otherParticipant.name}.`);
             return;
         }
          if(otherParticipant.blockedUsers?.includes(user.uid)) {
-            toast({ variant: 'destructive', title: "Message not sent", description: `You have been blocked by ${otherParticipant.name}.` });
+            toast.error(`You have been blocked by ${otherParticipant.name}.`);
             return;
         }
 
@@ -463,8 +453,6 @@ export default function ConversationPage() {
         const success = await sendDirectMessage(conversationId as string, { content: text, type: 'text' });
         if (success) {
             setText("");
-        } else {
-            toast({ variant: 'destructive', title: "Failed to send message" });
         }
         setIsSending(false);
     };
@@ -474,19 +462,20 @@ export default function ConversationPage() {
         if (!file || !otherParticipant || !user) return;
         
         if(user.blockedUsers?.includes(otherParticipant.uid)) {
-            toast({ variant: 'destructive', title: "File not sent", description: `You have blocked ${otherParticipant.name}.` });
+            toast.error(`You have blocked ${otherParticipant.name}.`);
             return;
         }
         if(otherParticipant.blockedUsers?.includes(user.uid)) {
-            toast({ variant: 'destructive', title: "File not sent", description: `You have been blocked by ${otherParticipant.name}.` });
+            toast.error(`You have been blocked by ${otherParticipant.name}.`);
             return;
         }
 
         setIsSending(true);
-        toast({ title: 'Uploading...', description: `Sending ${file.name}` });
+        const loadingToast = toast.loading(`Sending ${file.name}...`);
         const success = await sendDirectMessage(conversationId as string, { file });
+        toast.dismiss(loadingToast);
         if (!success) {
-            toast({ variant: 'destructive', title: `Failed to upload file` });
+            toast.error(`Failed to upload file.`);
         }
         setIsSending(false);
         if (e.target) e.target.value = '';
@@ -510,7 +499,7 @@ export default function ConversationPage() {
             mediaRecorderRef.current.start();
             setRecordingState('recording');
         } catch (error) {
-            toast({ variant: 'destructive', title: 'Microphone access denied', description: 'Please allow microphone access in your browser settings.' });
+            toast.error('Please allow microphone access in your browser settings.');
         }
     };
 
@@ -524,16 +513,17 @@ export default function ConversationPage() {
         if (!recordedAudio || !otherParticipant || !user) return;
 
         if (user.blockedUsers?.includes(otherParticipant.uid) || otherParticipant.blockedUsers?.includes(user.uid)) {
-            toast({ variant: 'destructive', title: "Voice note not sent", description: "You cannot send messages in this chat." });
+            toast.error("You cannot send messages in this chat.");
             return;
         }
 
         setIsSending(true);
-        toast({ title: 'Uploading...', description: 'Sending voice note' });
+        const loadingToast = toast.loading('Sending voice note...');
         const audioFile = new window.File([recordedAudio.blob], `voice-note-${Date.now()}.webm`, { type: 'audio/webm' });
         const success = await sendDirectMessage(conversationId as string, { file: audioFile });
+        toast.dismiss(loadingToast);
         if (!success) {
-            toast({ variant: 'destructive', title: 'Failed to send voice note' });
+            toast.error('Failed to send voice note');
         }
         setIsSending(false);
         setRecordedAudio(null);
@@ -564,13 +554,13 @@ export default function ConversationPage() {
         if (!conversation) return;
         togglePinConversation(conversation.id);
         const isCurrentlyPinned = conversation.pinnedBy && conversation.pinnedBy[user!.uid];
-        toast({ title: isCurrentlyPinned ? "Conversation Unpinned" : "Conversation Pinned" });
+        toast.success(isCurrentlyPinned ? "Conversation Unpinned" : "Conversation Pinned");
     }
 
     const handleDeleteConversation = () => {
         if (!conversation) return;
         deleteConversationForUser(conversation.id);
-        toast({ title: "Conversation Deleted" });
+        toast.success("Conversation Deleted");
         router.push("/#messages");
     }
 
@@ -579,9 +569,9 @@ export default function ConversationPage() {
             unlockConversation(conversationId as string);
             setIsLocked(false);
             setPinInput("");
-            toast({ title: "Chat Unlocked" });
+            toast.success("Chat Unlocked");
         } else {
-            toast({ variant: 'destructive', title: "Incorrect PIN" });
+            toast.error("Incorrect PIN");
         }
     }
     
@@ -589,7 +579,7 @@ export default function ConversationPage() {
         if (!otherParticipant) return;
         toggleBlockUser(otherParticipant.uid);
         const isBlocked = user?.blockedUsers?.includes(otherParticipant.uid);
-        toast({ title: isBlocked ? `Unblocked ${otherParticipant.name}` : `Blocked ${otherParticipant.name}` });
+        toast.success(isBlocked ? `Unblocked ${otherParticipant.name}` : `Blocked ${otherParticipant.name}`);
     };
 
     const getOtherParticipant = () => {
@@ -808,4 +798,3 @@ export default function ConversationPage() {
     
 
     
-

@@ -1,5 +1,4 @@
 
-
 "use client";
 
 import { PlaceHolderImages } from "@/lib/placeholder-images";
@@ -13,6 +12,7 @@ import { ref as storageRef, uploadBytes, getDownloadURL } from "firebase/storage
 import { generateLinkPreview } from '@/ai/flows/generate-link-preview';
 import { getMessaging, getToken, onMessage } from "firebase/messaging";
 import { app } from "@/lib/firebase"; // Import app
+import toast from 'react-hot-toast';
 
 type AddCourseData = {
     title: string;
@@ -373,16 +373,19 @@ export function AppContextProvider({ children }: { children: React.ReactNode }) 
             const userDbRef = ref(db, `users/${firebaseUser.uid}`);
             await update(userDbRef, { name, photoURL });
             
+            toast.success("Profile updated successfully!");
             return true;
         } catch (error) {
             console.error("Error updating profile:", error);
+            toast.error("Failed to update profile.");
             return false;
         }
     };
     
     const enableNotifications = async () => {
         if (!user || typeof window === 'undefined' || !('serviceWorker' in navigator)) {
-            throw new Error("Push messaging is not supported in this browser or environment.");
+            toast.error("Push messaging is not supported in this browser.");
+            return;
         }
 
         try {
@@ -391,22 +394,19 @@ export function AppContextProvider({ children }: { children: React.ReactNode }) 
 
             if (permission === 'granted') {
                 const fcmToken = await getToken(messaging);
-
                 if (fcmToken) {
-                    console.log('FCM Token:', fcmToken);
-                    // Save the token to the user's profile in the database
                     const userRef = ref(db, `users/${user.uid}/fcmTokens/${fcmToken}`);
                     await set(userRef, true);
-                    alert("Notifications have been enabled!");
+                    toast.success("Notifications enabled!");
                 } else {
-                     throw new Error('No registration token available. Request permission to generate one.');
+                     toast.error('Could not get notification token.');
                 }
             } else {
-                throw new Error('Unable to get permission to notify.');
+                toast.error('Unable to get permission to notify.');
             }
         } catch (error) {
             console.error('An error occurred while retrieving token. ', error);
-            throw error;
+            toast.error('An error occurred while enabling notifications.');
         }
     };
 
@@ -416,7 +416,7 @@ export function AppContextProvider({ children }: { children: React.ReactNode }) 
     
     const { title, content, price, coverImage } = courseData;
     
-    try {
+    const promise = async () => {
         // 1. Upload image to Firebase Storage
         const courseId = `course-${Date.now()}`;
         const imageStorageRef = storageRef(storage, `course-images/${courseId}/${coverImage.name}`);
@@ -438,61 +438,85 @@ export function AppContextProvider({ children }: { children: React.ReactNode }) 
         // 3. Save course to Realtime Database
         await set(ref(db, `courses/${courseId}`), newCourse);
         return true;
-    } catch(e) {
-        console.error("Error adding course:", e);
-        return false;
     }
+    
+    toast.promise(promise(), {
+        loading: 'Publishing course...',
+        success: 'Course created successfully!',
+        error: 'Failed to create course.',
+    });
+
+    return promise().catch(() => false);
   };
 
   const updateCourse = async (courseId: string, courseData: Partial<Omit<Course, 'id' | 'creator' | 'creatorName'>>): Promise<boolean> => {
     if (!user || user.type !== 'user') return false;
     const courseRef = ref(db, `courses/${courseId}`);
-    const courseSnapshot = await get(courseRef);
-
-    if (courseSnapshot.exists() && courseSnapshot.val().creator === user.uid) {
-        try {
+    
+    const promise = async () => {
+        const courseSnapshot = await get(courseRef);
+        if (courseSnapshot.exists() && courseSnapshot.val().creator === user.uid) {
             await update(courseRef, courseData);
-            return true;
-        } catch (e) {
-            return false;
+        } else {
+            throw new Error("Unauthorized or course not found.");
         }
     }
-    return false;
+
+    toast.promise(promise(), {
+        loading: 'Saving changes...',
+        success: 'Course updated successfully!',
+        error: 'Failed to update course.',
+    });
+    
+    return promise().then(() => true).catch(() => false);
   };
 
   const deleteCourse = async (courseId: string): Promise<boolean> => {
       if (!user || user.type !== 'user') return false;
       const courseRef = ref(db, `courses/${courseId}`);
-      const courseSnapshot = await get(courseRef);
-
-      if (courseSnapshot.exists() && courseSnapshot.val().creator === user.uid) {
-          try {
+      
+      const promise = async () => {
+          const courseSnapshot = await get(courseRef);
+          if (courseSnapshot.exists() && courseSnapshot.val().creator === user.uid) {
               await remove(courseRef);
-              return true;
-          } catch(e) {
-              return false;
+          } else {
+              throw new Error("Unauthorized or course not found.");
           }
       }
-      return false;
+
+      toast.promise(promise(), {
+          loading: 'Deleting course...',
+          success: 'Course deleted.',
+          error: 'Failed to delete course.',
+      });
+      
+      return promise().then(() => true).catch(() => false);
   }
 
   const purchaseCourse = async (courseId: string): Promise<boolean> => {
     if (!user || user.type !== 'user') return false;
-    const course = courses.find(c => c.id === courseId);
-    if (!course || user.points < course.price || purchasedCourses.some(p => p.id === courseId)) return false;
 
-    const updatedPoints = user.points - course.price;
-    const userRef = ref(db, `users/${user.uid}`);
-    const purchasedCourseRef = ref(db, `users/${user.uid}/purchasedCourses/${courseId}`);
+    const promise = async () => {
+        const course = courses.find(c => c.id === courseId);
+        if (!course || user.points < course.price || purchasedCourses.some(p => p.id === courseId)) {
+            throw new Error("Purchase conditions not met.");
+        };
 
-    try {
+        const updatedPoints = user.points - course.price;
+        const userRef = ref(db, `users/${user.uid}`);
+        const purchasedCourseRef = ref(db, `users/${user.uid}/purchasedCourses/${courseId}`);
+
         await update(userRef, { points: updatedPoints });
         await set(purchasedCourseRef, { id: course.id, title: course.title });
-        
-        return true;
-    } catch (e) {
-        return false;
-    }
+    };
+
+    toast.promise(promise(), {
+        loading: 'Processing purchase...',
+        success: 'Course purchased successfully!',
+        error: 'Purchase failed. You may not have enough points or already own this course.',
+    });
+    
+    return promise().then(() => true).catch(() => false);
   };
   
   const watchAd = async (adId: string) => {
@@ -517,65 +541,83 @@ export function AppContextProvider({ children }: { children: React.ReactNode }) 
             const businessUser = businessSnapshot.val();
             await update(businessUserRef, {points: businessUser.points + 1});
         }
+        toast.success(`You earned ${pointsEarned} points!`);
     } catch (e) {
-        // silently fail
+        toast.error("Failed to process ad reward.");
     }
   };
 
   const createAd = async (adData: Omit<Ad, 'id' | 'creator' | 'views'>): Promise<boolean> => {
     if (!user || user.type !== 'business') return false;
     const payment = 50;
-    if (user.points < payment) return false;
+    
+    const promise = async () => {
+        if (user.points < payment) throw new Error("Not enough points.");
+        
+        const updatedPoints = user.points - payment;
+        const adId = `ad-${Date.now()}`;
+        const newAd: Ad = { ...adData, id: adId, creator: user.uid, views: 0 };
+        
+        const userRef = ref(db, `users/${user.uid}`);
+        const adRef = ref(db, `ads/${adId}`);
+        
+        await Promise.all([
+            update(userRef, { points: updatedPoints }),
+            set(adRef, newAd)
+        ]);
+    };
 
-    const updatedPoints = user.points - payment;
-    const adId = `ad-${Date.now()}`;
-    const newAd: Ad = { ...adData, id: adId, creator: user.uid, views: 0 };
+    toast.promise(promise(), {
+        loading: 'Creating ad campaign...',
+        success: 'Ad campaign created!',
+        error: 'Failed to create campaign. You may not have enough points.',
+    });
     
-    try {
-      const userRef = ref(db, `users/${user.uid}`);
-      const adRef = ref(db, `ads/${adId}`);
-      
-      await Promise.all([
-        update(userRef, { points: updatedPoints }),
-        set(adRef, newAd)
-      ]);
-    } catch(e) {
-        return false;
-    }
-    
-    return true;
+    return promise().then(() => true).catch(() => false);
   };
 
   const updateAd = async (adId: string, adData: Partial<Omit<Ad, 'id' | 'creator'>>): Promise<boolean> => {
       if (!user || user.type !== 'business') return false;
-      const adRef = ref(db, `ads/${adId}`);
-      const adSnapshot = await get(adRef);
+      
+      const promise = async () => {
+        const adRef = ref(db, `ads/${adId}`);
+        const adSnapshot = await get(adRef);
 
-      if (adSnapshot.exists() && adSnapshot.val().creator === user.uid) {
-          try {
-              await update(adRef, adData);
-              return true;
-          } catch(e) {
-              return false;
-          }
+        if (adSnapshot.exists() && adSnapshot.val().creator === user.uid) {
+            await update(adRef, adData);
+        } else {
+            throw new Error("Unauthorized or ad not found.");
+        }
       }
-      return false;
+      
+      toast.promise(promise(), {
+          loading: 'Saving changes...',
+          success: 'Ad campaign updated.',
+          error: 'Failed to update campaign.',
+      });
+
+      return promise().then(() => true).catch(() => false);
   }
 
   const deleteAd = async (adId: string): Promise<boolean> => {
       if (!user || user.type !== 'business') return false;
-      const adRef = ref(db, `ads/${adId}`);
-      const adSnapshot = await get(adRef);
+      const promise = async () => {
+        const adRef = ref(db, `ads/${adId}`);
+        const adSnapshot = await get(adRef);
 
-      if (adSnapshot.exists() && adSnapshot.val().creator === user.uid) {
-          try {
-              await remove(adRef);
-              return true;
-          } catch(e) {
-              return false;
-          }
+        if (adSnapshot.exists() && adSnapshot.val().creator === user.uid) {
+            await remove(adRef);
+        } else {
+            throw new Error("Unauthorized or ad not found.");
+        }
       }
-      return false;
+      toast.promise(promise(), {
+          loading: 'Deleting campaign...',
+          success: 'Ad campaign deleted.',
+          error: 'Failed to delete campaign.',
+      });
+
+      return promise().then(() => true).catch(() => false);
   }
 
   const followUser = async (targetUserId: string) => {
@@ -599,6 +641,7 @@ export function AppContextProvider({ children }: { children: React.ReactNode }) 
         targetUrl: `/profile/${user.uid}`,
         targetId: user.uid,
     });
+    toast.success(`You are now following them!`);
   };
 
   const unfollowUser = async (targetUserId: string) => {
@@ -611,6 +654,7 @@ export function AppContextProvider({ children }: { children: React.ReactNode }) 
     // Update target user's followers list
     const targetUserRef = ref(db, `users/${targetUserId}/followers/${user.uid}`);
     await remove(targetUserRef);
+    toast.success(`You have unfollowed them.`);
   };
 
     const getFileType = (file: File): 'image' | 'audio' | 'video' | 'file' => {
@@ -652,7 +696,7 @@ export function AppContextProvider({ children }: { children: React.ReactNode }) 
       const { content, file, repostedFrom, fileUrl, fileName, fileType, linkPreview } = postData;
       if (!content?.trim() && !file && !fileUrl) return false;
       
-      try {
+      const promise = async () => {
         const postsRef = ref(db, 'posts');
         const newPostRef = push(postsRef);
         const postId = newPostRef.key!;
@@ -712,45 +756,58 @@ export function AppContextProvider({ children }: { children: React.ReactNode }) 
                 message: "reposted your post.",
             });
         }
-        
-        return true;
-      } catch (e) {
-        console.error("Error adding post:", e);
-        return false;
       }
+
+      toast.promise(promise(), {
+          loading: 'Creating post...',
+          success: 'Post created!',
+          error: 'Failed to create post.',
+      });
+
+      return promise().then(() => true).catch(() => false);
   };
   
   const updatePost = async (postId: string, postData: { content: string }): Promise<boolean> => {
       if (!user) return false;
       const postRef = ref(db, `posts/${postId}`);
-      const postSnapshot = await get(postRef);
-      if (postSnapshot.exists() && postSnapshot.val().creatorUid === user.uid) {
-          try {
+      const promise = async () => {
+          const postSnapshot = await get(postRef);
+          if (postSnapshot.exists() && postSnapshot.val().creatorUid === user.uid) {
               await update(postRef, { content: postData.content });
               await handleMentions(postData.content, postId);
-              return true;
-          } catch (e) {
-              console.error("Error updating post:", e);
-              return false;
+          } else {
+              throw new Error("Unauthorized or post not found.");
           }
-      }
-      return false;
+      };
+
+      toast.promise(promise(), {
+          loading: 'Saving changes...',
+          success: 'Post updated!',
+          error: 'Failed to update post.',
+      });
+
+      return promise().then(() => true).catch(() => false);
   };
   
   const deletePost = async (postId: string): Promise<boolean> => {
       if (!user) return false;
       const postRef = ref(db, `posts/${postId}`);
-      const postSnapshot = await get(postRef);
-      if (postSnapshot.exists() && postSnapshot.val().creatorUid === user.uid) {
-          try {
-              await remove(postRef);
-              return true;
-          } catch (e) {
-              console.error("Error deleting post:", e);
-              return false;
-          }
+      const promise = async () => {
+        const postSnapshot = await get(postRef);
+        if (postSnapshot.exists() && postSnapshot.val().creatorUid === user.uid) {
+            await remove(postRef);
+        } else {
+            throw new Error("Unauthorized or post not found.");
+        }
       }
-      return false;
+
+      toast.promise(promise(), {
+          loading: 'Deleting post...',
+          success: 'Post deleted.',
+          error: 'Failed to delete post.',
+      });
+
+      return promise().then(() => true).catch(() => false);
   };
 
   const likePost = async (postId: string) => {
@@ -785,7 +842,7 @@ export function AppContextProvider({ children }: { children: React.ReactNode }) 
             const postRef = ref(db, `posts/${postId}`);
             const postSnapshot = await get(postRef);
             if (!postSnapshot.exists()) {
-                console.error("Post does not exist.");
+                toast.error("Post does not exist.");
                 return false;
             }
 
@@ -807,6 +864,7 @@ export function AppContextProvider({ children }: { children: React.ReactNode }) 
             
             // Set comment without preview first
             await set(newCommentRef, newComment);
+            toast.success("Comment added!");
 
             const urlMatch = content.match(urlRegex);
             if (urlMatch) {
@@ -848,7 +906,7 @@ export function AppContextProvider({ children }: { children: React.ReactNode }) 
             }
             return true;
         } catch (e) {
-            console.error("Failed to add comment:", e);
+            toast.error("Failed to add comment.");
             return false;
         }
     };
@@ -882,7 +940,7 @@ export function AppContextProvider({ children }: { children: React.ReactNode }) 
     
     const deleteComment = async (postId: string, commentId: string): Promise<boolean> => {
         if (!user) return false;
-        try {
+        const promise = async () => {
             const commentRef = ref(db, `posts/${postId}/comments/${commentId}`);
             const commentSnapshot = await get(commentRef);
             if (commentSnapshot.exists() && commentSnapshot.val().creatorUid === user.uid) {
@@ -894,20 +952,25 @@ export function AppContextProvider({ children }: { children: React.ReactNode }) 
                     const replyRef = ref(db, `posts/${postId}/comments/${reply.id}`);
                     await remove(replyRef);
                 }
-                return true;
+            } else {
+                throw new Error("Unauthorized or comment not found.");
             }
-            return false;
-        } catch (e) {
-            console.error("Error deleting comment:", e);
-            return false;
-        }
+        };
+
+        toast.promise(promise(), {
+            loading: 'Deleting comment...',
+            success: 'Comment deleted.',
+            error: 'Failed to delete comment.',
+        });
+
+        return promise().then(() => true).catch(() => false);
     };
 
 
   const createGroup = async (groupData: { name: string; description: string; pin?: string, photoFile?: File | null }): Promise<string | null> => {
     if (!user) return null;
     
-    try {
+    const promise = async () => {
         const groupsRef = ref(db, 'groups');
         const newGroupRef = push(groupsRef);
         const groupId = newGroupRef.key!;
@@ -938,18 +1001,24 @@ export function AppContextProvider({ children }: { children: React.ReactNode }) 
         });
 
         return groupId;
-    } catch(e) {
-        console.error(e)
-        return null;
     }
+    
+    toast.promise(promise(), {
+        loading: 'Creating group...',
+        success: 'Group created!',
+        error: 'Failed to create group.',
+    });
+
+    return promise().catch(() => null);
   };
   
     const updateGroup = async (groupId: string, groupData: { name: string; description: string }, photoFile: File | null): Promise<boolean> => {
         if (!user) return false;
-        const groupRef = ref(db, `groups/${groupId}`);
-        const groupSnapshot = await get(groupRef);
-        if (groupSnapshot.exists() && groupSnapshot.val().creatorUid === user.uid) {
-            try {
+        
+        const promise = async () => {
+            const groupRef = ref(db, `groups/${groupId}`);
+            const groupSnapshot = await get(groupRef);
+            if (groupSnapshot.exists() && groupSnapshot.val().creatorUid === user.uid) {
                 const updates: any = { ...groupData };
                 if (photoFile) {
                     const photoStorageRef = storageRef(storage, `group-avatars/${groupId}`);
@@ -957,71 +1026,93 @@ export function AppContextProvider({ children }: { children: React.ReactNode }) 
                     updates.photoURL = await getDownloadURL(photoStorageRef);
                 }
                 await update(groupRef, updates);
-                return true;
-            } catch (e) {
-                console.error("Error updating group:", e);
-                return false;
+            } else {
+                throw new Error("Unauthorized or group not found.");
             }
-        }
-        return false;
+        };
+
+        toast.promise(promise(), {
+            loading: 'Saving changes...',
+            success: 'Group updated!',
+            error: 'Failed to update group.',
+        });
+
+        return promise().then(() => true).catch(() => false);
     };
     
     const updateGroupPin = async (groupId: string, pin: string): Promise<boolean> => {
         if (!user) return false;
-        const groupRef = ref(db, `groups/${groupId}`);
-        const groupSnapshot = await get(groupRef);
-        if (groupSnapshot.exists() && groupSnapshot.val().creatorUid === user.uid) {
-            try {
+        
+        const promise = async () => {
+            const groupRef = ref(db, `groups/${groupId}`);
+            const groupSnapshot = await get(groupRef);
+            if (groupSnapshot.exists() && groupSnapshot.val().creatorUid === user.uid) {
                 await update(groupRef, { pin: pin || null, hasPin: !!pin });
-                return true;
-            } catch (e) {
-                return false;
+            } else {
+                throw new Error("Unauthorized or group not found.");
             }
         }
-        return false;
+        
+        toast.promise(promise(), {
+            loading: 'Updating PIN...',
+            success: 'Group PIN updated.',
+            error: 'Failed to update PIN.',
+        });
+
+        return promise().then(() => true).catch(() => false);
     };
 
     const deleteGroup = async (groupId: string): Promise<boolean> => {
         if (!user) return false;
-        const groupRef = ref(db, `groups/${groupId}`);
-        const groupSnapshot = await get(groupRef);
-        if (groupSnapshot.exists() && groupSnapshot.val().creatorUid === user.uid) {
-            try {
+        
+        const promise = async () => {
+            const groupRef = ref(db, `groups/${groupId}`);
+            const groupSnapshot = await get(groupRef);
+            if (groupSnapshot.exists() && groupSnapshot.val().creatorUid === user.uid) {
                 await remove(groupRef);
-                return true;
-            } catch (e) {
-                return false;
+            } else {
+                throw new Error("Unauthorized or group not found.");
             }
-        }
-        return false;
+        };
+
+        toast.promise(promise(), {
+            loading: 'Deleting group...',
+            success: 'Group deleted.',
+            error: 'Failed to delete group.',
+        });
+
+        return promise().then(() => true).catch(() => false);
     };
 
   const joinGroup = async (groupId: string, pin?: string): Promise<boolean> => {
       if (!user) return false;
-      const group = groups.find(g => g.id === groupId);
-      if (!group) return false;
+      
+      const promise = async () => {
+        const group = groups.find(g => g.id === groupId);
+        if (!group) throw new Error("Group not found.");
 
-      // Check if user is already a member
-      if (group.members && Object.keys(group.members).includes(user.uid)) return true;
+        if (group.members && Object.keys(group.members).includes(user.uid)) return true;
 
-      // Check PIN if the group is private
-      if (group.hasPin && group.pin !== pin) {
-          return false;
-      }
+        if (group.hasPin && group.pin !== pin) {
+            throw new Error("Incorrect PIN.");
+        }
 
-      try {
-          const memberRef = ref(db, `groups/${groupId}/members/${user.uid}`);
-          await set(memberRef, { joinedAt: serverTimestamp(), joinMethod: 'direct' });
-          
-          await sendMessage(groupId, {
-            content: `${user.name} joined the group.`,
-            type: 'system'
-          });
+        const memberRef = ref(db, `groups/${groupId}/members/${user.uid}`);
+        await set(memberRef, { joinedAt: serverTimestamp(), joinMethod: 'direct' });
+        
+        await sendMessage(groupId, {
+          content: `${user.name} joined the group.`,
+          type: 'system'
+        });
+      };
+      
+      toast.promise(promise(), {
+          loading: 'Joining group...',
+          success: 'Welcome to the group!',
+          error: (err) => err.message || 'Failed to join group.',
+      });
 
-          return true;
-      } catch(e) {
-          return false;
-      }
+      return promise().then(() => true).catch(() => false);
   };
 
   const sendMessage = async (groupId: string, messageData: { content?: string; file?: File; type?: 'system' | 'text' }): Promise<boolean> => {
@@ -1134,11 +1225,12 @@ export function AppContextProvider({ children }: { children: React.ReactNode }) 
                 }
                 
                 await update(messageRef, updateData);
+                toast.success("Message updated.");
                 return true;
             }
             return false;
         } catch (e) {
-            console.error("Error editing message:", e);
+            toast.error("Failed to edit message.");
             return false;
         }
     };
@@ -1154,7 +1246,7 @@ export function AppContextProvider({ children }: { children: React.ReactNode }) 
             }
             return false;
         } catch (e) {
-            console.error("Error deleting message:", e);
+            toast.error("Failed to delete message.");
             return false;
         }
     };
@@ -1213,10 +1305,10 @@ export function AppContextProvider({ children }: { children: React.ReactNode }) 
             updates[`/users/${user.uid}/conversationIds/${conversationId}`] = true;
             updates[`/users/${otherUserId}/conversationIds/${conversationId}`] = true;
             await update(ref(db), updates);
-
+            toast.success("Conversation started!");
             return conversationId;
         } catch (error) {
-            console.error("Error starting conversation:", error);
+            toast.error("Could not start conversation.");
             return null;
         }
     }
@@ -1299,7 +1391,7 @@ export function AppContextProvider({ children }: { children: React.ReactNode }) 
         
         return true;
     } catch (e) {
-        console.error("Error sending direct message:", e);
+        toast.error("Failed to send message.");
         return false;
     }
   };
@@ -1322,11 +1414,12 @@ export function AppContextProvider({ children }: { children: React.ReactNode }) 
                 }
 
                 await update(messageRef, updateData);
+                toast.success("Message updated.");
                 return true;
             }
             return false;
         } catch (e) {
-            console.error("Error editing direct message:", e);
+            toast.error("Failed to edit message.");
             return false;
         }
     };
@@ -1342,7 +1435,7 @@ export function AppContextProvider({ children }: { children: React.ReactNode }) 
             }
             return false;
         } catch (e) {
-            console.error("Error deleting direct message:", e);
+            toast.error("Failed to delete message.");
             return false;
         }
     };
@@ -1454,8 +1547,10 @@ export function AppContextProvider({ children }: { children: React.ReactNode }) 
 
         if (isBlocked) {
             await remove(blockRef);
+            toast.success("User unblocked.");
         } else {
             await set(blockRef, true);
+            toast.success("User blocked.");
         }
     };
 

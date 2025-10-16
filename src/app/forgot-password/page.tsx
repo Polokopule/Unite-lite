@@ -6,14 +6,13 @@ import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle }
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { auth } from "@/lib/firebase";
-import { useToast } from "@/hooks/use-toast";
 import { Loader2, KeyRound } from "lucide-react";
 import { sendPasswordResetEmail } from "firebase/auth";
 import { useState } from "react";
 import Link from "next/link";
+import toast from "react-hot-toast";
 
 export default function ForgotPasswordPage() {
-    const { toast } = useToast();
     const [email, setEmail] = useState("");
     const [isLoading, setIsLoading] = useState(false);
     const [isSent, setIsSent] = useState(false);
@@ -26,16 +25,9 @@ export default function ForgotPasswordPage() {
         try {
             await sendPasswordResetEmail(auth, email);
             setIsSent(true);
-            toast({
-                title: "Password Reset Email Sent",
-                description: "Check your inbox for a link to reset your password.",
-            });
+            toast.success("Check your inbox for a link to reset your password.");
         } catch (error: any) {
-            toast({
-                variant: "destructive",
-                title: "Error",
-                description: "Could not send reset email. Please ensure the email address is correct.",
-            });
+            toast.error("Could not send reset email. Please ensure the email address is correct.");
         } finally {
             setIsLoading(false);
         }

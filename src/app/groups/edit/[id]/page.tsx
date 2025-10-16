@@ -6,19 +6,18 @@ import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle }
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-import { useToast } from "@/hooks/use-toast";
 import { useAppContext } from "@/contexts/app-context";
 import { useRouter, useParams } from "next/navigation";
 import { useEffect, useState } from "react";
 import { Users, Loader2, Upload, Save } from "lucide-react";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Group } from "@/lib/types";
+import toast from "react-hot-toast";
 
 export default function EditGroupPage() {
   const { user, groups, updateGroup, loading } = useAppContext();
   const router = useRouter();
   const params = useParams();
-  const { toast } = useToast();
   
   const groupId = params.id as string;
 
@@ -42,14 +41,14 @@ export default function EditGroupPage() {
         setGroupImageUrl(foundGroup.photoURL || null);
         setIsAuthorized(true);
       } else {
-        toast({ variant: 'destructive', title: 'Unauthorized', description: 'You are not the creator of this group.' });
+        toast.error('You are not the creator of this group.');
         router.push(`/groups/${groupId}`);
       }
     } else if (!loading) {
-      toast({ variant: 'destructive', title: 'Group not found' });
+      toast.error('Group not found');
       router.push('/groups');
     }
-  }, [user, loading, groups, groupId, router, toast]);
+  }, [user, loading, groups, groupId, router]);
 
   const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -61,7 +60,7 @@ export default function EditGroupPage() {
 
   const handleSave = async () => {
     if (!name || !description) {
-      toast({ variant: "destructive", title: "Missing Information" });
+      toast.error("Missing Information");
       return;
     }
     
@@ -70,10 +69,7 @@ export default function EditGroupPage() {
     setIsSaving(false);
 
     if (success) {
-      toast({ title: "Group Updated!", description: "Your changes have been saved." });
       router.push(`/groups/${groupId}`);
-    } else {
-      toast({ variant: "destructive", title: "Update Failed", description: "Could not update the group." });
     }
   };
   

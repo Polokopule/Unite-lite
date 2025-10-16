@@ -11,11 +11,10 @@ import Link from "next/link";
 import { useState } from "react";
 import { signInWithEmailAndPassword } from "firebase/auth";
 import { auth } from "@/lib/firebase";
-import { useToast } from "@/hooks/use-toast";
+import toast from "react-hot-toast";
 
 export default function LoginBusinessPage() {
   const { login } = useAppContext();
-  const { toast } = useToast();
   const [email, setEmail] = useState("business@example.com");
   const [password, setPassword] = useState("password");
   const [isLoading, setIsLoading] = useState(false);
@@ -25,15 +24,13 @@ export default function LoginBusinessPage() {
     if (!email || !password) return;
 
     setIsLoading(true);
+    const loadingToast = toast.loading("Logging in...");
     try {
       await signInWithEmailAndPassword(auth, email, password);
       await login(email, 'business');
+      toast.dismiss(loadingToast);
     } catch (error: any) {
-      toast({
-        variant: "destructive",
-        title: "Login Failed",
-        description: "Invalid credentials. Please check your email and password.",
-      });
+      toast.error("Invalid credentials. Please check your email and password.", { id: loadingToast });
     } finally {
       setIsLoading(false);
     }

@@ -5,7 +5,6 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { useToast } from "@/hooks/use-toast";
 import { useAppContext } from "@/contexts/app-context";
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
@@ -13,6 +12,7 @@ import { BookOpen, CreditCard, Image as ImageIcon, Upload, Loader2 } from "lucid
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
 import Image from "next/image";
 import { Editor, EditorProvider } from 'react-simple-wysiwyg';
+import toast from "react-hot-toast";
 
 function RichTextEditor({ value, onChange }: { value: string, onChange: (value: string) => void }) {
   return (
@@ -30,7 +30,6 @@ function RichTextEditor({ value, onChange }: { value: string, onChange: (value: 
 export default function CreateCoursePage() {
   const { user, addCourse, loading } = useAppContext();
   const router = useRouter();
-  const { toast } = useToast();
 
   const [title, setTitle] = useState("");
   const [content, setContent] = useState("");
@@ -41,10 +40,10 @@ export default function CreateCoursePage() {
 
   useEffect(() => {
     if (!loading && (!user || user.type !== 'user')) {
-      toast({ variant: 'destructive', title: 'Unauthorized', description: 'You must be logged in as a user to create a course.'})
+      toast.error('You must be logged in as a user to create a course.');
       router.push('/login-user');
     }
-  }, [user, loading, router, toast]);
+  }, [user, loading, router]);
   
   const handleCoverImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -56,11 +55,7 @@ export default function CreateCoursePage() {
 
   const handlePublish = async () => {
     if (!title || !content || price <= 0 || !coverImage) {
-        toast({
-            variant: "destructive",
-            title: "Missing Information",
-            description: "Please fill out all fields and upload a cover image.",
-        });
+        toast.error("Please fill out all fields and upload a cover image.");
         return;
     }
     
@@ -69,17 +64,7 @@ export default function CreateCoursePage() {
     setIsPublishing(false);
 
     if(success) {
-        toast({
-            title: "Course Created!",
-            description: `Your course "${title}" is now live in the marketplace.`
-        });
         router.push('/dashboard');
-    } else {
-        toast({
-            variant: "destructive",
-            title: "Error",
-            description: "Could not create the course. Please try again.",
-        });
     }
   };
 

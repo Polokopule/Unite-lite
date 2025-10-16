@@ -8,13 +8,12 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import React, { useEffect, useState } from "react";
 import { User as UserType, Post as PostType } from "@/lib/types";
 import { Loader2, UserPlus, UserMinus, ShieldCheck } from "lucide-react";
-import { useToast } from "@/hooks/use-toast";
 import { PostCard } from "@/components/post-card";
 import { isVerified } from "@/lib/utils";
+import toast from "react-hot-toast";
 
 export default function ProfilePageClient({ profileUserId }: { profileUserId: string }) {
     const { user: currentUser, allUsers, loading, followUser, unfollowUser, posts } = useAppContext();
-    const { toast } = useToast();
 
     const [profileUser, setProfileUser] = useState<UserType | null>(null);
     const [isFollowing, setIsFollowing] = useState(false);
@@ -41,7 +40,6 @@ export default function ProfilePageClient({ profileUserId }: { profileUserId: st
         if (!profileUser) return;
         setIsProcessing(true);
         await followUser(profileUser.uid);
-        toast({ title: "Followed", description: `You are now following ${profileUser.name}.`});
         setIsProcessing(false);
     };
 
@@ -49,7 +47,6 @@ export default function ProfilePageClient({ profileUserId }: { profileUserId: st
         if (!profileUser) return;
         setIsProcessing(true);
         await unfollowUser(profileUser.uid);
-        toast({ title: "Unfollowed", description: `You are no longer following ${profileUser.name}.`});
         setIsProcessing(false);
     };
 

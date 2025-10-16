@@ -9,14 +9,13 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Download, Loader2 } from "lucide-react";
 import Image from "next/image";
-import { useToast } from "@/hooks/use-toast";
 import jsPDF from 'jspdf';
 import html2canvas from 'html2canvas';
+import toast from "react-hot-toast";
 
 export default function CourseViewer({ courseId }: { courseId: string }) {
     const { user, courses, purchasedCourses, loading } = useAppContext();
     const router = useRouter();
-    const { toast } = useToast();
     const courseContentRef = useRef<HTMLDivElement>(null);
 
     const [course, setCourse] = useState<Course | null>(null);
@@ -35,43 +34,27 @@ export default function CourseViewer({ courseId }: { courseId: string }) {
                 if (isPurchased || foundCourse.creator === user.uid) {
                     setIsAuthorized(true);
                 } else {
-                     toast({
-                        variant: "destructive",
-                        title: "Unauthorized",
-                        description: "You have not purchased this course.",
-                    });
+                     toast.error("You have not purchased this course.");
                     router.push('/courses');
                 }
             } else if (user?.type === 'business') {
-                toast({
-                    variant: "destructive",
-                    title: "Access Denied",
-                    description: "Business accounts cannot view course content.",
-                });
+                toast.error("Business accounts cannot view course content.");
                 router.push('/');
             } else {
-                toast({
-                    variant: "destructive",
-                    title: "Please Log In",
-                    description: "You must be logged in to view courses.",
-                });
+                toast.error("You must be logged in to view courses.");
                 router.push('/login-user');
             }
         } else {
-             toast({
-                variant: "destructive",
-                title: "Course not found",
-                description: "The course you are looking for does not exist.",
-            });
+             toast.error("The course you are looking for does not exist.");
             router.push('/courses');
         }
-    }, [courseId, courses, purchasedCourses, user, router, toast, loading]);
+    }, [courseId, courses, purchasedCourses, user, router, loading]);
 
     const handleDownloadPDF = async () => {
         if (!courseContentRef.current || !course) return;
 
         setIsDownloading(true);
-        toast({ title: "Preparing PDF...", description: "Please wait while we generate your download." });
+        const toastId = toast.loading("Preparing PDF...");
 
         const content = courseContentRef.current;
 
@@ -93,9 +76,9 @@ export default function CourseViewer({ courseId }: { courseId: string }) {
             pdf.addImage(imgData, 'PNG', 0, 0, canvas.width, canvas.height);
             pdf.save(`${course.title.replace(/\s+/g, '_').toLowerCase()}.pdf`);
 
-            toast({ title: "Download Started!", description: "Your course PDF is being downloaded." });
+            toast.success("Download Started!", { id: toastId });
         } catch (error) {
-            toast({ variant: 'destructive', title: "PDF Generation Failed", description: "Could not generate PDF. Please try again." });
+            toast.error("Could not generate PDF. Please try again.", { id: toastId });
         } finally {
             setIsDownloading(false);
         }
