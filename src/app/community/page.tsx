@@ -120,7 +120,7 @@ export default function CommunityPage() {
 
             <div className="space-y-3">
                 {sortedAndFilteredUsers.map(user => (
-                    <Card key={user.uid} className="shadow-sm hover:shadow-md transition-shadow">
+                    <Card key={user.uid} className="shadow-sm hover:shadow-md transition-shadow bg-white dark:bg-card">
                         <CardContent className="p-3 flex items-center justify-between gap-4">
                            <div className="flex items-center gap-3 flex-1 truncate">
                                 <Avatar className="h-10 w-10">
