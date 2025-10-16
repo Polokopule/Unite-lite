@@ -1,4 +1,5 @@
 
+
 "use client";
 
 import { PlaceHolderImages } from "@/lib/placeholder-images";
@@ -379,8 +380,7 @@ export function AppContextProvider({ children }: { children: React.ReactNode }) 
     
     const enableNotifications = async () => {
         if (!user || typeof window === 'undefined' || !('serviceWorker' in navigator)) {
-            console.error("Push messaging is not supported");
-            return;
+            throw new Error("Push messaging is not supported in this browser or environment.");
         }
 
         try {
@@ -388,9 +388,7 @@ export function AppContextProvider({ children }: { children: React.ReactNode }) 
             const permission = await Notification.requestPermission();
 
             if (permission === 'granted') {
-                console.log('Notification permission granted.');
-                const vapidKey = "YOUR_VAPID_PUBLIC_KEY"; // IMPORTANT: Replace with your actual VAPID key
-                const fcmToken = await getToken(messaging, { vapidKey });
+                const fcmToken = await getToken(messaging);
 
                 if (fcmToken) {
                     console.log('FCM Token:', fcmToken);
@@ -399,13 +397,14 @@ export function AppContextProvider({ children }: { children: React.ReactNode }) 
                     await set(userRef, true);
                     alert("Notifications have been enabled!");
                 } else {
-                    console.log('No registration token available. Request permission to generate one.');
+                     throw new Error('No registration token available. Request permission to generate one.');
                 }
             } else {
-                console.log('Unable to get permission to notify.');
+                throw new Error('Unable to get permission to notify.');
             }
         } catch (error) {
             console.error('An error occurred while retrieving token. ', error);
+            throw error;
         }
     };
 

@@ -29,7 +29,7 @@ export default function SettingsPage() {
 
     useEffect(() => {
         // Check if running in PWA mode
-        if (window.matchMedia('(display-mode: standalone)').matches) {
+        if (typeof window !== 'undefined' && window.matchMedia('(display-mode: standalone)').matches) {
             setIsPwa(true);
         }
     }, []);

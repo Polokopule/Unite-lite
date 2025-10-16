@@ -5,7 +5,7 @@
 import { useAppContext } from "@/contexts/app-context";
 import { Ad, Post as PostType, FeedItem, Course, Group, User as UserType, Notification, Conversation } from "@/lib/types";
 import { Button } from "@/components/ui/button";
-import { Loader2, ShoppingBag, CheckCircle, PlusCircle, Home as HomeIcon, Bell, Users, MessageSquare, User as UserIconLucide, Search, Bot, Wallet, Lock, ShieldCheck as ShieldCheck } from "lucide-react";
+import { Loader2, ShoppingBag, CheckCircle, PlusCircle, Home as HomeIcon, Bell, Users, MessageSquare, User as UserIconLucide, Search, Bot, Wallet, Lock, ShieldCheck as ShieldCheck, Settings } from "lucide-react";
 import Link from "next/link";
 import { useMemo, useState, useEffect } from "react";
 import { useToast } from "@/hooks/use-toast";
@@ -20,6 +20,7 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Input } from "@/components/ui/input";
 import { PostCard } from "@/components/post-card";
 import { isVerified, formatTimeAgo } from "@/lib/utils";
+import SettingsPage from "@/app/settings/page";
 
 
 function AdCard({ ad }: { ad: Ad }) {
@@ -528,9 +529,9 @@ export default function HomePage() {
     // and navigating to the hash when the tab is changed.
     useEffect(() => {
         const hash = window.location.hash.substring(1);
-        const validTabs = ['home', 'courses', 'groups', 'community', 'messages', 'notifications'];
+        const validTabs = ['home', 'courses', 'groups', 'community', 'messages', 'notifications', 'settings'];
         if (hash && validTabs.includes(hash)) {
-            if (!loading && !user && (hash === 'messages' || hash === 'notifications')) {
+            if (!loading && !user && (hash === 'messages' || hash === 'notifications' || hash === 'settings')) {
                 router.push('/login-user');
             } else {
                 setActiveTab(hash);
@@ -541,7 +542,7 @@ export default function HomePage() {
     }, [pathname, user, loading, router]); // Rerun when path changes, e.g. navigating away and back.
     
     const handleTabChange = (tab: string) => {
-        if (!loading && !user && (tab === 'messages' || tab === 'notifications')) {
+        if (!loading && !user && (tab === 'messages' || tab === 'notifications' || tab === 'settings')) {
             router.push('/login-user');
             return;
         }
@@ -570,7 +571,7 @@ export default function HomePage() {
             <Tabs defaultValue="home" value={activeTab} onValueChange={handleTabChange} className="w-full">
                 <div className="sticky top-16 z-40 bg-background border-b">
                     <div className="container mx-auto">
-                        <TabsList className="grid w-full grid-cols-6 max-w-2xl mx-auto">
+                        <TabsList className="grid w-full grid-cols-7 max-w-2xl mx-auto">
                             <TabsTrigger value="home"><HomeIcon className="h-5 w-5" /></TabsTrigger>
                             <TabsTrigger value="courses"><ShoppingBag className="h-5 w-5" /></TabsTrigger>
                             <TabsTrigger value="groups"><Users className="h-5 w-5" /></TabsTrigger>
@@ -580,6 +581,7 @@ export default function HomePage() {
                                 <Bell className="h-5 w-5" />
                                 {hasUnreadNotifications && <span className="absolute top-1 right-1 h-2 w-2 rounded-full bg-red-500" />}
                             </TabsTrigger>
+                            <TabsTrigger value="settings"><Settings className="h-5 w-5" /></TabsTrigger>
                         </TabsList>
                     </div>
                 </div>
@@ -601,6 +603,11 @@ export default function HomePage() {
                 </TabsContent>
                 <TabsContent value="notifications" className="mt-0">
                     <NotificationsContent />
+                </TabsContent>
+                <TabsContent value="settings" className="mt-0">
+                    <div className="container mx-auto py-8">
+                       <SettingsPage />
+                    </div>
                 </TabsContent>
             </Tabs>
         </div>
