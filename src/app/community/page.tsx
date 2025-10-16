@@ -4,8 +4,8 @@
 import { useAppContext } from "@/contexts/app-context";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { User, Users, ShieldCheck, MessageSquare, Search } from "lucide-react";
+import { Card, CardContent } from "@/components/ui/card";
+import { User, Users, ShieldCheck, MessageSquare, Search, ArrowUpDown, User as UserIcon } from "lucide-react";
 import Link from "next/link";
 import { getAuth } from "firebase/auth";
 import { User as UserType } from "@/lib/types";
@@ -13,10 +13,13 @@ import { useState, useMemo } from "react";
 import { useRouter } from "next/navigation";
 import { useToast } from "@/hooks/use-toast";
 import { Input } from "@/components/ui/input";
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 
 const isVerified = (user: UserType) => {
     return user.email === 'polokopule91@gmail.com' || (user.followers && user.followers.length >= 1000000);
 }
+
+type SortOrder = "name-asc" | "name-desc";
 
 export default function CommunityPage() {
     const { allUsers, loading, startConversation, user: currentUser } = useAppContext();
@@ -24,6 +27,7 @@ export default function CommunityPage() {
     const { toast } = useToast();
     const auth = getAuth();
     const [searchTerm, setSearchTerm] = useState("");
+    const [sortOrder, setSortOrder] = useState<SortOrder>("name-asc");
 
     const handleStartConversation = async (otherUser: UserType) => {
         if (!currentUser) {
@@ -55,12 +59,20 @@ export default function CommunityPage() {
         return name.substring(0, 2).toUpperCase();
     };
 
-    const filteredUsers = useMemo(() => {
-        return allUsers.filter(u => 
+    const sortedAndFilteredUsers = useMemo(() => {
+        const filtered = allUsers.filter(u => 
             u.uid !== auth.currentUser?.uid &&
             u.name.toLowerCase().includes(searchTerm.toLowerCase())
         );
-    }, [allUsers, searchTerm, auth.currentUser]);
+
+        return filtered.sort((a, b) => {
+            if (sortOrder === "name-asc") {
+                return a.name.localeCompare(b.name);
+            } else { // name-desc
+                return b.name.localeCompare(a.name);
+            }
+        });
+    }, [allUsers, searchTerm, auth.currentUser, sortOrder]);
     
     if (loading) {
         return <div className="container mx-auto py-8"><p>Loading community...</p></div>
@@ -78,21 +90,39 @@ export default function CommunityPage() {
                 </Button>
             </div>
 
-            <div className="relative mb-8">
-                <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground" />
-                <Input
-                    placeholder="Search for people..."
-                    className="pl-10"
-                    value={searchTerm}
-                    onChange={(e) => setSearchTerm(e.target.value)}
-                />
+            <div className="flex items-center gap-4 mb-8">
+                <div className="relative flex-1">
+                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground" />
+                    <Input
+                        placeholder="Search for people..."
+                        className="pl-10"
+                        value={searchTerm}
+                        onChange={(e) => setSearchTerm(e.target.value)}
+                    />
+                </div>
+                 <DropdownMenu>
+                    <DropdownMenuTrigger asChild>
+                        <Button variant="outline" className="shrink-0">
+                            <ArrowUpDown className="mr-2 h-4 w-4" />
+                            Sort By
+                        </Button>
+                    </DropdownMenuTrigger>
+                    <DropdownMenuContent>
+                        <DropdownMenuItem onClick={() => setSortOrder("name-asc")}>
+                            Name (A-Z)
+                        </DropdownMenuItem>
+                        <DropdownMenuItem onClick={() => setSortOrder("name-desc")}>
+                            Name (Z-A)
+                        </DropdownMenuItem>
+                    </DropdownMenuContent>
+                </DropdownMenu>
             </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                {filteredUsers.map(user => (
+            <div className="space-y-4">
+                {sortedAndFilteredUsers.map(user => (
                     <Card key={user.uid}>
                         <CardContent className="p-4 flex items-center justify-between gap-4">
-                           <Link href={`/profile/${user.uid}`} className="flex items-center gap-4 flex-1 truncate">
+                           <div className="flex items-center gap-4 flex-1 truncate">
                                 <Avatar className="h-12 w-12 border-2 border-primary">
                                     {user.photoURL && <AvatarImage src={user.photoURL} alt={user.name} />}
                                     <AvatarFallback className="bg-muted text-muted-foreground text-xl font-bold">
@@ -106,10 +136,17 @@ export default function CommunityPage() {
                                     </div>
                                     <p className="text-sm text-muted-foreground capitalize truncate">{user.type}</p>
                                 </div>
-                            </Link>
-                             <Button size="icon" variant="outline" onClick={() => handleStartConversation(user)}>
-                                <MessageSquare className="h-5 w-5" />
-                             </Button>
+                            </div>
+                            <div className="flex items-center gap-2">
+                                <Button size="icon" variant="outline" asChild>
+                                   <Link href={`/profile/${user.uid}`}>
+                                     <UserIcon className="h-5 w-5" />
+                                   </Link>
+                                </Button>
+                                <Button size="icon" variant="outline" onClick={() => handleStartConversation(user)}>
+                                    <MessageSquare className="h-5 w-5" />
+                                </Button>
+                             </div>
                         </CardContent>
                     </Card>
                 ))}
