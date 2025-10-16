@@ -4,6 +4,7 @@ import './globals.css';
 import { AppContextProvider } from '@/contexts/app-context';
 import { Header } from '@/components/header';
 import { Toaster } from '@/components/ui/toaster';
+import { ThemeProvider } from '@/components/theme-provider';
 
 export const metadata: Metadata = {
   title: 'Unite - Learn and Earn',
@@ -33,11 +34,18 @@ export default function RootLayout({
         />
       </head>
       <body className="font-body antialiased">
-        <AppContextProvider>
-          <Header />
-          <main>{children}</main>
-          <Toaster />
-        </AppContextProvider>
+        <ThemeProvider
+            attribute="class"
+            defaultTheme="system"
+            enableSystem
+            disableTransitionOnChange
+        >
+            <AppContextProvider>
+              <Header />
+              <main>{children}</main>
+              <Toaster />
+            </AppContextProvider>
+        </ThemeProvider>
       </body>
     </html>
   );

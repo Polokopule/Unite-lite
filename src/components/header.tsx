@@ -6,7 +6,7 @@ import { Button } from "./ui/button";
 import { Logo } from "./logo";
 import Link from "next/link";
 import { Avatar, AvatarFallback, AvatarImage } from "./ui/avatar";
-import { Briefcase, LogOut, User as UserIcon, Wallet, Users, Home, MessageSquare, Edit, Menu, ShoppingBag, BookOpen, BellRing } from "lucide-react";
+import { Briefcase, LogOut, User as UserIcon, Wallet, Users, Home, MessageSquare, Edit, Menu, ShoppingBag, BookOpen, BellRing, Settings } from "lucide-react";
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from "./ui/sheet";
 import { useState } from "react";
 import { Separator } from "./ui/separator";
@@ -45,7 +45,7 @@ function AuthSheet() {
 }
 
 function UserSheet() {
-    const { user, logout, enableNotifications } = useAppContext();
+    const { user, logout } = useAppContext();
     const [open, setOpen] = useState(false);
     
     if (!user) return null;
@@ -135,8 +135,8 @@ function UserSheet() {
                         <Button asChild variant="ghost" className="justify-start" onClick={handleLinkClick}>
                            <Link href="/profile/edit"><Edit className="mr-2 h-4 w-4" />Edit Profile</Link>
                         </Button>
-                        <Button variant="ghost" className="justify-start" onClick={enableNotifications}>
-                            <BellRing className="mr-2 h-4 w-4" />Enable Notifications
+                        <Button asChild variant="ghost" className="justify-start" onClick={handleLinkClick}>
+                           <Link href="/settings"><Settings className="mr-2 h-4 w-4" />Settings</Link>
                         </Button>
                     </div>
                     <Separator />
