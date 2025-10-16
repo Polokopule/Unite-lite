@@ -50,7 +50,7 @@ const uniteAIFlow = ai.defineFlow(
         history,
         system: systemPrompt,
     });
-    return output!;
+    return output as string;
   }
 );
 
