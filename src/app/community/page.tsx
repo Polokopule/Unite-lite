@@ -5,7 +5,7 @@ import { useAppContext } from "@/contexts/app-context";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
-import { User, Users, ShieldCheck, MessageSquare, Search, ArrowUpDown, User as UserIcon } from "lucide-react";
+import { User as UserIcon, Users, ShieldCheck, MessageSquare, Search, ArrowUpDown } from "lucide-react";
 import Link from "next/link";
 import { getAuth } from "firebase/auth";
 import { User as UserType } from "@/lib/types";
@@ -118,34 +118,40 @@ export default function CommunityPage() {
                 </DropdownMenu>
             </div>
 
-            <div className="space-y-4">
+            <div className="space-y-3">
                 {sortedAndFilteredUsers.map(user => (
-                    <Card key={user.uid}>
-                        <CardContent className="p-4 flex items-center justify-between gap-4">
-                           <div className="flex items-center gap-4 flex-1 truncate">
-                                <Avatar className="h-12 w-12 border-2 border-primary">
+                    <Card key={user.uid} className="shadow-sm hover:shadow-md transition-shadow">
+                        <CardContent className="p-3 flex items-center justify-between gap-4">
+                           <div className="flex items-center gap-3 flex-1 truncate">
+                                <Avatar className="h-10 w-10">
                                     {user.photoURL && <AvatarImage src={user.photoURL} alt={user.name} />}
-                                    <AvatarFallback className="bg-muted text-muted-foreground text-xl font-bold">
+                                    <AvatarFallback className="bg-muted text-muted-foreground font-bold">
                                         {getInitials(user.name)}
                                     </AvatarFallback>
                                 </Avatar>
                                 <div className="truncate">
                                     <div className="flex items-center gap-1.5 truncate">
-                                        <span className="font-semibold truncate">{user.name}</span>
+                                        <span className="font-medium text-gray-700 dark:text-gray-200 truncate">{user.name}</span>
                                         {isVerified(user) && <ShieldCheck className="h-4 w-4 text-primary flex-shrink-0" />}
                                     </div>
-                                    <p className="text-sm text-muted-foreground capitalize truncate">{user.type}</p>
+                                    <p className="text-sm text-gray-500 dark:text-gray-400 capitalize truncate">{user.type}</p>
                                 </div>
                             </div>
-                            <div className="flex items-center gap-2">
-                                <Button size="icon" variant="outline" asChild>
-                                   <Link href={`/profile/${user.uid}`}>
-                                     <UserIcon className="h-5 w-5" />
-                                   </Link>
-                                </Button>
-                                <Button size="icon" variant="outline" onClick={() => handleStartConversation(user)}>
-                                    <MessageSquare className="h-5 w-5" />
-                                </Button>
+                            <div className="flex items-center gap-4">
+                                <div className="text-right">
+                                    <p className="font-bold text-green-600 dark:text-green-500 text-lg">{user.followers?.length || 0}</p>
+                                    <p className="text-xs text-muted-foreground">Followers</p>
+                                </div>
+                                <div className="flex items-center gap-2">
+                                    <Button size="icon" variant="ghost" asChild>
+                                    <Link href={`/profile/${user.uid}`}>
+                                        <UserIcon className="h-5 w-5 text-muted-foreground" />
+                                    </Link>
+                                    </Button>
+                                    <Button size="icon" variant="ghost" onClick={() => handleStartConversation(user)}>
+                                        <MessageSquare className="h-5 w-5 text-muted-foreground" />
+                                    </Button>
+                                </div>
                              </div>
                         </CardContent>
                     </Card>
