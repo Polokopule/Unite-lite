@@ -31,6 +31,14 @@ type AddPostData = {
     linkPreview?: LinkPreview | null;
 };
 
+// --- For WebView Bridge ---
+declare global {
+  interface Window {
+    AndroidBridge?: {
+      postMessage: (message: string) => void;
+    };
+  }
+}
 
 // --- CONTEXT TYPE ---
 interface AppContextType {
@@ -113,6 +121,17 @@ export function AppContextProvider({ children }: { children: React.ReactNode }) 
   const router = useRouter();
 
   const urlRegex = /(https?:\/\/[^\s"'<>()\[\]{}]+)/g;
+
+  // --- WebView Bridge ---
+  const postToWebView = (notification: {title: string, body: string, url: string}) => {
+    if (window.AndroidBridge && typeof window.AndroidBridge.postMessage === 'function') {
+      try {
+        window.AndroidBridge.postMessage(JSON.stringify(notification));
+      } catch (e) {
+        console.error("Error posting message to Android Bridge", e);
+      }
+    }
+  }
 
   useEffect(() => {
     // Load locked conversations from local storage
@@ -234,10 +253,27 @@ export function AppContextProvider({ children }: { children: React.ReactNode }) 
             setPurchasedCourses(snapshot.exists() ? Object.values(snapshot.val()) : []);
         });
 
-        const notificationsRef = ref(db, `notifications/${user.uid}`);
+        const notificationsRef = query(ref(db, `notifications/${user.uid}`), orderByChild('timestamp'));
         notificationsListener = onValue(notificationsRef, (snapshot) => {
             const data = snapshot.val() || {};
-            setNotifications(Object.values(data).sort((a: any, b: any) => b.timestamp - a.timestamp));
+            const newNotifications: Notification[] = Object.values(data).sort((a: any, b: any) => b.timestamp - a.timestamp);
+            
+            // --- WebView Bridge Logic ---
+            const latestOldNotif = notifications[0];
+            const latestNewNotif = newNotifications[0];
+
+            if (latestNewNotif && (!latestOldNotif || latestNewNotif.id !== latestOldNotif.id)) {
+              if (latestNewNotif.actorUid !== user.uid) { // Don't notify for own actions
+                  postToWebView({
+                      title: latestNewNotif.actorName,
+                      body: latestNewNotif.message ? `${latestNewNotif.actorName} ${latestNewNotif.message}` : `Sent you a notification`,
+                      url: latestNewNotif.targetUrl
+                  });
+              }
+            }
+            // --- End WebView Bridge Logic ---
+
+            setNotifications(newNotifications);
         });
 
         const userConversationsRef = ref(db, `users/${user.uid}/conversationIds`);
