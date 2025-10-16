@@ -10,6 +10,8 @@ import { ref, onValue, set, get, update, remove, push, serverTimestamp, query, o
 import { onAuthStateChanged, signOut, User as FirebaseUser, updateProfile as updateFirebaseProfile } from "firebase/auth";
 import { ref as storageRef, uploadBytes, getDownloadURL } from "firebase/storage";
 import { generateLinkPreview } from '@/ai/flows/generate-link-preview';
+import { getMessaging, getToken, onMessage } from "firebase/messaging";
+import { app } from "@/lib/firebase"; // Import app
 
 type AddCourseData = {
     title: string;
@@ -44,6 +46,7 @@ interface AppContextType {
   login: (email: string, type: 'user' | 'business') => Promise<void>;
   logout: () => void;
   updateUserProfile: (name: string, photoFile: File | null) => Promise<boolean>;
+  enableNotifications: () => Promise<void>;
   addCourse: (courseData: AddCourseData) => Promise<boolean>;
   updateCourse: (courseId: string, courseData: Partial<Omit<Course, 'id' | 'creator' | 'creatorName'>>) => Promise<boolean>;
   deleteCourse: (courseId: string) => Promise<boolean>;
@@ -371,6 +374,38 @@ export function AppContextProvider({ children }: { children: React.ReactNode }) 
         } catch (error) {
             console.error("Error updating profile:", error);
             return false;
+        }
+    };
+    
+    const enableNotifications = async () => {
+        if (!user || typeof window === 'undefined' || !('serviceWorker' in navigator)) {
+            console.error("Push messaging is not supported");
+            return;
+        }
+
+        try {
+            const messaging = getMessaging(app);
+            const permission = await Notification.requestPermission();
+
+            if (permission === 'granted') {
+                console.log('Notification permission granted.');
+                const vapidKey = "YOUR_VAPID_PUBLIC_KEY"; // IMPORTANT: Replace with your actual VAPID key
+                const fcmToken = await getToken(messaging, { vapidKey });
+
+                if (fcmToken) {
+                    console.log('FCM Token:', fcmToken);
+                    // Save the token to the user's profile in the database
+                    const userRef = ref(db, `users/${user.uid}/fcmTokens/${fcmToken}`);
+                    await set(userRef, true);
+                    alert("Notifications have been enabled!");
+                } else {
+                    console.log('No registration token available. Request permission to generate one.');
+                }
+            } else {
+                console.log('Unable to get permission to notify.');
+            }
+        } catch (error) {
+            console.error('An error occurred while retrieving token. ', error);
         }
     };
 
@@ -1444,6 +1479,7 @@ export function AppContextProvider({ children }: { children: React.ReactNode }) 
     login,
     logout,
     updateUserProfile,
+    enableNotifications,
     addCourse,
     updateCourse,
     deleteCourse,

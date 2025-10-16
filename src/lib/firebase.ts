@@ -4,6 +4,7 @@ import { initializeApp } from "firebase/app";
 import { getDatabase } from "firebase/database";
 import { getAuth } from "firebase/auth";
 import { getStorage } from "firebase/storage";
+import { getMessaging } from "firebase/messaging";
 
 // Your web app's Firebase configuration
 
@@ -22,4 +23,10 @@ const db = getDatabase(app);
 const auth = getAuth(app);
 const storage = getStorage(app);
 
-export { db, auth, app, storage };
+// Conditionally initialize messaging
+let messaging;
+if (typeof window !== 'undefined') {
+  messaging = getMessaging(app);
+}
+
+export { db, auth, app, storage, messaging };

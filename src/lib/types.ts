@@ -1,5 +1,4 @@
 
-
 export type Course = {
   id: string;
   title: string;
@@ -53,6 +52,7 @@ export type User = {
   lockedConversations?: { [id: string]: string }; // id: pin
   blockedUsers?: string[];
   aiChatHistory?: AIChatMessage[];
+  fcmTokens?: { [token: string]: boolean };
 };
 
 export type PurchasedCourse = {
@@ -165,5 +165,3 @@ export type Conversation = {
 
 // Represents either a Post or an Ad in a feed
 export type FeedItem = Post | Ad;
-
-    
