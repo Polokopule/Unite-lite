@@ -89,6 +89,7 @@ interface AppContextType {
   unlockConversation: (conversationId: string) => void;
   toggleBlockUser: (targetUserId: string) => void;
   updateAIChatHistory: (history: AIChatMessage[]) => Promise<void>;
+  updateThemePreference: (theme: 'light' | 'dark') => Promise<void>;
   lockedConversations: { [id: string]: string };
   loading: boolean;
 }
@@ -331,6 +332,7 @@ export function AppContextProvider({ children }: { children: React.ReactNode }) 
         followers: [],
         following: [],
         photoURL: photoURL || '',
+        theme: 'light',
       };
       await set(userRef, newUser);
     }
@@ -1462,6 +1464,12 @@ export function AppContextProvider({ children }: { children: React.ReactNode }) 
         const historyRef = ref(db, `users/${user.uid}/aiChatHistory`);
         await set(historyRef, history);
     }
+    
+    const updateThemePreference = async (theme: 'light' | 'dark') => {
+        if (!user) return;
+        const themeRef = ref(db, `users/${user.uid}/theme`);
+        await set(themeRef, theme);
+    };
 
 
   const value = {
@@ -1520,6 +1528,7 @@ export function AppContextProvider({ children }: { children: React.ReactNode }) 
     unlockConversation,
     toggleBlockUser,
     updateAIChatHistory,
+    updateThemePreference,
     lockedConversations,
     loading,
   };

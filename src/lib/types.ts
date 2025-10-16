@@ -53,6 +53,7 @@ export type User = {
   blockedUsers?: string[];
   aiChatHistory?: AIChatMessage[];
   fcmTokens?: { [token: string]: boolean };
+  theme?: 'light' | 'dark';
 };
 
 export type PurchasedCourse = {
@@ -133,7 +134,7 @@ export type Message = {
 
 export type GroupMemberInfo = {
     joinedAt: number;
-    joinMethod: 'creator' | 'invite' | 'direct';
+    joinMethod: 'creator' | 'direct';
 }
 
 // Represents a user-created group

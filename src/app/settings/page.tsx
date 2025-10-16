@@ -14,7 +14,7 @@ import { useRouter } from "next/navigation";
 import { useEffect } from "react";
 
 export default function SettingsPage() {
-    const { user, loading, enableNotifications } = useAppContext();
+    const { user, loading, enableNotifications, updateThemePreference } = useAppContext();
     const { theme, setTheme } = useTheme();
     const [isPwa, setIsPwa] = useState(false);
     const [isEnabling, setIsEnabling] = useState(false);
@@ -26,6 +26,13 @@ export default function SettingsPage() {
             router.push('/login-user');
         }
     }, [user, loading, router]);
+    
+    useEffect(() => {
+        if (user?.theme) {
+            setTheme(user.theme);
+        }
+    }, [user, setTheme]);
+
 
     useEffect(() => {
         // Check if running in PWA mode
@@ -48,69 +55,73 @@ export default function SettingsPage() {
             setIsEnabling(false);
         }
     }
+    
+    const handleThemeChange = (checked: boolean) => {
+        const newTheme = checked ? 'dark' : 'light';
+        setTheme(newTheme);
+        updateThemePreference(newTheme);
+    }
 
     if (loading || !user) {
         return <div className="container mx-auto py-8"><p>Loading settings...</p></div>;
     }
 
     return (
-        <div className="container mx-auto py-8 max-w-2xl">
-             <div className="flex items-center gap-4 mb-8">
-                <SettingsIcon className="h-8 w-8" />
-                <div>
-                    <h1 className="text-3xl font-bold font-headline">Settings</h1>
-                    <p className="text-muted-foreground">Manage your account and application settings.</p>
+        <div>
+             <div className="container mx-auto">
+                 <div className="flex items-center gap-4 py-8">
+                    <SettingsIcon className="h-8 w-8" />
+                    <div>
+                        <h1 className="text-3xl font-bold font-headline">Settings</h1>
+                        <p className="text-muted-foreground">Manage your account and application settings.</p>
+                    </div>
                 </div>
             </div>
 
-            <Card>
-                <CardHeader>
-                    <CardTitle>Appearance</CardTitle>
-                    <CardDescription>Customize the look and feel of the application.</CardDescription>
-                </CardHeader>
-                <CardContent>
-                    <div className="flex items-center justify-between p-4 border rounded-lg">
-                        <div className="flex items-center gap-4">
-                           <div className="p-2 bg-muted rounded-full">
-                             {theme === 'dark' ? <Moon className="h-5 w-5" /> : <Sun className="h-5 w-5" />}
-                           </div>
-                           <div>
-                            <Label htmlFor="dark-mode-switch" className="font-semibold">Dark Mode</Label>
-                            <p className="text-sm text-muted-foreground">Toggle between light and dark themes.</p>
-                           </div>
+            <div className="border-y">
+                <div className="container mx-auto">
+                    <div className="py-6">
+                        <h2 className="text-xl font-semibold mb-2">Appearance</h2>
+                        <p className="text-muted-foreground mb-4">Customize the look and feel of the application.</p>
+                        <div className="flex items-center justify-between p-4 border rounded-lg">
+                            <div className="flex items-center gap-4">
+                               <div className="p-2 bg-muted rounded-full">
+                                 {theme === 'dark' ? <Moon className="h-5 w-5" /> : <Sun className="h-5 w-5" />}
+                               </div>
+                               <div>
+                                <Label htmlFor="dark-mode-switch" className="font-semibold">Dark Mode</Label>
+                                <p className="text-sm text-muted-foreground">Toggle between light and dark themes.</p>
+                               </div>
+                            </div>
+                            <Switch
+                                id="dark-mode-switch"
+                                checked={theme === "dark"}
+                                onCheckedChange={handleThemeChange}
+                            />
                         </div>
-                        <Switch
-                            id="dark-mode-switch"
-                            checked={theme === "dark"}
-                            onCheckedChange={(checked) => setTheme(checked ? "dark" : "light")}
-                        />
                     </div>
-                </CardContent>
-            </Card>
 
-            <Card className="mt-8">
-                <CardHeader>
-                    <CardTitle>Notifications</CardTitle>
-                    <CardDescription>Manage how you receive notifications from Unite.</CardDescription>
-                </CardHeader>
-                <CardContent>
-                    <div className="flex items-center justify-between p-4 border rounded-lg">
-                       <div className="flex items-center gap-4">
-                           <div className="p-2 bg-muted rounded-full">
-                            <BellRing className="h-5 w-5 text-primary" />
+                    <div className="py-6">
+                        <h2 className="text-xl font-semibold mb-2">Notifications</h2>
+                        <p className="text-muted-foreground mb-4">Manage how you receive notifications from Unite.</p>
+                        <div className="flex items-center justify-between p-4 border rounded-lg">
+                           <div className="flex items-center gap-4">
+                               <div className="p-2 bg-muted rounded-full">
+                                <BellRing className="h-5 w-5 text-primary" />
+                               </div>
+                               <div>
+                                    <Label className="font-semibold">Push Notifications</Label>
+                                    <p className="text-sm text-muted-foreground">Receive notifications on your device, even when the app is closed.</p>
+                               </div>
                            </div>
-                           <div>
-                                <Label className="font-semibold">Push Notifications</Label>
-                                <p className="text-sm text-muted-foreground">Receive notifications on your device, even when the app is closed.</p>
-                           </div>
-                       </div>
-                        <Button onClick={handleEnableNotifications} disabled={isEnabling}>
-                            {isEnabling && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                            Enable
-                        </Button>
+                            <Button onClick={handleEnableNotifications} disabled={isEnabling}>
+                                {isEnabling && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                                Enable
+                            </Button>
+                        </div>
                     </div>
-                </CardContent>
-            </Card>
+                </div>
+            </div>
 
         </div>
     );

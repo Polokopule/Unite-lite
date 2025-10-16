@@ -605,9 +605,7 @@ export default function HomePage() {
                     <NotificationsContent />
                 </TabsContent>
                 <TabsContent value="settings" className="mt-0">
-                    <div className="container mx-auto py-8">
-                       <SettingsPage />
-                    </div>
+                    <SettingsPage />
                 </TabsContent>
             </Tabs>
         </div>
