@@ -329,6 +329,7 @@ export function AppContextProvider({ children }: { children: React.ReactNode }) 
       const newNotification: Omit<Notification, 'id'> = {
           ...notification,
           id: newNotificationRef.key!,
+          recipientUid: notification.recipientUid,
           isRead: false,
           timestamp: serverTimestamp() as any
       }
@@ -1720,5 +1721,3 @@ export function useAppContext() {
   }
   return context;
 }
-
-    
