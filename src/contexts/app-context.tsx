@@ -7,7 +7,7 @@ import { useRouter } from "next/navigation";
 import React, { createContext, useContext, useEffect, useState } from "react";
 import { db, auth, storage } from "@/lib/firebase";
 import { ref, onValue, set, get, update, remove, push, serverTimestamp, query, orderByChild, equalTo } from "firebase/database";
-import { onAuthStateChanged, signOut, User as FirebaseUser, updateProfile as updateFirebaseProfile } from "firebase/auth";
+import { onAuthStateChanged, signOut, User as FirebaseUser, updateProfile as updateFirebaseProfile, setPersistence, browserLocalPersistence } from "firebase/auth";
 import { ref as storageRef, uploadBytes, getDownloadURL } from "firebase/storage";
 import { generateLinkPreview } from '@/ai/flows/generate-link-preview';
 import { getMessaging, getToken, onMessage } from "firebase/messaging";
@@ -140,41 +140,44 @@ export function AppContextProvider({ children }: { children: React.ReactNode }) 
       setLockedConversations(JSON.parse(storedLocks));
     }
 
-    // Firebase auth state listener
-    const unsubscribe = onAuthStateChanged(auth, async (currentFirebaseUser) => {
-      setFirebaseUser(currentFirebaseUser);
-      if (currentFirebaseUser) {
-        // User is signed in, get their app-specific data from RTDB
-        const userRef = ref(db, 'users/' + currentFirebaseUser.uid);
-        onValue(userRef, (snapshot) => {
-            if(snapshot.exists()) {
-                const userData = snapshot.val();
-                 // Ensure photoURL is part of the user object
-                const fullUserData: User = {
-                    ...userData,
-                    photoURL: currentFirebaseUser.photoURL || userData.photoURL || '',
-                    followers: userData.followers ? Object.keys(userData.followers) : [],
-                    following: userData.following ? Object.keys(userData.following) : [],
-                    blockedUsers: userData.blockedUsers ? Object.keys(userData.blockedUsers) : [],
-                    aiChatHistory: userData.aiChatHistory ? Object.values(userData.aiChatHistory) : [],
-                };
-                setUser(fullUserData);
+    const initializeAuth = async () => {
+        await setPersistence(auth, browserLocalPersistence);
+        const unsubscribe = onAuthStateChanged(auth, async (currentFirebaseUser) => {
+            setFirebaseUser(currentFirebaseUser);
+            if (currentFirebaseUser) {
+                const userRef = ref(db, 'users/' + currentFirebaseUser.uid);
+                onValue(userRef, (snapshot) => {
+                    if (snapshot.exists()) {
+                        const userData = snapshot.val();
+                        const fullUserData: User = {
+                            ...userData,
+                            photoURL: currentFirebaseUser.photoURL || userData.photoURL || '',
+                            followers: userData.followers ? Object.keys(userData.followers) : [],
+                            following: userData.following ? Object.keys(userData.following) : [],
+                            blockedUsers: userData.blockedUsers ? Object.keys(userData.blockedUsers) : [],
+                            aiChatHistory: userData.aiChatHistory ? Object.values(userData.aiChatHistory) : [],
+                        };
+                        setUser(fullUserData);
 
-                 // If displayName or photoURL changed, update DB
-                if (currentFirebaseUser.displayName && currentFirebaseUser.displayName !== userData.name) {
-                    update(userRef, { name: currentFirebaseUser.displayName });
-                }
-                if (currentFirebaseUser.photoURL && currentFirebaseUser.photoURL !== userData.photoURL) {
-                    update(userRef, { photoURL: currentFirebaseUser.photoURL });
-                }
+                        if (currentFirebaseUser.displayName && currentFirebaseUser.displayName !== userData.name) {
+                            update(userRef, { name: currentFirebaseUser.displayName });
+                        }
+                        if (currentFirebaseUser.photoURL && currentFirebaseUser.photoURL !== userData.photoURL) {
+                            update(userRef, { photoURL: currentFirebaseUser.photoURL });
+                        }
+                    }
+                     setLoading(false);
+                });
+            } else {
+                setUser(null);
+                setLoading(false);
             }
         });
-      } else {
-        // User is signed out
-        setUser(null);
-      }
-      setLoading(false);
-    });
+        return unsubscribe;
+    };
+    
+    const unsubscribeAuth = initializeAuth();
+
 
     // Set up listeners for Courses, Ads, and all Users from Firebase
     const coursesRef = ref(db, 'courses');
@@ -232,7 +235,7 @@ export function AppContextProvider({ children }: { children: React.ReactNode }) 
 
     return () => {
       // Detach listeners on cleanup
-      unsubscribe();
+      unsubscribeAuth.then(unsub => unsub());
       coursesListener();
       adsListener();
       usersListener();
@@ -727,8 +730,8 @@ export function AppContextProvider({ children }: { children: React.ReactNode }) 
 
     const addPost = async (postData: AddPostData): Promise<boolean> => {
       if (!user) return false;
-      const { content, file, repostedFrom, fileUrl, fileName, fileType, linkPreview } = postData;
-      if (!content?.trim() && !file && !fileUrl) return false;
+      const { content, file, repostedFrom } = postData;
+      if (!content?.trim() && !file) return false;
       
       const promise = async () => {
         const postsRef = ref(db, 'posts');
@@ -754,11 +757,11 @@ export function AppContextProvider({ children }: { children: React.ReactNode }) 
             newPost.fileUrl = downloadURL;
             newPost.fileName = file.name;
             newPost.fileType = getFileType(file);
-        } else if (fileUrl && fileName && fileType) {
+        } else if (postData.fileUrl && postData.fileName && postData.fileType) {
             // This is a repost with media
-            newPost.fileUrl = fileUrl;
-            newPost.fileName = fileName;
-            newPost.fileType = fileType;
+            newPost.fileUrl = postData.fileUrl;
+            newPost.fileName = postData.fileName;
+            newPost.fileType = postData.fileType;
         }
         
         // Create the post first
@@ -1681,7 +1684,7 @@ export function AppContextProvider({ children }: { children: React.ReactNode }) 
     updateGroup,
     updateGroupPin,
     deleteGroup,
-    joinGroup,
+joinGroup,
     sendMessage,
     editMessage,
     deleteMessage,
