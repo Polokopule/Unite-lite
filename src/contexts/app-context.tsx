@@ -141,6 +141,7 @@ export function AppContextProvider({ children }: { children: React.ReactNode }) 
     }
 
     const initializeAuth = async () => {
+        // This is the line that enables login persistence in IndexedDB
         await setPersistence(auth, browserLocalPersistence);
         const unsubscribe = onAuthStateChanged(auth, async (currentFirebaseUser) => {
             setFirebaseUser(currentFirebaseUser);
@@ -731,88 +732,89 @@ export function AppContextProvider({ children }: { children: React.ReactNode }) 
     };
 
     const addPost = async (postData: AddPostData): Promise<boolean> => {
-        if (!user) {
-            toast.error("You must be logged in to post.");
-            return false;
-        }
-        const { content, file, repostedFrom } = postData;
-        if (!content?.trim() && !file && !postData.fileUrl) {
-            toast.error("Post cannot be empty.");
-            return false;
-        }
+      if (!user) {
+        toast.error("You must be logged in to post.");
+        return false;
+      }
+      const { content, file, repostedFrom } = postData;
+      if (!content?.trim() && !file && !postData.fileUrl) {
+          toast.error("Post cannot be empty.");
+          return false;
+      }
 
-        const promise = async () => {
-            const postsRef = ref(db, 'posts');
-            const newPostRef = push(postsRef);
-            const postId = newPostRef.key!;
-            
-            const newPost: Omit<Post, 'id' | 'likes' | 'comments'> = {
-                creatorUid: user.uid,
-                creatorName: user.name,
-                creatorPhotoURL: user.photoURL || '',
-                content: content || '',
-                timestamp: serverTimestamp() as any,
-                repostedFrom: repostedFrom || null,
-                linkPreview: null,
-            };
-            
-            if (file) {
-                const fileStorageRef = storageRef(storage, `post-files/${postId}/${file.name}`);
-                const snapshot = await uploadBytes(fileStorageRef, file);
-                const downloadURL = await getDownloadURL(snapshot.ref);
-                
-                newPost.fileUrl = downloadURL;
-                newPost.fileName = file.name;
-                newPost.fileType = getFileType(file);
-            } else if (postData.fileUrl && postData.fileName && postData.fileType) {
-                newPost.fileUrl = postData.fileUrl;
-                newPost.fileName = postData.fileName;
-                newPost.fileType = postData.fileType;
-            }
-            
-            await set(newPostRef, newPost);
-      
-            const urlMatch = content.match(urlRegex);
-            if (urlMatch) {
-                generateLinkPreview({ url: urlMatch[0] }).then(preview => {
-                    if (preview.title) {
-                        update(newPostRef, { linkPreview: preview });
-                    }
-                }).catch(e => console.error("Link preview generation failed, but post was created.", e));
-            }
-      
-            if (content) {
-                await handleMentions(content, postId);
-            }
-            
-            if (repostedFrom && repostedFrom.creatorUid !== user.uid) {
-                const notificationPayload = {
-                    recipientUid: repostedFrom.creatorUid,
-                    actorUid: user.uid,
-                    actorName: user.name,
-                    actorPhotoURL: user.photoURL,
-                    type: 'repost' as const,
-                    targetUrl: `/posts/${postId}`,
-                    targetId: postId,
-                    message: "reposted your post.",
-                };
-                await createNotification(notificationPayload);
-                postToWebView({
-                    title: user.name,
-                    body: notificationPayload.message,
-                    url: notificationPayload.targetUrl,
-                });
-            }
-        };
+      const promise = async () => {
+          const postsRef = ref(db, 'posts');
+          const newPostRef = push(postsRef);
+          const postId = newPostRef.key!;
+          
+          const newPost: Omit<Post, 'id' | 'likes' | 'comments'> = {
+              creatorUid: user.uid,
+              creatorName: user.name,
+              creatorPhotoURL: user.photoURL || '',
+              content: content || '',
+              timestamp: serverTimestamp() as any,
+              repostedFrom: repostedFrom || null,
+              linkPreview: null,
+          };
+          
+          if (file) {
+              const fileStorageRef = storageRef(storage, `post-files/${postId}/${file.name}`);
+              const snapshot = await uploadBytes(fileStorageRef, file);
+              const downloadURL = await getDownloadURL(snapshot.ref);
+              
+              newPost.fileUrl = downloadURL;
+              newPost.fileName = file.name;
+              newPost.fileType = getFileType(file);
+          } else if (postData.fileUrl && postData.fileName && postData.fileType) {
+              newPost.fileUrl = postData.fileUrl;
+              newPost.fileName = postData.fileName;
+              newPost.fileType = postData.fileType;
+          }
+          
+          await set(newPostRef, newPost);
+    
+          const urlMatch = content.match(urlRegex);
+          if (urlMatch) {
+              generateLinkPreview({ url: urlMatch[0] }).then(preview => {
+                  if (preview.title) {
+                      update(newPostRef, { linkPreview: preview });
+                  }
+              }).catch(e => console.error("Link preview generation failed, but post was created.", e));
+          }
+    
+          if (content) {
+              await handleMentions(content, postId);
+          }
+          
+          if (repostedFrom && repostedFrom.creatorUid !== user.uid) {
+              const notificationPayload = {
+                  recipientUid: repostedFrom.creatorUid,
+                  actorUid: user.uid,
+                  actorName: user.name,
+                  actorPhotoURL: user.photoURL,
+                  type: 'repost' as const,
+                  targetUrl: `/posts/${postId}`,
+                  targetId: postId,
+                  message: "reposted your post.",
+              };
+              await createNotification(notificationPayload);
+              postToWebView({
+                  title: user.name,
+                  body: notificationPayload.message,
+                  url: notificationPayload.targetUrl,
+              });
+          }
+      };
 
-        toast.promise(promise(), {
-          loading: 'Creating post...',
-          success: 'Post created!',
-          error: 'Failed to create post.',
-        });
-
-        return promise().then(() => true).catch(() => false);
-    };
+      try {
+          await promise();
+          // No toast here to prevent duplicate UI feedback
+          return true;
+      } catch (error) {
+          toast.error('Failed to create post.');
+          return false;
+      }
+  };
   
   const updatePost = async (postId: string, postData: { content: string }): Promise<boolean> => {
       if (!user) return false;
@@ -940,7 +942,6 @@ export function AppContextProvider({ children }: { children: React.ReactNode }) 
                     type: (parentId ? 'new_reply' : 'new_comment') as 'new_reply' | 'new_comment',
                     targetUrl: `/posts/${postId}#comment-${commentId}`,
                     targetId: postId,
-                    message: `sent a message in "${post.name}"`,
                 };
                 await createNotification(notificationPayload);
                 postToWebView({
@@ -1729,5 +1730,4 @@ export function useAppContext() {
   }
   return context;
 }
-
     
