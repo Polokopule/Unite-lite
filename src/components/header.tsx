@@ -156,9 +156,7 @@ export function Header() {
 
   return (
     <header className="sticky top-0 z-50 w-full border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
-     <meta name="google-adsense-account" content="ca-pub-6024568817887379">
-         
-        <div className="container flex h-16 items-center">
+    <div className="container flex h-16 items-center">
         <Logo />
         <div className="flex flex-1 items-center justify-end space-x-4">
             {user ? (
