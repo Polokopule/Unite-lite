@@ -331,8 +331,8 @@ export function AppContextProvider({ children }: { children: React.ReactNode }) 
       const newNotificationRef = push(notificationRef);
       const newNotification: Omit<Notification, 'id'> = {
           ...notification,
-          id: newNotificationRef.key!,
           recipientUid: notification.recipientUid,
+          id: newNotificationRef.key!,
           isRead: false,
           timestamp: serverTimestamp() as any
       }
@@ -736,12 +736,12 @@ export function AppContextProvider({ children }: { children: React.ReactNode }) 
             return false;
         }
         const { content, file, repostedFrom } = postData;
-        if (!content?.trim() && !file) {
+        if (!content?.trim() && !file && !postData.fileUrl) {
             toast.error("Post cannot be empty.");
             return false;
         }
 
-        try {
+        const promise = async () => {
             const postsRef = ref(db, 'posts');
             const newPostRef = push(postsRef);
             const postId = newPostRef.key!;
@@ -803,13 +803,15 @@ export function AppContextProvider({ children }: { children: React.ReactNode }) 
                     url: notificationPayload.targetUrl,
                 });
             }
-            toast.success('Post created!');
-            return true;
-        } catch(error) {
-            // Do not show toast on error, let the calling component handle it
-            console.error("Failed to create post.", error);
-            return false;
-        }
+        };
+
+        toast.promise(promise(), {
+          loading: 'Creating post...',
+          success: 'Post created!',
+          error: 'Failed to create post.',
+        });
+
+        return promise().then(() => true).catch(() => false);
     };
   
   const updatePost = async (postId: string, postData: { content: string }): Promise<boolean> => {
@@ -938,6 +940,7 @@ export function AppContextProvider({ children }: { children: React.ReactNode }) 
                     type: (parentId ? 'new_reply' : 'new_comment') as 'new_reply' | 'new_comment',
                     targetUrl: `/posts/${postId}#comment-${commentId}`,
                     targetId: postId,
+                    message: `sent a message in "${post.name}"`,
                 };
                 await createNotification(notificationPayload);
                 postToWebView({
@@ -1672,7 +1675,7 @@ export function AppContextProvider({ children }: { children: React.ReactNode }) 
     watchAd,
     createAd,
     updateAd,
-deleteAd,
+    deleteAd,
     followUser,
     unfollowUser,
     addPost,
@@ -1726,3 +1729,5 @@ export function useAppContext() {
   }
   return context;
 }
+
+    
