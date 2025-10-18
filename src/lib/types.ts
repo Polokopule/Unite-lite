@@ -1,4 +1,5 @@
 
+
 export type Course = {
   id: string;
   title: string;
@@ -33,12 +34,24 @@ export type AIChatMessage = {
   parts: Part[];
 };
 
+export type WithdrawalRequest = {
+    id: string;
+    userId: string;
+    userName: string;
+    userEmail: string;
+    points: number;
+    amountZAR: number;
+    status: 'pending' | 'approved' | 'rejected';
+    requestedAt: number;
+    processedAt?: number;
+};
+
 export type User = {
   uid: string;
   email: string;
   name: string;
   type: 'user' | 'business';
-  points: number;
+  points: number; // Can be float for UPs
   purchasedCourses?: { [courseId: string]: PurchasedCourse };
   createdCourses?: string[];
   createdAds?: string[];
@@ -54,6 +67,8 @@ export type User = {
   aiChatHistory?: AIChatMessage[];
   fcmTokens?: { [token: string]: boolean };
   theme?: 'light' | 'dark';
+  lastAdClaim?: number;
+  withdrawalRequests?: { [requestId: string]: WithdrawalRequest };
 };
 
 export type PurchasedCourse = {
@@ -67,7 +82,7 @@ export type Notification = {
     actorUid: string;
     actorName: string;
     actorPhotoURL?: string;
-    type: 'new_follower' | 'new_comment' | 'new_reply' | 'post_like' | 'comment_like' | 'new_group_message' | 'new_direct_message' | 'mention' | 'repost';
+    type: 'new_follower' | 'new_comment' | 'new_reply' | 'post_like' | 'comment_like' | 'new_group_message' | 'new_direct_message' | 'mention' | 'repost' | 'withdrawal_request' | 'withdrawal_approved';
     targetUrl: string; // e.g., /posts/post-123#comment-456
     targetId: string; // e.g., post-123
     isRead: boolean;

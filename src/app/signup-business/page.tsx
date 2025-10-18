@@ -47,7 +47,7 @@ export default function SignUpBusinessPage() {
               <Briefcase className="h-8 w-8 text-primary" />
             </div>
             <CardTitle className="text-2xl font-headline">Create a Business Account</CardTitle>
-            <CardDescription>Reach new customers by advertising on AdEd.</CardDescription>
+            <CardDescription>Reach new customers by advertising on Unite.</CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
             <div className="space-y-2">

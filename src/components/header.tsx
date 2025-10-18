@@ -6,7 +6,7 @@ import { Button } from "./ui/button";
 import { Logo } from "./logo";
 import Link from "next/link";
 import { Avatar, AvatarFallback, AvatarImage } from "./ui/avatar";
-import { Briefcase, LogOut, User as UserIcon, Wallet, Users, Home, MessageSquare, Edit, Menu, ShoppingBag, BookOpen, BellRing, Settings } from "lucide-react";
+import { Briefcase, LogOut, User as UserIcon, Wallet, Users, Home, MessageSquare, Edit, Menu, ShoppingBag, BookOpen, BellRing, Settings, DollarSign } from "lucide-react";
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from "./ui/sheet";
 import { useState } from "react";
 import { Separator } from "./ui/separator";
@@ -94,7 +94,7 @@ function UserSheet() {
                             <Wallet className="h-5 w-5 text-muted-foreground"/>
                             <span>Points</span>
                          </div>
-                        <span>{user.points}</span>
+                        <span>{user.points.toFixed(3)} UPs</span>
                      </div>
                     <Separator />
                      <div className="flex flex-col gap-2">
@@ -114,9 +114,14 @@ function UserSheet() {
                            <Link href="/#messages"><MessageSquare className="mr-2 h-4 w-4" />Messages</Link>
                         </Button>
                           {user?.type === 'user' && (
-                            <Button asChild variant="ghost" className="justify-start" onClick={handleLinkClick}>
-                                <Link href="/watch-ads"><Wallet className="mr-2 h-4 w-4" />Earn Points</Link>
-                            </Button>
+                            <>
+                              <Button asChild variant="ghost" className="justify-start" onClick={handleLinkClick}>
+                                  <Link href="/watch-ads"><Wallet className="mr-2 h-4 w-4" />Earn Points</Link>
+                              </Button>
+                               <Button asChild variant="ghost" className="justify-start" onClick={handleLinkClick}>
+                                  <Link href="/withdraw"><DollarSign className="mr-2 h-4 w-4" />Withdraw</Link>
+                              </Button>
+                            </>
                           )}
                            {user?.type === 'business' && (
                              <Button asChild variant="ghost" className="justify-start" onClick={handleLinkClick}>

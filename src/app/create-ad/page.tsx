@@ -89,30 +89,14 @@ export default function CreateAdPage() {
             </div>
             <div className="p-4 bg-muted rounded-lg border">
                 <p className="font-semibold">Pricing</p>
-                <p className="text-sm text-muted-foreground">Each ad campaign costs <span className="font-bold text-primary">50 points</span> to publish. Points can be earned based on ad views.</p>
+                <p className="text-sm text-muted-foreground">Each ad view by a user costs your business <span className="font-bold text-primary">1 point</span>.</p>
             </div>
           </CardContent>
           <CardFooter>
-            <AlertDialog>
-              <AlertDialogTrigger asChild>
-                <Button type="button" className="w-full sm:w-auto" disabled={!campaignName || !content || isPublishing}>
-                  {isPublishing ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <CreditCard className="h-4 w-4 mr-2" />}
-                  {isPublishing ? 'Publishing...' : 'Proceed to Payment'}
-                </Button>
-              </AlertDialogTrigger>
-              <AlertDialogContent>
-                <AlertDialogHeader>
-                  <AlertDialogTitle>Confirm Payment</AlertDialogTitle>
-                  <AlertDialogDescription>
-                    This will deduct 50 points from your account to publish the ad campaign "{campaignName}". This action cannot be undone.
-                  </AlertDialogDescription>
-                </AlertDialogHeader>
-                <AlertDialogFooter>
-                  <AlertDialogCancel>Cancel</AlertDialogCancel>
-                  <AlertDialogAction onClick={handlePublish}>Pay 50 Points & Publish</AlertDialogAction>
-                </AlertDialogFooter>
-              </AlertDialogContent>
-            </AlertDialog>
+            <Button type="submit" className="w-full sm:w-auto" disabled={!campaignName || !content || isPublishing}>
+              {isPublishing ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <CreditCard className="h-4 w-4 mr-2" />}
+              {isPublishing ? 'Publishing...' : 'Publish Campaign'}
+            </Button>
           </CardFooter>
         </form>
       </Card>
