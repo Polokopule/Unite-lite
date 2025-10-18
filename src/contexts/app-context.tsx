@@ -2,7 +2,7 @@
 "use client";
 
 import { PlaceHolderImages } from "@/lib/placeholder-images";
-import type { Course, Ad, User, PurchasedCourse, Post, Group, Comment, Message, Notification, LinkPreview, Conversation, AIChatMessage } from "@/lib/types";
+import type { Course, Ad, User, PurchasedCourse, Post, Group, Comment, Message, Notification, LinkPreview, Conversation, AIChatMessage, WithdrawalRequest } from "@/lib/types";
 import { useRouter } from "next/navigation";
 import React, { createContext, useContext, useEffect, useState } from "react";
 import { db, auth, storage } from "@/lib/firebase";
@@ -60,7 +60,7 @@ interface AppContextType {
   updateCourse: (courseId: string, courseData: Partial<Omit<Course, 'id' | 'creator' | 'creatorName'>>) => Promise<boolean>;
   deleteCourse: (courseId: string) => Promise<boolean>;
   purchaseCourse: (courseId: string) => Promise<boolean>;
-  watchAd: (adId: string) => void;
+  claimAdPoints: () => Promise<void>;
   createAd: (ad: Omit<Ad, 'id' | 'creator' | 'views'>) => Promise<boolean>;
   updateAd: (adId: string, adData: Partial<Omit<Ad, 'id' | 'creator'>>) => Promise<boolean>;
   deleteAd: (adId: string) => Promise<boolean>;
@@ -98,6 +98,9 @@ interface AppContextType {
   toggleBlockUser: (targetUserId: string) => void;
   updateAIChatHistory: (history: AIChatMessage[]) => Promise<void>;
   updateThemePreference: (theme: 'light' | 'dark') => Promise<void>;
+  requestWithdrawal: (amount: number) => Promise<void>;
+  approveWithdrawal: (request: WithdrawalRequest) => Promise<void>;
+  rejectWithdrawal: (request: WithdrawalRequest) => Promise<void>;
   lockedConversations: { [id: string]: string };
   loading: boolean;
 }
@@ -354,7 +357,7 @@ export function AppContextProvider({ children }: { children: React.ReactNode }) 
         uid, 
         email, 
         type, 
-        points: type === 'user' ? 100 : 500,
+        points: 0,
         name: displayName || email.split('@')[0],
         followers: [],
         following: [],
@@ -522,6 +525,10 @@ export function AppContextProvider({ children }: { children: React.ReactNode }) 
 
   const purchaseCourse = async (courseId: string): Promise<boolean> => {
     if (!user || user.type !== 'user') return false;
+    if (user.email === 'polokopule91@gmail.com') {
+      toast.success("Admin has free access.");
+      return true;
+    }
 
     const promise = async () => {
         const course = courses.find(c => c.id === courseId);
@@ -546,31 +553,26 @@ export function AppContextProvider({ children }: { children: React.ReactNode }) 
     return promise().then(() => true).catch(() => false);
   };
   
-  const watchAd = async (adId: string) => {
+  const claimAdPoints = async () => {
     if (!user || user.type !== 'user') return;
-    const ad = ads.find(a => a.id === adId);
-    if (!ad) return;
+    const now = Date.now();
+    const COOLDOWN_TIME = 60 * 1000; // 1 minute
+    const lastClaim = user.lastAdClaim || 0;
 
-    const pointsEarned = 10;
+    if (now - lastClaim < COOLDOWN_TIME) {
+        toast.error(`Please wait ${Math.ceil((COOLDOWN_TIME - (now - lastClaim)) / 1000)}s`);
+        return;
+    }
+
+    const pointsToEarn = 0.005;
     const userRef = ref(db, `users/${user.uid}`);
-    const adRef = ref(db, `ads/${adId}`);
-
+    
     try {
-        const updatedUserPoints = user.points + pointsEarned;
-        await update(userRef, { points: updatedUserPoints });
-
-        await update(adRef, { views: ad.views + 1 });
-
-        const businessOwnerUid = ad.creator;
-        const businessUserRef = ref(db, `users/${businessOwnerUid}`);
-        const businessSnapshot = await get(businessUserRef);
-        if(businessSnapshot.exists()){
-            const businessUser = businessSnapshot.val();
-            await update(businessUserRef, {points: businessUser.points + 1});
-        }
-        toast.success(`You earned ${pointsEarned} points!`);
-    } catch (e) {
-        toast.error("Failed to process ad reward.");
+        const updatedPoints = (user.points || 0) + pointsToEarn;
+        await update(userRef, { points: updatedPoints, lastAdClaim: now });
+        toast.success(`You earned ${pointsToEarn} UPs!`);
+    } catch(e) {
+        toast.error("Failed to claim points.");
     }
   };
 
@@ -742,78 +744,68 @@ export function AppContextProvider({ children }: { children: React.ReactNode }) 
           return false;
       }
 
-      const promise = async () => {
-          const postsRef = ref(db, 'posts');
-          const newPostRef = push(postsRef);
-          const postId = newPostRef.key!;
-          
-          const newPost: Omit<Post, 'id' | 'likes' | 'comments'> = {
-              creatorUid: user.uid,
-              creatorName: user.name,
-              creatorPhotoURL: user.photoURL || '',
-              content: content || '',
-              timestamp: serverTimestamp() as any,
-              repostedFrom: repostedFrom || null,
-              linkPreview: null,
-          };
-          
-          if (file) {
-              const fileStorageRef = storageRef(storage, `post-files/${postId}/${file.name}`);
-              const snapshot = await uploadBytes(fileStorageRef, file);
-              const downloadURL = await getDownloadURL(snapshot.ref);
-              
-              newPost.fileUrl = downloadURL;
-              newPost.fileName = file.name;
-              newPost.fileType = getFileType(file);
-          } else if (postData.fileUrl && postData.fileName && postData.fileType) {
-              newPost.fileUrl = postData.fileUrl;
-              newPost.fileName = postData.fileName;
-              newPost.fileType = postData.fileType;
-          }
-          
-          await set(newPostRef, newPost);
-    
-          const urlMatch = content.match(urlRegex);
-          if (urlMatch) {
-              generateLinkPreview({ url: urlMatch[0] }).then(preview => {
-                  if (preview.title) {
-                      update(newPostRef, { linkPreview: preview });
-                  }
-              }).catch(e => console.error("Link preview generation failed, but post was created.", e));
-          }
-    
-          if (content) {
-              await handleMentions(content, postId);
-          }
-          
-          if (repostedFrom && repostedFrom.creatorUid !== user.uid) {
-              const notificationPayload = {
-                  recipientUid: repostedFrom.creatorUid,
-                  actorUid: user.uid,
-                  actorName: user.name,
-                  actorPhotoURL: user.photoURL,
-                  type: 'repost' as const,
-                  targetUrl: `/posts/${postId}`,
-                  targetId: postId,
-                  message: "reposted your post.",
-              };
-              await createNotification(notificationPayload);
-              postToWebView({
-                  title: user.name,
-                  body: notificationPayload.message,
-                  url: notificationPayload.targetUrl,
-              });
-          }
+      const postsRef = ref(db, 'posts');
+      const newPostRef = push(postsRef);
+      const postId = newPostRef.key!;
+      
+      const newPost: Omit<Post, 'id' | 'likes' | 'comments'> = {
+          creatorUid: user.uid,
+          creatorName: user.name,
+          creatorPhotoURL: user.photoURL || '',
+          content: content || '',
+          timestamp: serverTimestamp() as any,
+          repostedFrom: repostedFrom || null,
+          linkPreview: null,
       };
-
-      try {
-          await promise();
-          // No toast here to prevent duplicate UI feedback
-          return true;
-      } catch (error) {
-          toast.error('Failed to create post.');
-          return false;
+      
+      if (file) {
+          const fileStorageRef = storageRef(storage, `post-files/${postId}/${file.name}`);
+          const snapshot = await uploadBytes(fileStorageRef, file);
+          const downloadURL = await getDownloadURL(snapshot.ref);
+          
+          newPost.fileUrl = downloadURL;
+          newPost.fileName = file.name;
+          newPost.fileType = getFileType(file);
+      } else if (postData.fileUrl && postData.fileName && postData.fileType) {
+          newPost.fileUrl = postData.fileUrl;
+          newPost.fileName = postData.fileName;
+          newPost.fileType = postData.fileType;
       }
+      
+      await set(newPostRef, newPost);
+
+      const urlMatch = content.match(urlRegex);
+      if (urlMatch) {
+          generateLinkPreview({ url: urlMatch[0] }).then(preview => {
+              if (preview.title) {
+                  update(newPostRef, { linkPreview: preview });
+              }
+          }).catch(e => console.error("Link preview generation failed, but post was created.", e));
+      }
+
+      if (content) {
+          await handleMentions(content, postId);
+      }
+      
+      if (repostedFrom && repostedFrom.creatorUid !== user.uid) {
+          const notificationPayload = {
+              recipientUid: repostedFrom.creatorUid,
+              actorUid: user.uid,
+              actorName: user.name,
+              actorPhotoURL: user.photoURL,
+              type: 'repost' as const,
+              targetUrl: `/posts/${postId}`,
+              targetId: postId,
+              message: "reposted your post.",
+          };
+          await createNotification(notificationPayload);
+          postToWebView({
+              title: user.name,
+              body: notificationPayload.message,
+              url: notificationPayload.targetUrl,
+          });
+      }
+      return true;
   };
   
   const updatePost = async (postId: string, postData: { content: string }): Promise<boolean> => {
@@ -1653,6 +1645,122 @@ export function AppContextProvider({ children }: { children: React.ReactNode }) 
         await set(themeRef, theme);
     };
 
+    const requestWithdrawal = async (amount: number) => {
+        if (!user || user.type !== 'user' || user.points < amount) {
+            toast.error("Invalid withdrawal request.");
+            return;
+        }
+
+        const adminUid = allUsers.find(u => u.email === 'polokopule91@gmail.com')?.uid;
+        if (!adminUid) {
+            toast.error("Admin user not found. Cannot process withdrawal.");
+            return;
+        }
+
+        const POINTS_TO_ZAR_RATE = 0.10;
+        const zarAmount = amount * POINTS_TO_ZAR_RATE;
+
+        const requestRef = ref(db, `users/${user.uid}/withdrawalRequests`);
+        const newRequestRef = push(requestRef);
+        const requestId = newRequestRef.key!;
+
+        const withdrawalRequest: WithdrawalRequest = {
+            id: requestId,
+            userId: user.uid,
+            userName: user.name,
+            userEmail: user.email,
+            points: amount,
+            amountZAR: zarAmount,
+            status: 'pending',
+            requestedAt: serverTimestamp() as any,
+        };
+        
+        const userPointsRef = ref(db, `users/${user.uid}/points`);
+
+        const promise = async () => {
+            await set(newRequestRef, withdrawalRequest);
+            await update(ref(db, `users/${user.uid}`), { points: user.points - amount });
+            
+            // Notify Admin
+            await createNotification({
+                recipientUid: adminUid,
+                actorUid: user.uid,
+                actorName: user.name,
+                actorPhotoURL: user.photoURL,
+                type: 'withdrawal_request',
+                targetUrl: `/dashboard`,
+                targetId: requestId,
+                message: `requested a withdrawal of ${amount} UPs.`,
+            });
+        };
+
+        toast.promise(promise(), {
+            loading: 'Submitting request...',
+            success: 'Withdrawal request submitted!',
+            error: 'Failed to submit request.',
+        });
+    };
+
+    const approveWithdrawal = async (request: WithdrawalRequest) => {
+        if (!user || user.email !== 'polokopule91@gmail.com') return;
+
+        const requestRef = ref(db, `users/${request.userId}/withdrawalRequests/${request.id}`);
+
+        const promise = async () => {
+            await update(requestRef, { status: 'approved', processedAt: serverTimestamp() });
+            
+            await createNotification({
+                recipientUid: request.userId,
+                actorUid: user.uid,
+                actorName: "Admin",
+                type: 'withdrawal_approved',
+                targetUrl: '/withdraw',
+                targetId: request.id,
+                message: `Your withdrawal of ${request.points} UPs has been approved.`,
+            });
+        };
+
+        toast.promise(promise(), {
+            loading: 'Approving request...',
+            success: 'Withdrawal approved.',
+            error: 'Failed to approve request.',
+        });
+    };
+
+    const rejectWithdrawal = async (request: WithdrawalRequest) => {
+        if (!user || user.email !== 'polokopule91@gmail.com') return;
+        
+        const requestRef = ref(db, `users/${request.userId}/withdrawalRequests/${request.id}`);
+        const targetUserRef = ref(db, `users/${request.userId}`);
+
+        const promise = async () => {
+            const targetUserSnapshot = await get(targetUserRef);
+            if (!targetUserSnapshot.exists()) throw new Error("Target user not found.");
+            
+            const targetUser = targetUserSnapshot.val();
+            const refundedPoints = targetUser.points + request.points;
+
+            await update(requestRef, { status: 'rejected', processedAt: serverTimestamp() });
+            await update(targetUserRef, { points: refundedPoints });
+
+            await createNotification({
+                recipientUid: request.userId,
+                actorUid: user.uid,
+                actorName: "Admin",
+                type: 'withdrawal_rejected',
+                targetUrl: '/withdraw',
+                targetId: request.id,
+                message: `Your withdrawal of ${request.points} UPs was rejected and points have been refunded.`,
+            });
+        };
+
+         toast.promise(promise(), {
+            loading: 'Rejecting request...',
+            success: 'Withdrawal rejected.',
+            error: 'Failed to reject request.',
+        });
+    };
+
 
   const value = {
     user,
@@ -1673,7 +1781,7 @@ export function AppContextProvider({ children }: { children: React.ReactNode }) 
     updateCourse,
     deleteCourse,
     purchaseCourse,
-    watchAd,
+    claimAdPoints,
     createAd,
     updateAd,
     deleteAd,
@@ -1711,6 +1819,9 @@ export function AppContextProvider({ children }: { children: React.ReactNode }) 
     toggleBlockUser,
     updateAIChatHistory,
     updateThemePreference,
+    requestWithdrawal,
+    approveWithdrawal,
+    rejectWithdrawal,
     lockedConversations,
     loading,
   };
@@ -1730,4 +1841,3 @@ export function useAppContext() {
   }
   return context;
 }
-    

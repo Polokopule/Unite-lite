@@ -5,16 +5,18 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
 import { useAppContext } from "@/contexts/app-context";
-import { Ad, Course, Post as PostType, FeedItem, Comment as CommentType } from "@/lib/types";
-import { ArrowRight, BookCopy, Eye, PlusCircle, ShoppingBag, Pencil, Trash2, Loader2, MessageCircle, Heart, Send, Edit } from "lucide-react";
+import { Ad, Course, Post as PostType, FeedItem, Comment as CommentType, WithdrawalRequest, User } from "@/lib/types";
+import { ArrowRight, BookCopy, Eye, PlusCircle, ShoppingBag, Pencil, Trash2, Loader2, MessageCircle, Heart, Send, Edit, Check, X, Banknote } from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useEffect, useState, useMemo } from "react";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { formatDistanceToNow } from "date-fns";
+import { format, formatDistanceToNow } from "date-fns";
 import { Input } from "@/components/ui/input";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { Badge } from "@/components/ui/badge";
 import toast from "react-hot-toast";
 
 
@@ -36,7 +38,8 @@ export default function DashboardPage() {
     );
   }
 
-  const defaultTab = user.type === 'user' ? 'my_courses' : 'my_ads';
+  const isAdmin = user.email === 'polokopule91@gmail.com';
+  const defaultTab = isAdmin ? 'admin_withdrawals' : (user.type === 'user' ? 'my_courses' : 'my_ads');
 
   return (
     <div className="container mx-auto py-8">
@@ -46,19 +49,28 @@ export default function DashboardPage() {
       <p className="text-muted-foreground mb-8">Here's a summary of your activity on Unite.</p>
       
       <Tabs defaultValue={defaultTab} className="w-full">
-         <TabsList className="grid w-full max-w-lg mx-auto grid-cols-2 mb-8">
+         <TabsList className={`grid w-full max-w-lg mx-auto mb-8 ${isAdmin ? 'grid-cols-3' : 'grid-cols-2'}`}>
+            {isAdmin && <TabsTrigger value="admin_withdrawals">Withdrawals</TabsTrigger>}
             {user.type === 'user' ? (
                 <>
                     <TabsTrigger value="my_courses">My Courses</TabsTrigger>
                     <TabsTrigger value="my_posts">My Posts</TabsTrigger>
                 </>
             ) : (
-                <>
-                    <TabsTrigger value="my_ads">My Ad Campaigns</TabsTrigger>
-                    <TabsTrigger value="my_posts">My Posts</TabsTrigger>
-                </>
+                 !isAdmin && (
+                    <>
+                        <TabsTrigger value="my_ads">My Ad Campaigns</TabsTrigger>
+                        <TabsTrigger value="my_posts">My Posts</TabsTrigger>
+                    </>
+                 )
             )}
         </TabsList>
+
+        {isAdmin && (
+            <TabsContent value="admin_withdrawals">
+                <AdminWithdrawalsDashboard />
+            </TabsContent>
+        )}
         
         <TabsContent value="my_courses">
             {user.type === 'user' && <UserCoursesDashboard />}
@@ -69,11 +81,103 @@ export default function DashboardPage() {
         </TabsContent>
 
         <TabsContent value="my_posts">
-            <UserPostsDashboard />
+             {/* Admin can also see their posts */}
+            {(user.type === 'user' || isAdmin) && <UserPostsDashboard />}
         </TabsContent>
       </Tabs>
     </div>
   );
+}
+
+function AdminWithdrawalsDashboard() {
+    const { allUsers, approveWithdrawal, rejectWithdrawal } = useAppContext();
+    const [processingId, setProcessingId] = useState<string | null>(null);
+
+    const allRequests: WithdrawalRequest[] = useMemo(() => {
+        return allUsers
+            .filter(u => u.withdrawalRequests)
+            .flatMap(u => Object.values(u.withdrawalRequests!))
+            .sort((a, b) => b.requestedAt - a.requestedAt);
+    }, [allUsers]);
+
+    const handleApprove = async (request: WithdrawalRequest) => {
+        setProcessingId(request.id);
+        await approveWithdrawal(request);
+        setProcessingId(null);
+    };
+
+    const handleReject = async (request: WithdrawalRequest) => {
+        setProcessingId(request.id);
+        await rejectWithdrawal(request);
+        setProcessingId(null);
+    };
+    
+    return (
+        <Card>
+            <CardHeader>
+                <CardTitle className="flex items-center gap-2"><Banknote /> Withdrawal Requests</CardTitle>
+                <CardDescription>Review and process user withdrawal requests.</CardDescription>
+            </CardHeader>
+            <CardContent>
+                <Table>
+                    <TableHeader>
+                        <TableRow>
+                            <TableHead>User</TableHead>
+                            <TableHead>Date</TableHead>
+                            <TableHead>Points (UPs)</TableHead>
+                            <TableHead>Amount (ZAR)</TableHead>
+                            <TableHead>Status</TableHead>
+                            <TableHead className="text-right">Actions</TableHead>
+                        </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                        {allRequests.length > 0 ? allRequests.map(req => (
+                            <TableRow key={req.id}>
+                                <TableCell>
+                                    <div className="font-medium">{req.userName}</div>
+                                    <div className="text-sm text-muted-foreground">{req.userEmail}</div>
+                                </TableCell>
+                                <TableCell>{format(new Date(req.requestedAt), "PPP p")}</TableCell>
+                                <TableCell>{req.points.toFixed(3)}</TableCell>
+                                <TableCell>R {req.amountZAR.toFixed(2)}</TableCell>
+                                <TableCell>
+                                     <Badge variant={req.status === 'approved' ? 'default' : req.status === 'pending' ? 'secondary' : 'destructive'}>
+                                        {req.status}
+                                     </Badge>
+                                </TableCell>
+                                <TableCell className="text-right">
+                                    {req.status === 'pending' && (
+                                        <div className="flex gap-2 justify-end">
+                                            <Button 
+                                                size="icon" 
+                                                variant="outline" 
+                                                onClick={() => handleApprove(req)}
+                                                disabled={processingId === req.id}
+                                            >
+                                                {processingId === req.id ? <Loader2 className="h-4 w-4 animate-spin"/> : <Check className="h-4 w-4 text-green-600"/>}
+                                            </Button>
+                                            <Button 
+                                                size="icon" 
+                                                variant="destructive"
+                                                onClick={() => handleReject(req)}
+                                                disabled={processingId === req.id}
+                                            >
+                                                {processingId === req.id ? <Loader2 className="h-4 w-4 animate-spin"/> : <X className="h-4 w-4"/>}
+                                            </Button>
+                                        </div>
+                                    )}
+                                </TableCell>
+                            </TableRow>
+                        )) : (
+                            <TableRow>
+                                <TableCell colSpan={6} className="text-center h-24">No pending withdrawal requests.</TableCell>
+                            </TableRow>
+                        )}
+                    </TableBody>
+                </Table>
+            </CardContent>
+        </Card>
+    )
 }
 
 function UserPostsDashboard() {
