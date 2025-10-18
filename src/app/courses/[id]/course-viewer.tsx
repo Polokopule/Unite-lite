@@ -7,7 +7,7 @@ import { useEffect, useState, useRef } from "react";
 import { Course } from "@/lib/types";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Download, Loader2 } from "lucide-react";
+import { Download, Loader2, Share2 } from "lucide-react";
 import Image from "next/image";
 import jsPDF from 'jspdf';
 import html2canvas from 'html2canvas';
@@ -29,6 +29,13 @@ export default function CourseViewer({ courseId }: { courseId: string }) {
 
         if (foundCourse) {
             setCourse(foundCourse);
+            
+            // Check for admin access first
+            if (user?.email === 'polokopule91@gmail.com') {
+                setIsAuthorized(true);
+                return;
+            }
+
             if (user?.type === 'user') {
                 const isPurchased = purchasedCourses.some(pc => pc.id === courseId);
                 if (isPurchased || foundCourse.creator === user.uid) {
@@ -40,11 +47,11 @@ export default function CourseViewer({ courseId }: { courseId: string }) {
             } else if (user?.type === 'business') {
                 toast.error("Business accounts cannot view course content.");
                 router.push('/');
-            } else {
+            } else if (!user) {
                 toast.error("You must be logged in to view courses.");
                 router.push('/login-user');
             }
-        } else {
+        } else if (!loading) {
              toast.error("The course you are looking for does not exist.");
             router.push('/courses');
         }
@@ -83,10 +90,27 @@ export default function CourseViewer({ courseId }: { courseId: string }) {
             setIsDownloading(false);
         }
     };
+    
+    const handleShare = () => {
+        if (!course) return;
+        const url = window.location.href;
+        navigator.clipboard.writeText(url).then(() => {
+            toast.success("Course link copied to clipboard!");
+        }, () => {
+            toast.error("Could not copy link.");
+        });
+    };
 
-    if (loading || !isAuthorized || !course) {
+    if (loading || !course) {
         return <div className="container mx-auto py-8"><p>Loading course...</p></div>;
     }
+
+    if (!isAuthorized) {
+        // This handles the case where auth check is done but user is not authorized.
+        // It prevents a flash of content.
+         return <div className="container mx-auto py-8"><p>Loading course...</p></div>;
+    }
+
 
     return (
         <div className="container mx-auto py-8 max-w-4xl">
@@ -113,7 +137,7 @@ export default function CourseViewer({ courseId }: { courseId: string }) {
                         <div className="prose dark:prose-invert max-w-none" dangerouslySetInnerHTML={{ __html: course.content }} />
                     </CardContent>
                  </div>
-                 <div className="p-6 pt-0">
+                 <div className="p-6 pt-0 flex flex-wrap gap-4">
                     <Button onClick={handleDownloadPDF} disabled={isDownloading}>
                         {isDownloading ? (
                             <>
@@ -126,6 +150,10 @@ export default function CourseViewer({ courseId }: { courseId: string }) {
                                 Download as PDF
                             </>
                         )}
+                    </Button>
+                     <Button onClick={handleShare} variant="outline">
+                        <Share2 className="mr-2 h-4 w-4" />
+                        Share
                     </Button>
                  </div>
             </Card>
