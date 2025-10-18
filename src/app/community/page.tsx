@@ -72,10 +72,6 @@ export default function CommunityPage() {
     }
 
     return (
-
-                 <meta name="google-adsense-account" content="ca-pub-6024568817887379">
-                     <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-6024568817887379"
-     crossorigin="anonymous"></script>
         <div className="container mx-auto py-8">
             <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between mb-8">
                 <div>
