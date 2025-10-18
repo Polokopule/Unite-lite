@@ -31,12 +31,7 @@ export default function WelcomePage() {
     },
   ];
 
-  return (
-    <meta name="google-adsense-account" content="ca-pub-6024568817887379">
-<script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-6024568817887379"
-     crossorigin="anonymous"></script>
-    
-    <div className="flex flex-col items-center">
+  return (<div className="flex flex-col items-center">
       <section className="w-full relative">
         <div className="absolute inset-0 bg-primary/10" />
         {heroImage && (
