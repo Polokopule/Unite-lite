@@ -14,8 +14,8 @@ export default function WatchAdsPage() {
   const router = useRouter();
   const [isClaiming, setIsClaiming] = useState(false);
   
-  // 1 minute cooldown
-  const COOLDOWN_TIME = 60 * 1000;
+  // 5 minute cooldown
+  const COOLDOWN_TIME = 5 * 60 * 1000;
   const [timeLeft, setTimeLeft] = useState(0);
 
   useEffect(() => {
@@ -94,7 +94,7 @@ export default function WatchAdsPage() {
               )}
               {canClaim ? 'Claim 0.005 UPs' : `Claim again in ${Math.ceil(timeLeft / 1000)}s`}
             </Button>
-             <p className="text-xs text-muted-foreground text-center mt-2">You can claim points once every minute.</p>
+             <p className="text-xs text-muted-foreground text-center mt-2">You can claim points once every 5 minutes.</p>
            </CardContent>
         </Card>
       </div>

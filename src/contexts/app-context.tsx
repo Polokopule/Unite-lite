@@ -556,7 +556,7 @@ export function AppContextProvider({ children }: { children: React.ReactNode }) 
   const claimAdPoints = async () => {
     if (!user || user.type !== 'user') return;
     const now = Date.now();
-    const COOLDOWN_TIME = 60 * 1000; // 1 minute
+    const COOLDOWN_TIME = 5 * 60 * 1000; // 5 minutes
     const lastClaim = user.lastAdClaim || 0;
 
     if (now - lastClaim < COOLDOWN_TIME) {
