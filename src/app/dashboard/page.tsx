@@ -6,7 +6,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter }
 import { Separator } from "@/components/ui/separator";
 import { useAppContext } from "@/contexts/app-context";
 import { Ad, Course, Post as PostType, FeedItem, Comment as CommentType, WithdrawalRequest, User } from "@/lib/types";
-import { ArrowRight, BookCopy, Eye, PlusCircle, ShoppingBag, Pencil, Trash2, Loader2, MessageCircle, Heart, Send, Edit, Check, X, Banknote, UserX, Shield, UserCheck } from "lucide-react";
+import { ArrowRight, BookCopy, Eye, PlusCircle, ShoppingBag, Pencil, Trash2, Loader2, MessageCircle, Heart, Send, Edit, Check, X, Banknote, UserX, Shield, UserCheck, Activity } from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useEffect, useState, useMemo } from "react";
@@ -18,6 +18,33 @@ import { Input } from "@/components/ui/input";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
 import toast from "react-hot-toast";
+import { CreatePostForm } from "@/components/create-post-form";
+import { PostCard } from "@/components/post-card";
+
+
+function FeedTab() {
+    const { posts, loading } = useAppContext();
+
+    if (loading) {
+        return <div className="container mx-auto py-8"><p>Loading feed...</p></div>;
+    }
+
+    return (
+        <div className="w-full">
+            <CreatePostForm />
+            <div className="container mx-auto py-8 max-w-2xl space-y-6">
+                {posts.length > 0 ? (
+                    posts.map(post => <PostCard key={post.id} post={post} />)
+                ) : (
+                    <div className="text-center text-muted-foreground py-12 border-2 border-dashed rounded-lg">
+                        <h2 className="text-xl font-semibold">The feed is empty.</h2>
+                        <p className="mt-2">Be the first to share something with the community!</p>
+                    </div>
+                )}
+            </div>
+        </div>
+    );
+}
 
 
 export default function DashboardPage() {
@@ -39,7 +66,7 @@ export default function DashboardPage() {
   }
 
   const isAdmin = user.email === 'polokopule91@gmail.com';
-  const defaultTab = isAdmin ? 'admin_withdrawals' : (user.type === 'user' ? 'my_courses' : 'my_ads');
+  const defaultTab = 'feed';
 
   return (
     <div className="container mx-auto py-8">
@@ -49,7 +76,8 @@ export default function DashboardPage() {
       <p className="text-muted-foreground mb-8">Here's a summary of your activity on Unite.</p>
       
       <Tabs defaultValue={defaultTab} className="w-full">
-         <TabsList className={`grid w-full max-w-xl mx-auto mb-8 ${isAdmin ? 'grid-cols-4' : 'grid-cols-2'}`}>
+         <TabsList className={`grid w-full max-w-2xl mx-auto mb-8 ${isAdmin ? 'grid-cols-5' : 'grid-cols-3'}`}>
+            <TabsTrigger value="feed">Feed</TabsTrigger>
             {isAdmin && <>
                 <TabsTrigger value="admin_withdrawals">Withdrawals</TabsTrigger>
                 <TabsTrigger value="admin_users">Users</TabsTrigger>
@@ -70,6 +98,10 @@ export default function DashboardPage() {
             )}
             {isAdmin && <TabsTrigger value="my_posts">My Posts</TabsTrigger>}
         </TabsList>
+        
+        <TabsContent value="feed">
+          <FeedTab />
+        </TabsContent>
 
         {isAdmin && (
             <>

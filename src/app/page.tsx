@@ -3,10 +3,19 @@
 
 import { useAppContext } from "@/contexts/app-context";
 import WelcomePage from "@/app/welcome/page";
-import HomeFeed from "@/components/home-feed";
+import { useEffect } from "react";
+import { useRouter } from "next/navigation";
 
 export default function HomePage() {
     const { user, loading } = useAppContext();
+    const router = useRouter();
+
+    useEffect(() => {
+        if (!loading && user) {
+            router.push('/dashboard');
+        }
+    }, [user, loading, router]);
+
 
     if (loading) {
         return (
@@ -20,5 +29,10 @@ export default function HomePage() {
         return <WelcomePage />;
     }
 
-    return <HomeFeed />;
+    // This will be shown briefly before redirecting
+    return (
+        <div className="h-screen w-full flex items-center justify-center">
+            <p>Redirecting to your dashboard...</p>
+        </div>
+    );
 }
