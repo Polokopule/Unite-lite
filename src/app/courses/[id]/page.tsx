@@ -10,26 +10,13 @@ type Props = {
   params: { id: string }
 }
 
-export async function generateStaticParams() {
-  const coursesRef = ref(db, 'courses');
-  const snapshot = await get(coursesRef);
-  if (snapshot.exists()) {
-    const courses = snapshot.val();
-    return Object.keys(courses).map((courseId) => ({
-      id: courseId,
-    }));
-  }
-  return [];
-}
-
-
 // Function to fetch a single course from Firebase
 async function getCourse(courseId: string): Promise<Course | null> {
   try {
     const courseRef = ref(db, `courses/${courseId}`);
     const snapshot = await get(courseRef);
     if (snapshot.exists()) {
-      return snapshot.val() as Course;
+      return { id: courseId, ...snapshot.val() } as Course;
     }
     return null;
   } catch (error) {
