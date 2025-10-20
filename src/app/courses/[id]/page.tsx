@@ -1,16 +1,16 @@
 
+// This file is now dynamic by default and doesn't need getStaticProps or generateStaticParams
 
+import type { Metadata } from "next";
 import { get, ref } from "firebase/database";
 import { db } from "@/lib/firebase";
 import type { Course } from "@/lib/types";
-import type { Metadata } from "next";
 import CourseViewer from "./course-viewer";
 
 type Props = {
   params: { id: string }
 }
 
-// Function to fetch a single course from Firebase
 async function getCourse(courseId: string): Promise<Course | null> {
   try {
     const courseRef = ref(db, `courses/${courseId}`);
@@ -20,6 +20,7 @@ async function getCourse(courseId: string): Promise<Course | null> {
     }
     return null;
   } catch (error) {
+    console.error("Error fetching course for metadata:", error);
     return null;
   }
 }
@@ -30,6 +31,7 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   if (!course) {
     return {
       title: "Course Not Found",
+      description: "The course you are looking for does not exist or may have been removed.",
     }
   }
 
@@ -61,7 +63,5 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
 }
 
 export default function CourseViewerPage({ params }: Props) {
-    // This is now a Server Component that wraps the client component
-    // It passes the courseId to the client component which will handle its own data fetching and logic
     return <CourseViewer courseId={params.id} />;
 }

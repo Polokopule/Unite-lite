@@ -7,20 +7,47 @@ import { useEffect, useState, useRef } from "react";
 import { Course } from "@/lib/types";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Download, Loader2, Share2 } from "lucide-react";
+import { Download, Loader2, Share2, Star, ThumbsUp } from "lucide-react";
 import Image from "next/image";
 import jsPDF from 'jspdf';
 import html2canvas from 'html2canvas';
 import toast from "react-hot-toast";
 
+function StarRating({ rating, onRatingChange, disabled }: { rating: number, onRatingChange: (rating: number) => void, disabled: boolean }) {
+    const [hover, setHover] = useState(0);
+
+    return (
+        <div className="flex items-center gap-1">
+            {[...Array(5)].map((_, index) => {
+                const ratingValue = index + 1;
+                return (
+                    <button
+                        type="button"
+                        key={ratingValue}
+                        className={`transition-colors text-amber-400 ${disabled ? 'cursor-not-allowed' : 'cursor-pointer'}`}
+                        onClick={() => !disabled && onRatingChange(ratingValue)}
+                        onMouseEnter={() => !disabled && setHover(ratingValue)}
+                        onMouseLeave={() => !disabled && setHover(0)}
+                    >
+                        <Star className={`h-6 w-6 ${(ratingValue <= (hover || rating)) ? 'fill-current' : 'fill-transparent'}`} />
+                    </button>
+                );
+            })}
+        </div>
+    );
+}
+
 export default function CourseViewer({ courseId }: { courseId: string }) {
-    const { user, courses, purchasedCourses, loading } = useAppContext();
+    const { user, courses, purchasedCourses, loading, rateCourse } = useAppContext();
     const router = useRouter();
     const courseContentRef = useRef<HTMLDivElement>(null);
 
     const [course, setCourse] = useState<Course | null>(null);
     const [isAuthorized, setIsAuthorized] = useState(false);
+    const [isPurchased, setIsPurchased] = useState(false);
     const [isDownloading, setIsDownloading] = useState(false);
+    const [userRating, setUserRating] = useState(0);
+    const [isRating, setIsRating] = useState(false);
 
     useEffect(() => {
         if (loading) return;
@@ -33,13 +60,18 @@ export default function CourseViewer({ courseId }: { courseId: string }) {
             // Check for admin access first
             if (user?.email === 'polokopule91@gmail.com') {
                 setIsAuthorized(true);
+                setIsPurchased(true); // Admin is considered to have "purchased" all
                 return;
             }
 
             if (user?.type === 'user') {
-                const isPurchased = purchasedCourses.some(pc => pc.id === courseId);
-                if (isPurchased || foundCourse.creator === user.uid) {
+                const purchased = purchasedCourses.some(pc => pc.id === courseId);
+                setIsPurchased(purchased);
+                if (purchased || foundCourse.creator === user.uid) {
                     setIsAuthorized(true);
+                } else if (foundCourse.status !== 'approved') {
+                    toast.error("This course is not available for viewing.");
+                    router.push('/courses');
                 } else {
                      toast.error("You have not purchased this course.");
                     router.push('/courses');
@@ -56,6 +88,12 @@ export default function CourseViewer({ courseId }: { courseId: string }) {
             router.push('/courses');
         }
     }, [courseId, courses, purchasedCourses, user, router, loading]);
+
+    useEffect(() => {
+        if (course && user && course.ratings && course.ratings[user.uid]) {
+            setUserRating(course.ratings[user.uid]);
+        }
+    }, [course, user]);
 
     const handleDownloadPDF = async () => {
         if (!courseContentRef.current || !course) return;
@@ -105,6 +143,14 @@ export default function CourseViewer({ courseId }: { courseId: string }) {
             toast.error("Could not copy link.");
         });
     };
+    
+    const handleRatingChange = async (newRating: number) => {
+        if (!course || !user) return;
+        setIsRating(true);
+        setUserRating(newRating); // Optimistic update
+        await rateCourse(course.id, newRating);
+        setIsRating(false);
+    }
 
     if (loading || !course) {
         return <div className="container mx-auto py-8"><p>Loading course...</p></div>;
@@ -142,6 +188,18 @@ export default function CourseViewer({ courseId }: { courseId: string }) {
                         <div className="prose dark:prose-invert max-w-none prose-lg prose-p:text-foreground prose-a:text-primary prose-strong:text-foreground prose-headings:text-foreground" dangerouslySetInnerHTML={{ __html: course.content }} />
                     </CardContent>
                  </div>
+                 {isPurchased && (
+                    <CardContent>
+                         <div className="mt-6 border-t pt-6">
+                            <h3 className="text-lg font-semibold mb-2">Rate this course</h3>
+                            <div className="flex flex-col sm:flex-row items-center gap-4">
+                                <StarRating rating={userRating} onRatingChange={handleRatingChange} disabled={isRating} />
+                                {userRating > 0 && !isRating && <p className="text-sm text-green-600 flex items-center gap-1"><ThumbsUp className="h-4 w-4"/> Thanks for your feedback!</p>}
+                                {isRating && <Loader2 className="h-5 w-5 animate-spin" />}
+                            </div>
+                        </div>
+                    </CardContent>
+                 )}
                  <div className="p-6 pt-0 flex flex-wrap gap-4">
                     <Button onClick={handleDownloadPDF} disabled={isDownloading}>
                         {isDownloading ? (

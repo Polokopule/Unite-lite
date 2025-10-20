@@ -72,6 +72,7 @@ export default function CreateCoursePage() {
     setIsPublishing(false);
 
     if(success) {
+        toast.success("Your course has been submitted for review.");
         router.push('/dashboard');
     }
   };
@@ -94,7 +95,7 @@ export default function CreateCoursePage() {
                 <BookOpen className="h-8 w-8 text-primary" />
                 <div>
                     <CardTitle className="text-2xl font-headline">Create a New Course</CardTitle>
-                    <CardDescription>Share your knowledge with the Unite community.</CardDescription>
+                    <CardDescription>Share your knowledge with the Unite community. Your course will be reviewed before publishing.</CardDescription>
                 </div>
             </div>
           </CardHeader>
@@ -153,19 +154,19 @@ export default function CreateCoursePage() {
               <AlertDialogTrigger asChild>
                 <Button type="button" className="w-full sm:w-auto" disabled={!title || !content || !coverImage || price <= 0 || isPublishing}>
                   {isPublishing ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <CreditCard className="h-4 w-4 mr-2" />}
-                  {isPublishing ? 'Publishing...' : 'Publish Course'}
+                  {isPublishing ? 'Submitting...' : 'Submit for Review'}
                 </Button>
               </AlertDialogTrigger>
               <AlertDialogContent>
                 <AlertDialogHeader>
-                  <AlertDialogTitle>Confirm & Publish</AlertDialogTitle>
+                  <AlertDialogTitle>Submit for Review</AlertDialogTitle>
                   <AlertDialogDescription>
-                    You are about to publish the course "{title}". Are you sure you want to proceed? This action cannot be undone.
+                    You are about to submit the course "{title}" for review. An admin will check it before it's published. Are you sure you want to proceed?
                   </AlertDialogDescription>
                 </AlertDialogHeader>
                 <AlertDialogFooter>
                   <AlertDialogCancel>Cancel</AlertDialogCancel>
-                  <AlertDialogAction onClick={handlePublish}>Yes, Publish</AlertDialogAction>
+                  <AlertDialogAction onClick={handlePublish}>Yes, Submit</AlertDialogAction>
                 </AlertDialogFooter>
               </AlertDialogContent>
             </AlertDialog>

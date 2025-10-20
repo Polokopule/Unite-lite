@@ -81,7 +81,13 @@ export default function EditCoursePage() {
     }
     
     setIsSaving(true);
-    const success = await updateCourse(course.id, { title, content, price, imageUrl: coverImageUrl || '' });
+    const success = await updateCourse(course.id, { 
+      title, 
+      content, 
+      price, 
+      imageUrl: coverImageUrl || '',
+      status: 'pending' // Resubmit for review
+    });
     setIsSaving(false);
 
     if(success) {
@@ -107,7 +113,7 @@ export default function EditCoursePage() {
                 <BookOpen className="h-8 w-8 text-primary" />
                 <div>
                     <CardTitle className="text-2xl font-headline">Edit Course</CardTitle>
-                    <CardDescription>Update the details of your course.</CardDescription>
+                    <CardDescription>Update the details of your course. Changes will be resubmitted for review.</CardDescription>
                 </div>
             </div>
           </CardHeader>
@@ -157,7 +163,7 @@ export default function EditCoursePage() {
           <CardFooter>
             <Button type="submit" className="w-full sm:w-auto" disabled={!title || !content || price <= 0 || isSaving}>
                 {isSaving ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <Save className="h-4 w-4 mr-2" />}
-                {isSaving ? 'Saving...' : 'Save Changes'}
+                {isSaving ? 'Resubmitting...' : 'Resubmit for Review'}
             </Button>
           </CardFooter>
         </form>

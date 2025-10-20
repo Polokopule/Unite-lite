@@ -31,7 +31,10 @@ export default function SignUpUserPage() {
       await signInWithPopup(auth, provider);
       const firebaseUser = auth.currentUser;
       if (firebaseUser?.email) {
+        // The login function will handle creating the user in the DB
         await login(firebaseUser.email, 'user');
+      } else {
+        throw new Error("Could not retrieve user info from Google.");
       }
       toast.dismiss(loadingToast);
     } catch (error: any) {
