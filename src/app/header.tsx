@@ -6,7 +6,7 @@ import { Button } from "./ui/button";
 import { Logo } from "./logo";
 import Link from "next/link";
 import { Avatar, AvatarFallback, AvatarImage } from "./ui/avatar";
-import { Briefcase, LogOut, User as UserIcon, Wallet, Edit, Menu, DollarSign, Settings, LayoutDashboard } from "lucide-react";
+import { Briefcase, LogOut, User as UserIcon, Wallet, Users, Home, MessageSquare, Edit, Menu, ShoppingBag, BookOpen, BellRing, Settings, DollarSign, LayoutDashboard, Bot } from "lucide-react";
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from "./ui/sheet";
 import { useState } from "react";
 import { Separator } from "./ui/separator";
@@ -101,6 +101,9 @@ function UserSheet() {
                     <Separator />
                      <div className="flex flex-col gap-2">
                         <Button asChild variant="ghost" className="justify-start" onClick={handleLinkClick}>
+                           <Link href="/"><Home className="mr-2 h-4 w-4" />Home</Link>
+                        </Button>
+                        <Button asChild variant="ghost" className="justify-start" onClick={handleLinkClick}>
                            <Link href="/dashboard"><LayoutDashboard className="mr-2 h-4 w-4" />Dashboard</Link>
                         </Button>
                         <Button asChild variant="ghost" className="justify-start" onClick={handleLinkClick}>
@@ -160,7 +163,7 @@ export function Header() {
                     </div>
                 )}
                  <div className="md:hidden">
-                    {user ? <UserSheet /> : <AuthSheet />}
+                    <AuthSheet />
                  </div>
             </div>
         </div>

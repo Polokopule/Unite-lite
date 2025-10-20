@@ -5,47 +5,18 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
 import { useAppContext } from "@/contexts/app-context";
-import { Ad, Course, Post as PostType, FeedItem, Comment as CommentType, WithdrawalRequest, User } from "@/lib/types";
-import { ArrowRight, BookCopy, Eye, PlusCircle, ShoppingBag, Pencil, Trash2, Loader2, MessageCircle, Heart, Send, Edit, Check, X, Banknote, UserX, Shield, UserCheck, Activity } from "lucide-react";
+import { Ad, Course, Post as PostType, WithdrawalRequest, User as UserType } from "@/lib/types";
+import { ArrowRight, BookCopy, Eye, PlusCircle, ShoppingBag, Pencil, Trash2, Loader2, Save, Check, X, Banknote, UserX, Shield, UserCheck } from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useEffect, useState, useMemo } from "react";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { format, formatDistanceToNow } from "date-fns";
-import { Input } from "@/components/ui/input";
+import { format } from "date-fns";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
+import { Input } from "@/components/ui/input";
 import toast from "react-hot-toast";
-import { CreatePostForm } from "@/components/create-post-form";
-import { PostCard } from "@/components/post-card";
-
-
-function FeedTab() {
-    const { posts, loading } = useAppContext();
-
-    if (loading) {
-        return <div className="container mx-auto py-8"><p>Loading feed...</p></div>;
-    }
-
-    return (
-        <div className="w-full">
-            <CreatePostForm />
-            <div className="container mx-auto py-8 max-w-2xl space-y-6">
-                {posts.length > 0 ? (
-                    posts.map(post => <PostCard key={post.id} post={post} />)
-                ) : (
-                    <div className="text-center text-muted-foreground py-12 border-2 border-dashed rounded-lg">
-                        <h2 className="text-xl font-semibold">The feed is empty.</h2>
-                        <p className="mt-2">Be the first to share something with the community!</p>
-                    </div>
-                )}
-            </div>
-        </div>
-    );
-}
-
 
 export default function DashboardPage() {
   const { user, loading } = useAppContext();
@@ -66,53 +37,48 @@ export default function DashboardPage() {
   }
 
   const isAdmin = user.email === 'polokopule91@gmail.com';
-  const defaultTab = 'feed';
+  
+  const getDefaultTab = () => {
+    if(isAdmin) return "admin_courses";
+    if(user.type === 'user') return "my_courses";
+    if(user.type === 'business') return "my_ads";
+    return "my_posts";
+  }
+  
+  const defaultTab = getDefaultTab();
 
   return (
     <div className="container mx-auto py-8">
       <h1 className="text-3xl font-bold font-headline mb-2">
-        Welcome back, {user.name}!
+        Dashboard
       </h1>
-      <p className="text-muted-foreground mb-8">Here's a summary of your activity on Unite.</p>
+      <p className="text-muted-foreground mb-8">Manage your content and activity on Unite.</p>
       
       <Tabs defaultValue={defaultTab} className="w-full">
-         <TabsList className={`grid w-full max-w-2xl mx-auto mb-8 ${isAdmin ? 'grid-cols-5' : 'grid-cols-3'}`}>
-            <TabsTrigger value="feed">Feed</TabsTrigger>
+         <TabsList className={`grid w-full ${isAdmin ? 'grid-cols-4' : 'grid-cols-1'}`}>
             {isAdmin && <>
+                <TabsTrigger value="admin_courses">Course Review</TabsTrigger>
                 <TabsTrigger value="admin_withdrawals">Withdrawals</TabsTrigger>
                 <TabsTrigger value="admin_users">Users</TabsTrigger>
-                <TabsTrigger value="admin_courses">Courses</TabsTrigger>
+                <TabsTrigger value="admin_all_courses">All Courses</TabsTrigger>
             </>}
-            {user.type === 'user' ? (
-                <>
-                    <TabsTrigger value="my_courses">My Courses</TabsTrigger>
-                    <TabsTrigger value="my_posts">My Posts</TabsTrigger>
-                </>
-            ) : (
-                 !isAdmin && (
-                    <>
-                        <TabsTrigger value="my_ads">My Ad Campaigns</TabsTrigger>
-                        <TabsTrigger value="my_posts">My Posts</TabsTrigger>
-                    </>
-                 )
-            )}
-            {isAdmin && <TabsTrigger value="my_posts">My Posts</TabsTrigger>}
+            {user.type === 'user' && <TabsTrigger value="my_courses">My Courses</TabsTrigger> }
+            {user.type === 'business' && <TabsTrigger value="my_ads">My Ad Campaigns</TabsTrigger>}
         </TabsList>
         
-        <TabsContent value="feed">
-          <FeedTab />
-        </TabsContent>
-
         {isAdmin && (
             <>
+            <TabsContent value="admin_courses">
+                <AdminCourseReviewDashboard />
+            </TabsContent>
             <TabsContent value="admin_withdrawals">
                 <AdminWithdrawalsDashboard />
             </TabsContent>
             <TabsContent value="admin_users">
                 <AdminUsersDashboard />
             </TabsContent>
-             <TabsContent value="admin_courses">
-                <AdminCoursesDashboard />
+             <TabsContent value="admin_all_courses">
+                <AdminAllCoursesDashboard />
             </TabsContent>
             </>
         )}
@@ -124,17 +90,96 @@ export default function DashboardPage() {
         <TabsContent value="my_ads">
             {user.type === 'business' && <BusinessDashboard />}
         </TabsContent>
-
-        <TabsContent value="my_posts">
-             {/* Admin can also see their posts */}
-            {(user.type === 'user' || user.type === 'business' || isAdmin) && <UserPostsDashboard />}
-        </TabsContent>
       </Tabs>
     </div>
   );
 }
 
-function AdminCoursesDashboard() {
+function AdminCourseReviewDashboard() {
+    const { courses, updateCourse } = useAppContext();
+    const [rejectionReason, setRejectionReason] = useState("");
+    const [selectedCourse, setSelectedCourse] = useState<Course | null>(null);
+
+    const handleApprove = async (courseId: string) => {
+        await updateCourse(courseId, { status: 'approved' });
+    };
+
+    const handleReject = async () => {
+        if (!selectedCourse) return;
+        await updateCourse(selectedCourse.id, { status: 'rejected', rejectionReason: rejectionReason });
+        setSelectedCourse(null);
+        setRejectionReason("");
+    };
+    
+    const pendingCourses = courses.filter(c => c.status === 'pending');
+
+    return (
+        <Card>
+            <CardHeader>
+                <CardTitle>Pending Course Approvals</CardTitle>
+                <CardDescription>Review courses submitted by users before they are published.</CardDescription>
+            </CardHeader>
+            <CardContent>
+                {pendingCourses.length > 0 ? (
+                     <Table>
+                        <TableHeader>
+                            <TableRow>
+                                <TableHead>Course</TableHead>
+                                <TableHead>Creator</TableHead>
+                                <TableHead className="text-right">Actions</TableHead>
+                            </TableRow>
+                        </TableHeader>
+                        <TableBody>
+                            {pendingCourses.map(course => (
+                                <TableRow key={course.id}>
+                                    <TableCell>
+                                        <Link href={`/courses/${course.id}`} className="font-medium hover:underline" target="_blank">{course.title}</Link>
+                                    </TableCell>
+                                    <TableCell>{course.creatorName}</TableCell>
+                                    <TableCell className="text-right">
+                                        <div className="flex gap-2 justify-end">
+                                             <AlertDialog>
+                                                <AlertDialogTrigger asChild>
+                                                    <Button size="sm" variant="outline" onClick={() => handleApprove(course.id)}>Approve</Button>
+                                                </AlertDialogTrigger>
+                                             </AlertDialog>
+                                             <AlertDialog>
+                                                <AlertDialogTrigger asChild>
+                                                    <Button size="sm" variant="destructive" onClick={() => setSelectedCourse(course)}>Reject</Button>
+                                                </AlertDialogTrigger>
+                                                <AlertDialogContent>
+                                                    <AlertDialogHeader>
+                                                        <AlertDialogTitle>Reject Course: "{selectedCourse?.title}"?</AlertDialogTitle>
+                                                        <AlertDialogDescription>Please provide a reason for rejection. This will be shown to the course creator.</AlertDialogDescription>
+                                                    </AlertDialogHeader>
+                                                    <Input
+                                                        placeholder="Reason for rejection..."
+                                                        value={rejectionReason}
+                                                        onChange={(e) => setRejectionReason(e.target.value)}
+                                                    />
+                                                    <AlertDialogFooter>
+                                                        <AlertDialogCancel onClick={() => setSelectedCourse(null)}>Cancel</AlertDialogCancel>
+                                                        <AlertDialogAction onClick={handleReject}>Confirm Rejection</AlertDialogAction>
+                                                    </AlertDialogFooter>
+                                                </AlertDialogContent>
+                                            </AlertDialog>
+                                        </div>
+                                    </TableCell>
+                                </TableRow>
+                            ))}
+                        </TableBody>
+                     </Table>
+                ) : (
+                    <div className="text-center py-8 border-2 border-dashed rounded-lg">
+                        <p className="text-muted-foreground">No courses are pending review.</p>
+                    </div>
+                )}
+            </CardContent>
+        </Card>
+    );
+}
+
+function AdminAllCoursesDashboard() {
     const { courses, deleteCourse } = useAppContext();
     const [deletingId, setDeletingId] = useState<string|null>(null);
 
@@ -159,6 +204,7 @@ function AdminCoursesDashboard() {
                                 <p className="font-medium">{course.title}</p>
                                 <p className="text-xs text-muted-foreground">By {course.creatorName}</p>
                             </div>
+                             <Badge variant={course.status === 'approved' ? 'default' : course.status === 'pending' ? 'secondary' : 'destructive'} className="capitalize">{course.status}</Badge>
                             <div className="flex items-center gap-2 flex-shrink-0">
                                 <Button variant="outline" size="icon" asChild>
                                     <Link href={`/courses/${course.id}`}><Eye className="h-4 w-4" /></Link>
@@ -195,7 +241,6 @@ function AdminCoursesDashboard() {
         </Card>
     );
 }
-
 
 function AdminUsersDashboard() {
     const { allUsers, toggleUserBan } = useAppContext();
@@ -360,79 +405,17 @@ function AdminWithdrawalsDashboard() {
     )
 }
 
-function UserPostsDashboard() {
-    const { user, posts, deletePost } = useAppContext();
-    const [deletingId, setDeletingId] = useState<string|null>(null);
-
-    if (!user) return null;
-
-    const userPosts = posts.filter(post => post.creatorUid === user.uid);
-
-    const handleDeletePost = async (postId: string) => {
-        setDeletingId(postId);
-        await deletePost(postId);
-        setDeletingId(null);
-    }
-
-    return (
-         <Card>
-          <CardHeader>
-            <CardTitle>My Posts</CardTitle>
-            <CardDescription>The posts you have created.</CardDescription>
-          </CardHeader>
-          <CardContent>
-            {userPosts.length > 0 ? (
-                <ul className="space-y-2">
-                    {userPosts.map(post => (
-                        <li key={post.id} className="flex items-center justify-between p-3 bg-muted/50 rounded-lg">
-                            <span className="font-medium truncate pr-4">{post.content.substring(0, 100) || "Media Post"}</span>
-                            <div className="flex items-center gap-2 flex-shrink-0">
-                                <Button variant="outline" size="icon" asChild>
-                                    <Link href={`/posts/edit/${post.id}`}><Pencil className="h-4 w-4" /></Link>
-                                </Button>
-                                 <AlertDialog>
-                                    <AlertDialogTrigger asChild>
-                                        <Button variant="destructive" size="icon" disabled={deletingId === post.id}>
-                                            {deletingId === post.id ? <Loader2 className="h-4 w-4 animate-spin"/> : <Trash2 className="h-4 w-4" />}
-                                        </Button>
-                                    </AlertDialogTrigger>
-                                    <AlertDialogContent>
-                                        <AlertDialogHeader>
-                                            <AlertDialogTitle>Are you sure?</AlertDialogTitle>
-                                            <AlertDialogDescription>
-                                                This will permanently delete your post. This action cannot be undone.
-                                            </AlertDialogDescription>
-                                        </AlertDialogHeader>
-                                        <AlertDialogFooter>
-                                            <AlertDialogCancel>Cancel</AlertDialogCancel>
-                                            <AlertDialogAction onClick={() => handleDeletePost(post.id)}>Delete</AlertDialogAction>
-                                        </AlertDialogFooter>
-                                    </AlertDialogContent>
-                                </AlertDialog>
-                            </div>
-                        </li>
-                    ))}
-                </ul>
-            ) : (
-                 <div className="text-center py-8 border-2 border-dashed rounded-lg">
-                    <p className="text-muted-foreground">You haven't created any posts yet.</p>
-                    <Button asChild variant="link" className="mt-2">
-                        <Link href="/">Create your first post <ArrowRight className="h-4 w-4 ml-2"/></Link>
-                    </Button>
-                </div>
-            )}
-          </CardContent>
-        </Card>
-    );
-}
-
 function UserCoursesDashboard() {
-    const { user, courses, purchasedCourses, deleteCourse } = useAppContext();
+    const { user, courses, deleteCourse } = useAppContext();
     const [deletingId, setDeletingId] = useState<string|null>(null);
     
     if (!user) return null;
 
-    const purchasedCourseDetails = purchasedCourses.map(pc => courses.find(c => c.id === pc.id)).filter(Boolean) as Course[];
+    const purchasedCourseDetails = useMemo(() => {
+        const purchasedIds = user.purchasedCourses ? Object.keys(user.purchasedCourses) : [];
+        return courses.filter(course => purchasedIds.includes(course.id));
+    }, [user.purchasedCourses, courses]);
+    
     const createdCourses = courses.filter(course => course.creator === user.uid);
 
     const handleDeleteCourse = async (courseId: string) => {
@@ -442,38 +425,7 @@ function UserCoursesDashboard() {
     }
 
   return (
-    <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-      <div className="lg:col-span-2 space-y-6">
-        <Card>
-          <CardHeader>
-            <CardTitle>My Purchased Courses</CardTitle>
-            <CardDescription>The courses you have purchased.</CardDescription>
-          </CardHeader>
-          <CardContent>
-            {purchasedCourseDetails.length > 0 ? (
-                <ul className="space-y-4">
-                    {purchasedCourseDetails.map(course => (
-                        <li key={course.id} className="flex items-center justify-between p-3 bg-muted/50 rounded-lg">
-                            <div className="flex items-center gap-4">
-                               <BookCopy className="h-5 w-5 text-primary"/>
-                                <span className="font-medium">{course.title}</span>
-                            </div>
-                             <Button asChild variant="ghost" size="sm">
-                                <Link href={`/courses/${course.id}`}>View Course</Link>
-                            </Button>
-                        </li>
-                    ))}
-                </ul>
-            ) : (
-                <div className="text-center py-8 border-2 border-dashed rounded-lg">
-                    <p className="text-muted-foreground">You haven't purchased any courses yet.</p>
-                    <Button asChild variant="link" className="mt-2">
-                        <Link href="/courses">Browse Courses <ArrowRight className="h-4 w-4 ml-2"/></Link>
-                    </Button>
-                </div>
-            )}
-          </CardContent>
-        </Card>
+    <div className="grid grid-cols-1 gap-8">
         <Card>
           <CardHeader>
             <CardTitle>My Created Courses</CardTitle>
@@ -484,8 +436,14 @@ function UserCoursesDashboard() {
                 <ul className="space-y-2">
                     {createdCourses.map(course => (
                         <li key={course.id} className="flex items-center justify-between p-3 bg-muted/50 rounded-lg">
-                            <span className="font-medium">{course.title}</span>
+                            <div>
+                                <span className="font-medium">{course.title}</span>
+                                {course.status === 'rejected' && (
+                                    <p className="text-xs text-destructive">Rejected: {course.rejectionReason}</p>
+                                )}
+                            </div>
                             <div className="flex items-center gap-2">
+                                <Badge variant={course.status === 'approved' ? 'default' : course.status === 'pending' ? 'secondary' : 'destructive'} className="capitalize">{course.status}</Badge>
                                 <Button variant="outline" size="icon" asChild>
                                     <Link href={`/courses/edit/${course.id}`}><Pencil className="h-4 w-4" /></Link>
                                 </Button>
@@ -522,25 +480,36 @@ function UserCoursesDashboard() {
             )}
           </CardContent>
         </Card>
-      </div>
-      <div className="space-y-6">
-        <Card>
-            <CardHeader>
-                <CardTitle>Quick Actions</CardTitle>
-            </CardHeader>
-            <CardContent className="flex flex-col gap-4">
-                 <Button asChild size="lg">
-                    <Link href="/#courses"><ShoppingBag className="mr-2 h-4 w-4"/>Browse Marketplace</Link>
-                </Button>
-                 <Button asChild size="lg" variant="secondary">
-                    <Link href="/courses/create"><PlusCircle className="mr-2 h-4 w-4"/>Create a New Course</Link>
-                </Button>
-                 <Button asChild size="lg" variant="outline">
-                    <Link href="/profile/edit"><Edit className="mr-2 h-4 w-4"/>Edit Profile</Link>
-                </Button>
-            </CardContent>
+      <Card>
+          <CardHeader>
+            <CardTitle>My Purchased Courses</CardTitle>
+            <CardDescription>The courses you have purchased.</CardDescription>
+          </CardHeader>
+          <CardContent>
+            {purchasedCourseDetails.length > 0 ? (
+                <ul className="space-y-4">
+                    {purchasedCourseDetails.map(course => (
+                        <li key={course.id} className="flex items-center justify-between p-3 bg-muted/50 rounded-lg">
+                            <div className="flex items-center gap-4">
+                               <BookCopy className="h-5 w-5 text-primary"/>
+                                <span className="font-medium">{course.title}</span>
+                            </div>
+                             <Button asChild variant="ghost" size="sm">
+                                <Link href={`/courses/${course.id}`}>View Course</Link>
+                            </Button>
+                        </li>
+                    ))}
+                </ul>
+            ) : (
+                <div className="text-center py-8 border-2 border-dashed rounded-lg">
+                    <p className="text-muted-foreground">You haven't purchased any courses yet.</p>
+                    <Button asChild variant="link" className="mt-2">
+                        <Link href="/">Browse Courses <ArrowRight className="h-4 w-4 ml-2"/></Link>
+                    </Button>
+                </div>
+            )}
+          </CardContent>
         </Card>
-      </div>
     </div>
   );
 }
@@ -636,5 +605,3 @@ function BusinessDashboard() {
       </div>
   );
 }
-
-    

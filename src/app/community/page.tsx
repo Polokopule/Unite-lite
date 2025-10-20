@@ -73,16 +73,6 @@ export default function CommunityPage() {
 
     return (
         <div className="container mx-auto py-8">
-            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between mb-8">
-                <div>
-                    <h1 className="text-3xl font-bold font-headline mb-2">Community</h1>
-                    <p className="text-muted-foreground">Browse and connect with other users on Unite.</p>
-                </div>
-                <Button asChild>
-                    <Link href="/groups"><Users className="mr-2 h-4 w-4"/>Browse Groups</Link>
-                </Button>
-            </div>
-
             <div className="flex items-center gap-4 mb-8">
                 <div className="relative flex-1">
                     <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground" />
@@ -113,7 +103,7 @@ export default function CommunityPage() {
 
             <div className="space-y-3">
                 {sortedAndFilteredUsers.map(user => (
-                    <Card key={user.uid} className="shadow-sm hover:shadow-md transition-shadow bg-white dark:bg-card">
+                    <Card key={user.uid} className="shadow-sm hover:shadow-md transition-shadow bg-card">
                         <CardContent className="p-3 flex items-center justify-between gap-4">
                            <div className="flex items-center gap-3 flex-1 truncate">
                                 <Avatar className="h-10 w-10">
@@ -124,15 +114,15 @@ export default function CommunityPage() {
                                 </Avatar>
                                 <div className="truncate">
                                     <div className="flex items-center gap-1.5 truncate">
-                                        <span className="font-medium text-gray-700 dark:text-gray-200 truncate">{user.name}</span>
+                                        <span className="font-medium text-card-foreground truncate">{user.name}</span>
                                         {isVerified(user) && <ShieldCheck className="h-4 w-4 text-primary flex-shrink-0" />}
                                     </div>
-                                    <p className="text-sm text-gray-500 dark:text-gray-400 capitalize truncate">{user.type}</p>
+                                    <p className="text-sm text-muted-foreground capitalize truncate">{user.type}</p>
                                 </div>
                             </div>
                             <div className="flex items-center gap-4">
                                 <div className="text-right">
-                                    <p className="font-bold text-green-600 dark:text-green-500 text-lg">{user.followers?.length || 0}</p>
+                                    <p className="font-bold text-lg">{user.followers?.length || 0}</p>
                                     <p className="text-xs text-muted-foreground">Followers</p>
                                 </div>
                                 <div className="flex items-center gap-2">

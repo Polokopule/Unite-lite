@@ -33,7 +33,7 @@ function CourseRating({ ratings }: { ratings: { [key: string]: number } | undefi
 }
 
 export default function CoursesMarketplacePage() {
-  const { courses, user, purchaseCourse, purchasedCourses } = useAppContext();
+  const { courses, user, purchaseCourse, loading } = useAppContext();
   const [purchasingId, setPurchasingId] = useState<string | null>(null);
 
   const handlePurchase = async (course: Course) => {
@@ -45,11 +45,15 @@ export default function CoursesMarketplacePage() {
     setPurchasingId(null);
   };
   
+  if (loading) {
+    return <p>Loading courses...</p>
+  }
+  
   const approvedCourses = courses.filter(c => c.status === 'approved');
 
   return (
     <div className="container mx-auto py-8">
-       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between">
+       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between mb-8">
             <div>
                 <h2 className="text-3xl font-bold font-headline">Courses</h2>
                 <p className="text-muted-foreground">Browse our marketplace of user-created courses.</p>
@@ -62,9 +66,9 @@ export default function CoursesMarketplacePage() {
         </div>
 
       {approvedCourses.length > 0 ? (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mt-8">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
           {approvedCourses.map((course) => {
-            const isPurchased = purchasedCourses.some(pc => pc.id === course.id);
+            const isPurchased = user?.purchasedCourses && user.purchasedCourses[course.id];
             const isPurchasing = purchasingId === course.id;
             const excerpt = course.content.replace(/<[^>]+>/g, '').substring(0, 100) + '...';
 

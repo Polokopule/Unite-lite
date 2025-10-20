@@ -9,7 +9,11 @@ import { Users, Lock, PlusCircle } from "lucide-react";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 
 export default function GroupsPage() {
-    const { groups, user } = useAppContext();
+    const { groups, user, loading } = useAppContext();
+    
+    if (loading) {
+        return <p>Loading groups...</p>;
+    }
 
     return (
         <div className="container mx-auto py-8">
@@ -39,13 +43,13 @@ export default function GroupsPage() {
                                         <span className="truncate">{group.name}</span>
                                         {group.hasPin && <Lock className="h-4 w-4 text-muted-foreground flex-shrink-0 ml-2" />}
                                     </CardTitle>
-                                    <CardDescription>{group.description.substring(0, 100)}{group.description.length > 100 && '...'}</CardDescription>
+                                    <CardDescription className="line-clamp-2">{group.description}</CardDescription>
                                 </div>
                             </CardHeader>
                             <CardContent className="flex-grow">
                                 <div className="flex items-center text-sm text-muted-foreground gap-2">
                                     <Users className="h-4 w-4" />
-                                    <span>{group.members?.length || 0} members</span>
+                                    <span>{Object.keys(group.members || {}).length} members</span>
                                 </div>
                             </CardContent>
                             <CardContent>
