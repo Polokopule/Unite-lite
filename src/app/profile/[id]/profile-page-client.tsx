@@ -7,13 +7,14 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import React, { useEffect, useState } from "react";
 import { User as UserType, Post as PostType } from "@/lib/types";
-import { Loader2, UserPlus, UserMinus, ShieldCheck } from "lucide-react";
+import { Loader2, UserPlus, UserMinus, ShieldCheck, UserX } from "lucide-react";
 import { PostCard } from "@/components/post-card";
 import { isVerified } from "@/lib/utils";
 import toast from "react-hot-toast";
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
 
 export default function ProfilePageClient({ profileUserId }: { profileUserId: string }) {
-    const { user: currentUser, allUsers, loading, followUser, unfollowUser, posts } = useAppContext();
+    const { user: currentUser, allUsers, loading, followUser, unfollowUser, posts, toggleUserBan } = useAppContext();
 
     const [profileUser, setProfileUser] = useState<UserType | null>(null);
     const [isFollowing, setIsFollowing] = useState(false);
@@ -58,12 +59,19 @@ export default function ProfilePageClient({ profileUserId }: { profileUserId: st
         }
         return name.substring(0, 2).toUpperCase();
     };
+    
+    const handleToggleBan = async () => {
+        if (!profileUser) return;
+        await toggleUserBan(profileUser.uid, !profileUser.banned);
+    };
+
 
     if (loading || !profileUser) {
         return <div className="container mx-auto py-8"><p>Loading profile...</p></div>;
     }
 
     const isOwnProfile = currentUser?.uid === profileUser.uid;
+    const isAdmin = currentUser?.email === 'polokopule91@gmail.com';
 
     return (
         <div className="container mx-auto py-8 max-w-4xl">
@@ -80,6 +88,7 @@ export default function ProfilePageClient({ profileUserId }: { profileUserId: st
                         {isVerified(profileUser) && <ShieldCheck className="h-7 w-7 text-primary" />}
                     </CardTitle>
                     <CardDescription>{profileUser.email}</CardDescription>
+                     {profileUser.banned && <Badge variant="destructive" className="mt-2">BANNED</Badge>}
                 </CardHeader>
                 <CardContent>
                     <div className="flex justify-center gap-8 text-center my-4">
@@ -92,21 +101,47 @@ export default function ProfilePageClient({ profileUserId }: { profileUserId: st
                             <p className="text-sm text-muted-foreground">Following</p>
                         </div>
                     </div>
-                     {currentUser && !isOwnProfile && (
-                        <div className="text-center mt-6">
-                            {isFollowing ? (
-                                <Button onClick={handleUnfollow} disabled={isProcessing} variant="outline">
-                                    {isProcessing ? <Loader2 className="mr-2 h-4 w-4 animate-spin"/> : <UserMinus className="mr-2 h-4 w-4"/>}
-                                    Unfollow
-                                </Button>
-                            ) : (
-                                <Button onClick={handleFollow} disabled={isProcessing}>
-                                    {isProcessing ? <Loader2 className="mr-2 h-4 w-4 animate-spin"/> : <UserPlus className="mr-2 h-4 w-4"/>}
-                                    Follow
-                                </Button>
-                            )}
-                        </div>
-                    )}
+                     <div className="flex justify-center gap-4 mt-6">
+                         {currentUser && !isOwnProfile && (
+                            <>
+                                {isFollowing ? (
+                                    <Button onClick={handleUnfollow} disabled={isProcessing} variant="outline">
+                                        {isProcessing ? <Loader2 className="mr-2 h-4 w-4 animate-spin"/> : <UserMinus className="mr-2 h-4 w-4"/>}
+                                        Unfollow
+                                    </Button>
+                                ) : (
+                                    <Button onClick={handleFollow} disabled={isProcessing}>
+                                        {isProcessing ? <Loader2 className="mr-2 h-4 w-4 animate-spin"/> : <UserPlus className="mr-2 h-4 w-4"/>}
+                                        Follow
+                                    </Button>
+                                )}
+                            </>
+                        )}
+                        {isAdmin && !isOwnProfile && (
+                            <AlertDialog>
+                                <AlertDialogTrigger asChild>
+                                    <Button variant="destructive">
+                                        <UserX className="mr-2 h-4 w-4" />
+                                        {profileUser.banned ? 'Unban User' : 'Ban User'}
+                                    </Button>
+                                </AlertDialogTrigger>
+                                <AlertDialogContent>
+                                    <AlertDialogHeader>
+                                        <AlertDialogTitle>Are you sure?</AlertDialogTitle>
+                                        <AlertDialogDescription>
+                                            {profileUser.banned ? `Do you want to unban ${profileUser.name}? They will be able to log in and use the app again.` : `Do you want to ban ${profileUser.name}? They will no longer be able to log in.`}
+                                        </AlertDialogDescription>
+                                    </AlertDialogHeader>
+                                    <AlertDialogFooter>
+                                        <AlertDialogCancel>Cancel</AlertDialogCancel>
+                                        <AlertDialogAction onClick={handleToggleBan}>
+                                            {profileUser.banned ? 'Unban' : 'Ban'}
+                                        </AlertDialogAction>
+                                    </AlertDialogFooter>
+                                </AlertDialogContent>
+                            </AlertDialog>
+                        )}
+                     </div>
                 </CardContent>
             </Card>
 

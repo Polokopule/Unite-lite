@@ -11,18 +11,24 @@ import { useEffect, useState } from "react";
 import { BookOpen, CreditCard, Image as ImageIcon, Upload, Loader2 } from "lucide-react";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
 import Image from "next/image";
-import { Editor, EditorProvider } from 'react-simple-wysiwyg';
 import toast from "react-hot-toast";
+import { Editor } from "react-simple-wysiwyg";
 
 function RichTextEditor({ value, onChange }: { value: string, onChange: (value: string) => void }) {
   return (
-    <EditorProvider>
-        <Editor
-            value={value}
-            onChange={(e) => onChange(e.target.value)}
-            containerProps={{ style: { resize: 'vertical', minHeight: '200px', border: '1px solid hsl(var(--border))', borderRadius: 'var(--radius)' } }}
-        />
-    </EditorProvider>
+    <Editor
+        value={value}
+        onChange={(e) => onChange(e.target.value)}
+        containerProps={{ 
+            style: { 
+                resize: 'vertical', 
+                minHeight: '400px',
+                border: '1px solid hsl(var(--border))',
+                borderRadius: 'var(--radius)',
+                fontSize: '16px'
+            } 
+        }}
+    />
   );
 }
 

@@ -10,19 +10,25 @@ import { useRouter, useParams } from "next/navigation";
 import { useEffect, useState } from "react";
 import { BookOpen, CreditCard, Image as ImageIcon, Upload, Loader2, Save } from "lucide-react";
 import Image from "next/image";
-import { Editor, EditorProvider } from 'react-simple-wysiwyg';
+import { Editor } from "react-simple-wysiwyg";
 import { Course } from "@/lib/types";
 import toast from "react-hot-toast";
 
 function RichTextEditor({ value, onChange }: { value: string, onChange: (value: string) => void }) {
   return (
-    <EditorProvider>
-        <Editor
-            value={value}
-            onChange={(e) => onChange(e.target.value)}
-            containerProps={{ style: { resize: 'vertical', minHeight: '200px', border: '1px solid hsl(var(--border))', borderRadius: 'var(--radius)' } }}
-        />
-    </EditorProvider>
+    <Editor
+        value={value}
+        onChange={(e) => onChange(e.target.value)}
+        containerProps={{ 
+            style: { 
+                resize: 'vertical', 
+                minHeight: '400px',
+                border: '1px solid hsl(var(--border))',
+                borderRadius: 'var(--radius)',
+                fontSize: '16px'
+            } 
+        }}
+    />
   );
 }
 

@@ -70,7 +70,11 @@ export default function CourseViewer({ courseId }: { courseId: string }) {
                 scale: 2, 
                 useCORS: true, 
                 logging: false,
-                backgroundColor: null,
+                backgroundColor: window.getComputedStyle(document.body).backgroundColor === 'rgb(250, 250, 250)' ? '#ffffff' : '#09090b',
+                onclone: (document) => {
+                    // This might be necessary if images aren't loading
+                    // For now, useCORS should handle it for most cases
+                }
             });
 
             const imgData = canvas.toDataURL('image/png');
@@ -85,6 +89,7 @@ export default function CourseViewer({ courseId }: { courseId: string }) {
 
             toast.success("Download Started!", { id: toastId });
         } catch (error) {
+            console.error("PDF Generation Error: ", error);
             toast.error("Could not generate PDF. Please try again.", { id: toastId });
         } finally {
             setIsDownloading(false);
@@ -115,17 +120,17 @@ export default function CourseViewer({ courseId }: { courseId: string }) {
     return (
         <div className="container mx-auto py-8 max-w-4xl">
             <Card>
-                 <div ref={courseContentRef} className="bg-background text-foreground">
-                    <div className="relative aspect-video">
+                 <div ref={courseContentRef} className="bg-background text-foreground p-6">
+                    <div className="relative aspect-video mb-6">
                         <Image
                             src={course.imageUrl}
                             alt={course.title}
                             fill
-                            className="object-cover rounded-t-lg"
+                            className="object-cover rounded-lg"
                             priority
                         />
                     </div>
-                    <CardHeader>
+                    <CardHeader className="p-0">
                         <div className="flex justify-between items-start">
                             <div>
                                 <CardTitle className="text-3xl font-headline">{course.title}</CardTitle>
@@ -133,8 +138,8 @@ export default function CourseViewer({ courseId }: { courseId: string }) {
                             </div>
                         </div>
                     </CardHeader>
-                    <CardContent>
-                        <div className="prose dark:prose-invert max-w-none" dangerouslySetInnerHTML={{ __html: course.content }} />
+                    <CardContent className="p-0 mt-6">
+                        <div className="prose dark:prose-invert max-w-none prose-lg prose-p:text-foreground prose-a:text-primary prose-strong:text-foreground prose-headings:text-foreground" dangerouslySetInnerHTML={{ __html: course.content }} />
                     </CardContent>
                  </div>
                  <div className="p-6 pt-0 flex flex-wrap gap-4">

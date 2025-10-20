@@ -14,16 +14,20 @@ import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, 
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
 import { format } from "date-fns";
+import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 
 const POINTS_TO_ZAR_RATE = 0.10; // 1 UP = 0.10 ZAR (10 cents)
-const MIN_WITHDRAWAL_POINTS = 100;
+const MIN_WITHDRAWAL_MPESA = 100;
+const MIN_WITHDRAWAL_SKRILL = 1000;
 
 export default function WithdrawPage() {
     const { user, loading, requestWithdrawal } = useAppContext();
     const router = useRouter();
 
-    const [withdrawalAmount, setWithdrawalAmount] = useState(MIN_WITHDRAWAL_POINTS);
+    const [withdrawalAmount, setWithdrawalAmount] = useState(MIN_WITHDRAWAL_MPESA);
     const [isRequesting, setIsRequesting] = useState(false);
+    const [method, setMethod] = useState<'Mpesa' | 'Skrill'>('Mpesa');
+    const [paymentDetail, setPaymentDetail] = useState("");
 
     useEffect(() => {
         if (!loading && (!user || user.type !== 'user')) {
@@ -32,19 +36,25 @@ export default function WithdrawPage() {
     }, [user, loading, router]);
     
     const handleRequestWithdrawal = async () => {
-        if (withdrawalAmount < MIN_WITHDRAWAL_POINTS) {
-            toast.error(`Minimum withdrawal is ${MIN_WITHDRAWAL_POINTS} UPs.`);
+        const minAmount = method === 'Mpesa' ? MIN_WITHDRAWAL_MPESA : MIN_WITHDRAWAL_SKRILL;
+        if (withdrawalAmount < minAmount) {
+            toast.error(`Minimum withdrawal for ${method} is ${minAmount} UPs.`);
             return;
         }
         if (withdrawalAmount > user!.points) {
             toast.error("You cannot withdraw more points than you have.");
             return;
         }
+        if (!paymentDetail.trim()) {
+            toast.error(`Please provide your ${method === 'Mpesa' ? 'phone number' : 'Skrill email'}.`);
+            return;
+        }
         
         setIsRequesting(true);
-        await requestWithdrawal(withdrawalAmount);
+        await requestWithdrawal(withdrawalAmount, method, paymentDetail);
         setIsRequesting(false);
-        setWithdrawalAmount(MIN_WITHDRAWAL_POINTS);
+        setWithdrawalAmount(method === 'Mpesa' ? MIN_WITHDRAWAL_MPESA : MIN_WITHDRAWAL_SKRILL);
+        setPaymentDetail("");
     }
     
     const withdrawalHistory = user?.withdrawalRequests ? Object.values(user.withdrawalRequests).sort((a,b) => b.requestedAt - a.requestedAt) : [];
@@ -54,6 +64,7 @@ export default function WithdrawPage() {
     }
     
     const zarAmount = withdrawalAmount * POINTS_TO_ZAR_RATE;
+    const minWithdrawal = method === 'Mpesa' ? MIN_WITHDRAWAL_MPESA : MIN_WITHDRAWAL_SKRILL;
 
     return (
         <div className="container mx-auto py-8">
@@ -68,38 +79,44 @@ export default function WithdrawPage() {
                                 <Banknote />
                                 Request a Withdrawal
                             </CardTitle>
-                            <CardDescription>Minimum withdrawal is {MIN_WITHDRAWAL_POINTS} UPs. Your request will be reviewed by an admin.</CardDescription>
+                            <CardDescription>Select a withdrawal method and enter your details. Your request will be reviewed by an admin.</CardDescription>
                         </CardHeader>
-                        <CardContent className="space-y-4">
-                            <div className="grid grid-cols-2 gap-4">
-                                <div className="space-y-2">
-                                    <Label htmlFor="points">UPs to Withdraw</Label>
-                                    <Input 
-                                        id="points"
-                                        type="number"
-                                        min={MIN_WITHDRAWAL_POINTS}
-                                        max={user.points}
-                                        value={withdrawalAmount}
-                                        onChange={(e) => setWithdrawalAmount(Number(e.target.value))}
+                        <CardContent>
+                             <Tabs value={method} onValueChange={(value) => setMethod(value as 'Mpesa' | 'Skrill')} className="w-full">
+                                <TabsList className="grid w-full grid-cols-2">
+                                    <TabsTrigger value="Mpesa">M-Pesa</TabsTrigger>
+                                    <TabsTrigger value="Skrill">Skrill</TabsTrigger>
+                                </TabsList>
+                                <TabsContent value="Mpesa" className="space-y-4 pt-4">
+                                     <WithdrawalForm 
+                                        method="Mpesa"
+                                        minAmount={MIN_WITHDRAWAL_MPESA}
+                                        userPoints={user.points}
+                                        withdrawalAmount={withdrawalAmount}
+                                        setWithdrawalAmount={setWithdrawalAmount}
+                                        paymentDetail={paymentDetail}
+                                        setPaymentDetail={setPaymentDetail}
+                                        zarAmount={zarAmount}
                                     />
-                                </div>
-                                <div className="space-y-2">
-                                    <Label>Equivalent ZAR</Label>
-                                    <Input
-                                        value={`R ${zarAmount.toFixed(2)}`}
-                                        readOnly
-                                        className="font-bold bg-muted"
+                                </TabsContent>
+                                <TabsContent value="Skrill" className="space-y-4 pt-4">
+                                     <WithdrawalForm 
+                                        method="Skrill"
+                                        minAmount={MIN_WITHDRAWAL_SKRILL}
+                                        userPoints={user.points}
+                                        withdrawalAmount={withdrawalAmount}
+                                        setWithdrawalAmount={setWithdrawalAmount}
+                                        paymentDetail={paymentDetail}
+                                        setPaymentDetail={setPaymentDetail}
+                                        zarAmount={zarAmount}
                                     />
-                                </div>
-                            </div>
-                            <div className="text-xs text-muted-foreground">
-                                Conversion Rate: 1 UP = R{POINTS_TO_ZAR_RATE.toFixed(2)} ZAR.
-                            </div>
+                                </TabsContent>
+                            </Tabs>
                         </CardContent>
                         <CardFooter>
                              <AlertDialog>
                                 <AlertDialogTrigger asChild>
-                                    <Button disabled={isRequesting || user.points < MIN_WITHDRAWAL_POINTS || withdrawalAmount < MIN_WITHDRAWAL_POINTS || withdrawalAmount > user.points}>
+                                    <Button disabled={isRequesting || user.points < minWithdrawal || withdrawalAmount < minWithdrawal || withdrawalAmount > user.points || !paymentDetail}>
                                         {isRequesting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
                                         Request Withdrawal
                                     </Button>
@@ -108,7 +125,7 @@ export default function WithdrawPage() {
                                     <AlertDialogHeader>
                                         <AlertDialogTitle>Confirm Withdrawal Request</AlertDialogTitle>
                                         <AlertDialogDescription>
-                                            You are about to request a withdrawal of {withdrawalAmount} UPs (R{zarAmount.toFixed(2)}). This amount will be deducted from your balance and held until the request is processed.
+                                            You are about to request a withdrawal of {withdrawalAmount} UPs (R{zarAmount.toFixed(2)}) via {method}. This amount will be deducted from your balance and held until the request is processed.
                                         </AlertDialogDescription>
                                     </AlertDialogHeader>
                                     <AlertDialogFooter>
@@ -131,6 +148,7 @@ export default function WithdrawPage() {
                                         <TableHead>Date</TableHead>
                                         <TableHead>Points (UPs)</TableHead>
                                         <TableHead>Amount (ZAR)</TableHead>
+                                        <TableHead>Method</TableHead>
                                         <TableHead>Status</TableHead>
                                     </TableRow>
                                 </TableHeader>
@@ -140,6 +158,7 @@ export default function WithdrawPage() {
                                             <TableCell>{format(new Date(req.requestedAt), "PPP")}</TableCell>
                                             <TableCell>{req.points.toFixed(3)}</TableCell>
                                             <TableCell>R {req.amountZAR.toFixed(2)}</TableCell>
+                                            <TableCell>{req.method}</TableCell>
                                             <TableCell>
                                                  <Badge variant={req.status === 'approved' ? 'default' : req.status === 'pending' ? 'secondary' : 'destructive'}>
                                                     {req.status}
@@ -148,7 +167,7 @@ export default function WithdrawPage() {
                                         </TableRow>
                                     )) : (
                                         <TableRow>
-                                            <TableCell colSpan={4} className="text-center h-24">No withdrawal history.</TableCell>
+                                            <TableCell colSpan={5} className="text-center h-24">No withdrawal history.</TableCell>
                                         </TableRow>
                                     )}
                                 </TableBody>
@@ -173,8 +192,8 @@ export default function WithdrawPage() {
                         </CardHeader>
                         <CardContent className="text-sm text-muted-foreground space-y-2">
                            <p>1. Earn UPs by watching ads on the "Earn Points" page.</p>
-                           <p>2. Once you have at least {MIN_WITHDRAWAL_POINTS} UPs, you can request a withdrawal.</p>
-                           <p>3. Our team will review your request. Upon approval, we will contact you via email ({user.email}) to arrange payment.</p>
+                           <p>2. Once you have enough UPs for your chosen method, you can request a withdrawal.</p>
+                           <p>3. Our team will review your request. Upon approval, we will send payment to the details you provided.</p>
                            <p>4. Payments are processed manually.</p>
                         </CardContent>
                     </Card>
@@ -184,3 +203,52 @@ export default function WithdrawPage() {
     );
 }
 
+function WithdrawalForm({ method, minAmount, userPoints, withdrawalAmount, setWithdrawalAmount, paymentDetail, setPaymentDetail, zarAmount }: {
+    method: 'Mpesa' | 'Skrill',
+    minAmount: number,
+    userPoints: number,
+    withdrawalAmount: number,
+    setWithdrawalAmount: (amount: number) => void,
+    paymentDetail: string,
+    setPaymentDetail: (detail: string) => void,
+    zarAmount: number
+}) {
+    return (
+        <div className="space-y-4">
+            <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-2">
+                    <Label htmlFor={`${method}-points`}>UPs to Withdraw</Label>
+                    <Input 
+                        id={`${method}-points`}
+                        type="number"
+                        min={minAmount}
+                        max={userPoints}
+                        value={withdrawalAmount}
+                        onChange={(e) => setWithdrawalAmount(Number(e.target.value))}
+                    />
+                </div>
+                <div className="space-y-2">
+                    <Label>Equivalent ZAR</Label>
+                    <Input
+                        value={`R ${zarAmount.toFixed(2)}`}
+                        readOnly
+                        className="font-bold bg-muted"
+                    />
+                </div>
+            </div>
+             <div className="space-y-2">
+                <Label htmlFor={`${method}-detail`}>{method === 'Mpesa' ? 'M-Pesa Phone Number' : 'Skrill Email'}</Label>
+                <Input
+                    id={`${method}-detail`}
+                    type={method === 'Mpesa' ? 'tel' : 'email'}
+                    value={paymentDetail}
+                    onChange={(e) => setPaymentDetail(e.target.value)}
+                    placeholder={method === 'Mpesa' ? 'e.g., 0712345678' : 'e.g., you@example.com'}
+                />
+            </div>
+            <div className="text-xs text-muted-foreground">
+                Minimum withdrawal for {method} is {minAmount} UPs. Conversion Rate: 1 UP = R{POINTS_TO_ZAR_RATE.toFixed(2)} ZAR.
+            </div>
+        </div>
+    )
+}

@@ -1,5 +1,6 @@
 
 
+
 export type Course = {
   id: string;
   title: string;
@@ -44,6 +45,8 @@ export type WithdrawalRequest = {
     status: 'pending' | 'approved' | 'rejected';
     requestedAt: number;
     processedAt?: number;
+    method: 'Mpesa' | 'Skrill';
+    paymentDetail: string; // Phone number for Mpesa, email for Skrill
 };
 
 export type User = {
@@ -64,6 +67,7 @@ export type User = {
   pinnedConversations?: { [id: string]: number };
   lockedConversations?: { [id: string]: string }; // id: pin
   blockedUsers?: string[];
+  banned?: boolean;
   aiChatHistory?: AIChatMessage[];
   fcmTokens?: { [token: string]: boolean };
   theme?: 'light' | 'dark';

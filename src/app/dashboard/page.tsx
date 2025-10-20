@@ -6,7 +6,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter }
 import { Separator } from "@/components/ui/separator";
 import { useAppContext } from "@/contexts/app-context";
 import { Ad, Course, Post as PostType, FeedItem, Comment as CommentType, WithdrawalRequest, User } from "@/lib/types";
-import { ArrowRight, BookCopy, Eye, PlusCircle, ShoppingBag, Pencil, Trash2, Loader2, MessageCircle, Heart, Send, Edit, Check, X, Banknote } from "lucide-react";
+import { ArrowRight, BookCopy, Eye, PlusCircle, ShoppingBag, Pencil, Trash2, Loader2, MessageCircle, Heart, Send, Edit, Check, X, Banknote, UserX, Shield, UserCheck } from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useEffect, useState, useMemo } from "react";
@@ -49,8 +49,12 @@ export default function DashboardPage() {
       <p className="text-muted-foreground mb-8">Here's a summary of your activity on Unite.</p>
       
       <Tabs defaultValue={defaultTab} className="w-full">
-         <TabsList className={`grid w-full max-w-lg mx-auto mb-8 ${isAdmin ? 'grid-cols-3' : 'grid-cols-2'}`}>
-            {isAdmin && <TabsTrigger value="admin_withdrawals">Withdrawals</TabsTrigger>}
+         <TabsList className={`grid w-full max-w-xl mx-auto mb-8 ${isAdmin ? 'grid-cols-4' : 'grid-cols-2'}`}>
+            {isAdmin && <>
+                <TabsTrigger value="admin_withdrawals">Withdrawals</TabsTrigger>
+                <TabsTrigger value="admin_users">Users</TabsTrigger>
+                <TabsTrigger value="admin_courses">Courses</TabsTrigger>
+            </>}
             {user.type === 'user' ? (
                 <>
                     <TabsTrigger value="my_courses">My Courses</TabsTrigger>
@@ -64,12 +68,21 @@ export default function DashboardPage() {
                     </>
                  )
             )}
+            {isAdmin && <TabsTrigger value="my_posts">My Posts</TabsTrigger>}
         </TabsList>
 
         {isAdmin && (
+            <>
             <TabsContent value="admin_withdrawals">
                 <AdminWithdrawalsDashboard />
             </TabsContent>
+            <TabsContent value="admin_users">
+                <AdminUsersDashboard />
+            </TabsContent>
+             <TabsContent value="admin_courses">
+                <AdminCoursesDashboard />
+            </TabsContent>
+            </>
         )}
         
         <TabsContent value="my_courses">
@@ -82,11 +95,140 @@ export default function DashboardPage() {
 
         <TabsContent value="my_posts">
              {/* Admin can also see their posts */}
-            {(user.type === 'user' || isAdmin) && <UserPostsDashboard />}
+            {(user.type === 'user' || user.type === 'business' || isAdmin) && <UserPostsDashboard />}
         </TabsContent>
       </Tabs>
     </div>
   );
+}
+
+function AdminCoursesDashboard() {
+    const { courses, deleteCourse } = useAppContext();
+    const [deletingId, setDeletingId] = useState<string|null>(null);
+
+    const handleDeleteCourse = async (courseId: string) => {
+        setDeletingId(courseId);
+        await deleteCourse(courseId, true); // force delete as admin
+        setDeletingId(null);
+    }
+    
+    return (
+         <Card>
+          <CardHeader>
+            <CardTitle>All Courses</CardTitle>
+            <CardDescription>Manage all courses on the platform.</CardDescription>
+          </CardHeader>
+          <CardContent>
+            {courses.length > 0 ? (
+                <ul className="space-y-2">
+                    {courses.map(course => (
+                        <li key={course.id} className="flex items-center justify-between p-3 bg-muted/50 rounded-lg">
+                            <div className="flex-1">
+                                <p className="font-medium">{course.title}</p>
+                                <p className="text-xs text-muted-foreground">By {course.creatorName}</p>
+                            </div>
+                            <div className="flex items-center gap-2 flex-shrink-0">
+                                <Button variant="outline" size="icon" asChild>
+                                    <Link href={`/courses/${course.id}`}><Eye className="h-4 w-4" /></Link>
+                                </Button>
+                                 <AlertDialog>
+                                    <AlertDialogTrigger asChild>
+                                        <Button variant="destructive" size="icon" disabled={deletingId === course.id}>
+                                            {deletingId === course.id ? <Loader2 className="h-4 w-4 animate-spin"/> : <Trash2 className="h-4 w-4" />}
+                                        </Button>
+                                    </AlertDialogTrigger>
+                                    <AlertDialogContent>
+                                        <AlertDialogHeader>
+                                            <AlertDialogTitle>Are you absolutely sure?</AlertDialogTitle>
+                                            <AlertDialogDescription>
+                                                This action will permanently delete the course "{course.title}" by {course.creatorName}. This cannot be undone.
+                                            </AlertDialogDescription>
+                                        </AlertDialogHeader>
+                                        <AlertDialogFooter>
+                                            <AlertDialogCancel>Cancel</AlertDialogCancel>
+                                            <AlertDialogAction onClick={() => handleDeleteCourse(course.id)}>Delete</AlertDialogAction>
+                                        </AlertDialogFooter>
+                                    </AlertDialogContent>
+                                </AlertDialog>
+                            </div>
+                        </li>
+                    ))}
+                </ul>
+            ) : (
+                 <div className="text-center py-8 border-2 border-dashed rounded-lg">
+                    <p className="text-muted-foreground">No courses have been created yet.</p>
+                </div>
+            )}
+          </CardContent>
+        </Card>
+    );
+}
+
+
+function AdminUsersDashboard() {
+    const { allUsers, toggleUserBan } = useAppContext();
+
+    return (
+        <Card>
+            <CardHeader>
+                <CardTitle className="flex items-center gap-2"><Shield /> User Management</CardTitle>
+                <CardDescription>View, ban, and unban users.</CardDescription>
+            </CardHeader>
+            <CardContent>
+                 <Table>
+                    <TableHeader>
+                        <TableRow>
+                            <TableHead>User</TableHead>
+                            <TableHead>Type</TableHead>
+                            <TableHead>Status</TableHead>
+                            <TableHead className="text-right">Actions</TableHead>
+                        </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                        {allUsers.filter(u => u.email !== 'polokopule91@gmail.com').map(user => (
+                            <TableRow key={user.uid}>
+                                <TableCell>
+                                    <div className="font-medium">{user.name}</div>
+                                    <div className="text-sm text-muted-foreground">{user.email}</div>
+                                </TableCell>
+                                <TableCell className="capitalize">{user.type}</TableCell>
+                                <TableCell>
+                                    <Badge variant={user.banned ? 'destructive' : 'default'}>
+                                        {user.banned ? 'Banned' : 'Active'}
+                                    </Badge>
+                                </TableCell>
+                                <TableCell className="text-right">
+                                    <AlertDialog>
+                                        <AlertDialogTrigger asChild>
+                                             <Button variant={user.banned ? 'secondary' : 'destructive'} size="sm">
+                                                {user.banned ? <UserCheck className="mr-2 h-4 w-4"/> : <UserX className="mr-2 h-4 w-4"/>}
+                                                {user.banned ? 'Unban' : 'Ban'}
+                                            </Button>
+                                        </AlertDialogTrigger>
+                                        <AlertDialogContent>
+                                            <AlertDialogHeader>
+                                                <AlertDialogTitle>Are you sure?</AlertDialogTitle>
+                                                <AlertDialogDescription>
+                                                    You are about to {user.banned ? 'unban' : 'ban'} the user {user.name}. 
+                                                    {user.banned ? ' They will be able to log in again.' : ' They will no longer be able to log in.'}
+                                                </AlertDialogDescription>
+                                            </AlertDialogHeader>
+                                            <AlertDialogFooter>
+                                                <AlertDialogCancel>Cancel</AlertDialogCancel>
+                                                <AlertDialogAction onClick={() => toggleUserBan(user.uid, !user.banned)}>
+                                                    Confirm
+                                                </AlertDialogAction>
+                                            </AlertDialogFooter>
+                                        </AlertDialogContent>
+                                    </AlertDialog>
+                                </TableCell>
+                            </TableRow>
+                        ))}
+                    </TableBody>
+                 </Table>
+            </CardContent>
+        </Card>
+    )
 }
 
 function AdminWithdrawalsDashboard() {
@@ -124,8 +266,8 @@ function AdminWithdrawalsDashboard() {
                         <TableRow>
                             <TableHead>User</TableHead>
                             <TableHead>Date</TableHead>
-                            <TableHead>Points (UPs)</TableHead>
-                            <TableHead>Amount (ZAR)</TableHead>
+                            <TableHead>Points/Amount</TableHead>
+                            <TableHead>Method/Details</TableHead>
                             <TableHead>Status</TableHead>
                             <TableHead className="text-right">Actions</TableHead>
                         </TableRow>
@@ -138,8 +280,14 @@ function AdminWithdrawalsDashboard() {
                                     <div className="text-sm text-muted-foreground">{req.userEmail}</div>
                                 </TableCell>
                                 <TableCell>{format(new Date(req.requestedAt), "PPP p")}</TableCell>
-                                <TableCell>{req.points.toFixed(3)}</TableCell>
-                                <TableCell>R {req.amountZAR.toFixed(2)}</TableCell>
+                                 <TableCell>
+                                    <div>{req.points.toFixed(3)} UPs</div>
+                                    <div className="text-sm text-muted-foreground">R {req.amountZAR.toFixed(2)}</div>
+                                </TableCell>
+                                <TableCell>
+                                    <div className="font-medium">{req.method}</div>
+                                    <div className="text-sm text-muted-foreground">{req.paymentDetail}</div>
+                                </TableCell>
                                 <TableCell>
                                      <Badge variant={req.status === 'approved' ? 'default' : req.status === 'pending' ? 'secondary' : 'destructive'}>
                                         {req.status}
@@ -255,7 +403,7 @@ function UserCoursesDashboard() {
     const purchasedCourseDetails = purchasedCourses.map(pc => courses.find(c => c.id === pc.id)).filter(Boolean) as Course[];
     const createdCourses = courses.filter(course => course.creator === user.uid);
 
-    const handleDeleteCourse = async (courseId: string, courseTitle: string) => {
+    const handleDeleteCourse = async (courseId: string) => {
       setDeletingId(courseId);
       await deleteCourse(courseId);
       setDeletingId(null);
@@ -324,7 +472,7 @@ function UserCoursesDashboard() {
                                         </AlertDialogHeader>
                                         <AlertDialogFooter>
                                             <AlertDialogCancel>Cancel</AlertDialogCancel>
-                                            <AlertDialogAction onClick={() => handleDeleteCourse(course.id, course.title)}>Delete</AlertDialogAction>
+                                            <AlertDialogAction onClick={() => handleDeleteCourse(course.id)}>Delete</AlertDialogAction>
                                         </AlertDialogFooter>
                                     </AlertDialogContent>
                                 </AlertDialog>
@@ -374,7 +522,7 @@ function BusinessDashboard() {
     const userAds = ads.filter(ad => ad.creator === user.uid);
     const totalViews = userAds.reduce((sum, ad) => sum + ad.views, 0);
     
-    const handleDeleteAd = async (adId: string, campaignName: string) => {
+    const handleDeleteAd = async (adId: string) => {
         setDeletingId(adId);
         await deleteAd(adId);
         setDeletingId(null);
@@ -426,7 +574,7 @@ function BusinessDashboard() {
                                         </AlertDialogHeader>
                                         <AlertDialogFooter>
                                             <AlertDialogCancel>Cancel</AlertDialogCancel>
-                                            <AlertDialogAction onClick={() => handleDeleteAd(ad.id, ad.campaignName)}>Delete</AlertDialogAction>
+                                            <AlertDialogAction onClick={() => handleDeleteAd(ad.id)}>Delete</AlertDialogAction>
                                         </AlertDialogFooter>
                                     </AlertDialogContent>
                                 </AlertDialog>

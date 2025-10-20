@@ -6,14 +6,16 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { useAppContext } from "@/contexts/app-context";
 import { Loader2, Wallet } from "lucide-react";
 import { useRouter } from "next/navigation";
-import { useEffect, useState } from "react";
+import { useEffect, useState, useRef } from "react";
 import Script from "next/script";
 
 export default function WatchAdsPage() {
   const { user, loading, claimAdPoints } = useAppContext();
   const router = useRouter();
   const [isClaiming, setIsClaiming] = useState(false);
-  
+  const [adLoaded, setAdLoaded] = useState(false);
+  const adRef = useRef<HTMLDivElement>(null);
+
   // 5 minute cooldown
   const COOLDOWN_TIME = 5 * 60 * 1000;
   const [timeLeft, setTimeLeft] = useState(0);
@@ -39,6 +41,26 @@ export default function WatchAdsPage() {
 
     return () => clearInterval(timer);
   }, [user?.lastAdClaim]);
+
+  useEffect(() => {
+    try {
+      (window.adsbygoogle = window.adsbygoogle || []).push({});
+      // We can check if the ad container has been populated.
+      // This is a heuristic and might need adjustment.
+      const observer = new MutationObserver((mutations) => {
+        if (adRef.current && adRef.current.querySelector('iframe')) {
+            setAdLoaded(true);
+            observer.disconnect();
+        }
+      });
+      if(adRef.current){
+          observer.observe(adRef.current, { childList: true, subtree: true });
+      }
+      return () => observer.disconnect();
+    } catch (e) {
+      console.error("AdSense error:", e);
+    }
+  }, []);
 
   const handleClaimPoints = async () => {
     setIsClaiming(true);
@@ -69,7 +91,7 @@ export default function WatchAdsPage() {
             <CardTitle>Ad Unit</CardTitle>
             <CardDescription>An ad from the Google Display Network.</CardDescription>
           </CardHeader>
-          <CardContent>
+          <CardContent ref={adRef}>
             {/* AdSense Unit */}
             <ins
               className="adsbygoogle"
@@ -79,12 +101,13 @@ export default function WatchAdsPage() {
               data-ad-format="auto"
               data-full-width-responsive="true"
             ></ins>
+            {!adLoaded && <div className="h-64 flex items-center justify-center bg-muted rounded-md"><Loader2 className="animate-spin"/></div>}
           </CardContent>
            <CardContent>
             <Button
               className="w-full"
               onClick={handleClaimPoints}
-              disabled={!canClaim || isClaiming}
+              disabled={!canClaim || isClaiming || !adLoaded}
               size="lg"
             >
               {isClaiming ? (
@@ -92,15 +115,12 @@ export default function WatchAdsPage() {
               ) : (
                 <Wallet className="h-4 w-4 mr-2" />
               )}
-              {canClaim ? 'Claim 0.005 UPs' : `Claim again in ${Math.ceil(timeLeft / 1000)}s`}
+              {!adLoaded ? 'Waiting for ad...' : canClaim ? 'Claim 0.005 UPs' : `Claim again in ${Math.ceil(timeLeft / 1000)}s`}
             </Button>
              <p className="text-xs text-muted-foreground text-center mt-2">You can claim points once every 5 minutes.</p>
            </CardContent>
         </Card>
       </div>
-       <Script id="adsbygoogle-init">
-        {`(adsbygoogle = window.adsbygoogle || []).push({});`}
-      </Script>
     </>
   );
 }
