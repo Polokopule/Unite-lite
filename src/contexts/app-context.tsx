@@ -58,8 +58,8 @@ interface AppContextType {
   enableNotifications: () => Promise<void>;
   addCourse: (courseData: AddCourseData) => Promise<boolean>;
   updateCourse: (courseId: string, courseData: Partial<Omit<Course, 'id' | 'creator' | 'creatorName'>>) => Promise<boolean>;
-  deleteCourse: (courseId: string) => Promise<boolean>;
-  purchaseCourse: (courseId: string) => Promise<boolean>;
+  deleteCourse: (courseId: string, isAdmin?: boolean) => Promise<boolean>;
+  purchaseCourse: (course: Course) => Promise<boolean>;
   claimAdPoints: () => Promise<void>;
   createAd: (ad: Omit<Ad, 'id' | 'creator' | 'views'>) => Promise<boolean>;
   updateAd: (adId: string, adData: Partial<Omit<Ad, 'id' | 'creator'>>) => Promise<boolean>;
@@ -98,9 +98,11 @@ interface AppContextType {
   toggleBlockUser: (targetUserId: string) => void;
   updateAIChatHistory: (history: AIChatMessage[]) => Promise<void>;
   updateThemePreference: (theme: 'light' | 'dark') => Promise<void>;
-  requestWithdrawal: (amount: number) => Promise<void>;
+  requestWithdrawal: (amount: number, method: 'Mpesa' | 'Skrill', paymentDetail: string) => Promise<void>;
   approveWithdrawal: (request: WithdrawalRequest) => Promise<void>;
   rejectWithdrawal: (request: WithdrawalRequest) => Promise<void>;
+  toggleUserBan: (userId: string, ban: boolean) => Promise<void>;
+  rateCourse: (courseId: string, rating: number) => Promise<void>;
   lockedConversations: { [id: string]: string };
   loading: boolean;
 }
@@ -153,6 +155,15 @@ export function AppContextProvider({ children }: { children: React.ReactNode }) 
                 onValue(userRef, (snapshot) => {
                     if (snapshot.exists()) {
                         const userData = snapshot.val();
+                        if (userData.banned) {
+                            toast.error("This account has been banned.");
+                            signOut(auth);
+                            setUser(null);
+                            setFirebaseUser(null);
+                            router.push('/');
+                            return;
+                        }
+
                         const fullUserData: User = {
                             ...userData,
                             photoURL: currentFirebaseUser.photoURL || userData.photoURL || '',
@@ -160,6 +171,7 @@ export function AppContextProvider({ children }: { children: React.ReactNode }) 
                             following: userData.following ? Object.keys(userData.following) : [],
                             blockedUsers: userData.blockedUsers ? Object.keys(userData.blockedUsers) : [],
                             aiChatHistory: userData.aiChatHistory ? Object.values(userData.aiChatHistory) : [],
+                            withdrawalRequests: userData.withdrawalRequests || {},
                         };
                         setUser(fullUserData);
 
@@ -192,7 +204,7 @@ export function AppContextProvider({ children }: { children: React.ReactNode }) 
 
     const coursesListener = onValue(coursesRef, (snapshot) => {
       const data = snapshot.val();
-      const courseList: Course[] = data ? Object.values(data) : [];
+      const courseList: Course[] = data ? Object.keys(data).map(id => ({ ...data[id], id })) : [];
       setCourses(courseList);
     });
 
@@ -357,7 +369,7 @@ export function AppContextProvider({ children }: { children: React.ReactNode }) 
         uid, 
         email, 
         type, 
-        points: 0,
+        points: 10,
         name: displayName || email.split('@')[0],
         followers: [],
         following: [],
@@ -365,6 +377,13 @@ export function AppContextProvider({ children }: { children: React.ReactNode }) 
         theme: 'light',
       };
       await set(userRef, newUser);
+    } else {
+        const userData = snapshot.val();
+        if (userData.banned) {
+            toast.error("This account has been banned.");
+            await signOut(auth);
+            return;
+        }
     }
     router.push("/dashboard");
   };
@@ -454,15 +473,16 @@ export function AppContextProvider({ children }: { children: React.ReactNode }) 
         const imageUrl = await getDownloadURL(uploadResult.ref);
 
         // 2. Create course object with the storage URL
-        const newCourse: Course = {
-            id: courseId,
+        const newCourse: Omit<Course, 'id'> = {
             title,
             content,
             price,
             imageUrl,
             creator: user.uid,
             creatorName: user.name,
-            imageHint: "new course" // Placeholder hint
+            imageHint: "new course",
+            status: 'pending',
+            ratings: {}
         };
 
         // 3. Save course to Realtime Database
@@ -471,8 +491,8 @@ export function AppContextProvider({ children }: { children: React.ReactNode }) 
     }
     
     toast.promise(promise(), {
-        loading: 'Publishing course...',
-        success: 'Course created successfully!',
+        loading: 'Submitting course for review...',
+        success: 'Course submitted successfully!',
         error: 'Failed to create course.',
     });
 
@@ -485,7 +505,7 @@ export function AppContextProvider({ children }: { children: React.ReactNode }) 
     
     const promise = async () => {
         const courseSnapshot = await get(courseRef);
-        if (courseSnapshot.exists() && courseSnapshot.val().creator === user.uid) {
+        if (courseSnapshot.exists() && (courseSnapshot.val().creator === user.uid || user.email === 'polokopule91@gmail.com')) {
             await update(courseRef, courseData);
         } else {
             throw new Error("Unauthorized or course not found.");
@@ -501,13 +521,13 @@ export function AppContextProvider({ children }: { children: React.ReactNode }) 
     return promise().then(() => true).catch(() => false);
   };
 
-  const deleteCourse = async (courseId: string): Promise<boolean> => {
-      if (!user || user.type !== 'user') return false;
+  const deleteCourse = async (courseId: string, isAdmin: boolean = false): Promise<boolean> => {
+      if (!user) return false;
       const courseRef = ref(db, `courses/${courseId}`);
       
       const promise = async () => {
           const courseSnapshot = await get(courseRef);
-          if (courseSnapshot.exists() && courseSnapshot.val().creator === user.uid) {
+          if (courseSnapshot.exists() && (courseSnapshot.val().creator === user.uid || isAdmin)) {
               await remove(courseRef);
           } else {
               throw new Error("Unauthorized or course not found.");
@@ -523,7 +543,7 @@ export function AppContextProvider({ children }: { children: React.ReactNode }) 
       return promise().then(() => true).catch(() => false);
   }
 
-  const purchaseCourse = async (courseId: string): Promise<boolean> => {
+  const purchaseCourse = async (course: Course): Promise<boolean> => {
     if (!user || user.type !== 'user') return false;
     if (user.email === 'polokopule91@gmail.com') {
       toast.success("Admin has free access.");
@@ -531,14 +551,13 @@ export function AppContextProvider({ children }: { children: React.ReactNode }) 
     }
 
     const promise = async () => {
-        const course = courses.find(c => c.id === courseId);
-        if (!course || user.points < course.price || purchasedCourses.some(p => p.id === courseId)) {
+        if (!course || user.points < course.price || purchasedCourses.some(p => p.id === course.id)) {
             throw new Error("Purchase conditions not met.");
         };
 
         const updatedPoints = user.points - course.price;
         const userRef = ref(db, `users/${user.uid}`);
-        const purchasedCourseRef = ref(db, `users/${user.uid}/purchasedCourses/${courseId}`);
+        const purchasedCourseRef = ref(db, `users/${user.uid}/purchasedCourses/${course.id}`);
 
         await update(userRef, { points: updatedPoints });
         await set(purchasedCourseRef, { id: course.id, title: course.title });
@@ -1645,7 +1664,7 @@ export function AppContextProvider({ children }: { children: React.ReactNode }) 
         await set(themeRef, theme);
     };
 
-    const requestWithdrawal = async (amount: number) => {
+    const requestWithdrawal = async (amount: number, method: 'Mpesa' | 'Skrill', paymentDetail: string) => {
         if (!user || user.type !== 'user' || user.points < amount) {
             toast.error("Invalid withdrawal request.");
             return;
@@ -1673,6 +1692,8 @@ export function AppContextProvider({ children }: { children: React.ReactNode }) 
             amountZAR: zarAmount,
             status: 'pending',
             requestedAt: serverTimestamp() as any,
+            method: method,
+            paymentDetail: paymentDetail
         };
         
         const userPointsRef = ref(db, `users/${user.uid}/points`);
@@ -1761,6 +1782,18 @@ export function AppContextProvider({ children }: { children: React.ReactNode }) 
         });
     };
 
+    const toggleUserBan = async (userId: string, ban: boolean) => {
+        if (!user || user.email !== 'polokopule91@gmail.com') return;
+        const userRef = ref(db, `users/${userId}/banned`);
+        await set(userRef, ban);
+    };
+
+    const rateCourse = async (courseId: string, rating: number) => {
+        if (!user) return;
+        const ratingRef = ref(db, `courses/${courseId}/ratings/${user.uid}`);
+        await set(ratingRef, rating);
+    }
+
 
   const value = {
     user,
@@ -1822,6 +1855,8 @@ export function AppContextProvider({ children }: { children: React.ReactNode }) 
     requestWithdrawal,
     approveWithdrawal,
     rejectWithdrawal,
+    toggleUserBan,
+    rateCourse,
     lockedConversations,
     loading,
   };
