@@ -22,7 +22,7 @@ function HomeFeedSkeleton() {
     return (
         <div className="w-full">
             <div className="bg-card border-b p-4">
-                 <div className="flex items-center gap-2 container w-full">
+                 <div className="flex items-center gap-2 container mx-auto w-full">
                     <Skeleton className="h-8 w-8 rounded-full" />
                     <Skeleton className="h-10 flex-1 rounded-full" />
                     <Skeleton className="h-8 w-8 rounded-md" />
@@ -84,20 +84,13 @@ export default function HomePage() {
 
     if (loading) {
         return (
-            <div className="container mx-auto py-4">
-                <Tabs defaultValue="home" className="w-full">
-                    <TabsList className="grid w-full grid-cols-6 mb-8">
-                        <TabsTrigger value="home"><Home className="h-5 w-5" /></TabsTrigger>
-                        <TabsTrigger value="courses"><Book className="h-5 w-5" /></TabsTrigger>
-                        <TabsTrigger value="community"><Users className="h-5 w-5" /></TabsTrigger>
-                        <TabsTrigger value="groups"><Users className="h-5 w-5" /></TabsTrigger>
-                        <TabsTrigger value="messages"><MessageSquare className="h-5 w-5" /></TabsTrigger>
-                        <TabsTrigger value="ai_chat" asChild><Link href="/messages/ai"><Bot className="h-5 w-5"/></Link></TabsTrigger>
-                    </TabsList>
-                    <TabsContent value="home">
-                        <HomeFeedSkeleton />
-                    </TabsContent>
-                </Tabs>
+            <div>
+                <div className="border-b">
+                    <div className="container mx-auto">
+                        <Skeleton className="h-12 w-96" />
+                    </div>
+                </div>
+                 <HomeFeedSkeleton />
             </div>
         );
     }
@@ -107,16 +100,19 @@ export default function HomePage() {
     }
 
     return (
-      <div className="container mx-auto py-4">
+      <div>
         <Tabs defaultValue="home" className="w-full">
-            <TabsList className="grid w-full grid-cols-6 mb-8">
-                <TabsTrigger value="home"><Home className="h-5 w-5" /></TabsTrigger>
-                <TabsTrigger value="courses"><Book className="h-5 w-5" /></TabsTrigger>
-                <TabsTrigger value="community"><Users className="h-5 w-5" /></TabsTrigger>
-                <TabsTrigger value="groups"><Users className="h-5 w-5" /></TabsTrigger>
-                <TabsTrigger value="messages"><MessageSquare className="h-5 w-5" /></TabsTrigger>
-                <TabsTrigger value="ai_chat" asChild><Link href="/messages/ai"><Bot className="h-5 w-5"/></Link></TabsTrigger>
-            </TabsList>
+            <div className="border-b">
+                <div className="container mx-auto">
+                    <TabsList className="grid w-full grid-cols-5 h-16">
+                        <TabsTrigger value="home"><Home className="h-6 w-6" /></TabsTrigger>
+                        <TabsTrigger value="courses"><Book className="h-6 w-6" /></TabsTrigger>
+                        <TabsTrigger value="community"><Users className="h-6 w-6" /></TabsTrigger>
+                        <TabsTrigger value="groups"><Users className="h-6 w-6" /></TabsTrigger>
+                        <TabsTrigger value="messages"><MessageSquare className="h-6 w-6" /></TabsTrigger>
+                    </TabsList>
+                </div>
+            </div>
             
             <TabsContent value="home">
               <HomeFeed />
@@ -131,7 +127,9 @@ export default function HomePage() {
                 <GroupsPage />
             </TabsContent>
             <TabsContent value="messages">
-                <ConversationsList />
+                <div className="container mx-auto">
+                    <ConversationsList />
+                </div>
             </TabsContent>
         </Tabs>
       </div>

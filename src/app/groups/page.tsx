@@ -7,12 +7,37 @@ import { useAppContext } from "@/contexts/app-context";
 import Link from "next/link";
 import { Users, Lock, PlusCircle } from "lucide-react";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { Skeleton } from "@/components/ui/skeleton";
+
+function GroupsPageSkeleton() {
+    return (
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            {Array.from({ length: 3 }).map((_, i) => (
+                <Card key={i} className="flex flex-col">
+                    <CardHeader className="flex-row items-center gap-4">
+                        <Skeleton className="h-12 w-12 rounded-full" />
+                        <div className="space-y-2">
+                            <Skeleton className="h-5 w-32" />
+                            <Skeleton className="h-4 w-24" />
+                        </div>
+                    </CardHeader>
+                    <CardContent className="flex-grow">
+                         <Skeleton className="h-4 w-20" />
+                    </CardContent>
+                    <CardContent>
+                        <Skeleton className="h-10 w-full" />
+                    </CardContent>
+                </Card>
+            ))}
+        </div>
+    );
+}
 
 export default function GroupsPage() {
     const { groups, user, loading } = useAppContext();
     
     if (loading) {
-        return <p>Loading groups...</p>;
+        return <GroupsPageSkeleton />;
     }
 
     return (

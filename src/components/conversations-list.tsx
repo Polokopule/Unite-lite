@@ -8,6 +8,23 @@ import Link from "next/link";
 import { formatTimeAgo } from "@/lib/utils";
 import { Bot, Check, CheckCheck, Pin, Shield } from "lucide-react";
 import { Button } from "./ui/button";
+import { Skeleton } from "./ui/skeleton";
+
+function ConversationListSkeleton() {
+    return (
+        <div className="space-y-1">
+            {Array.from({ length: 3 }).map((_, i) => (
+                <div key={i} className="flex items-center p-2 gap-3">
+                    <Skeleton className="h-12 w-12 rounded-full" />
+                    <div className="flex-1 space-y-2">
+                        <Skeleton className="h-4 w-3/4" />
+                        <Skeleton className="h-3 w-1/2" />
+                    </div>
+                </div>
+            ))}
+        </div>
+    );
+}
 
 function ConversationItem({ conversation, currentUserId }: { conversation: Conversation, currentUserId: string }) {
     const { allUsers, lockedConversations } = useAppContext();
@@ -65,7 +82,7 @@ export function ConversationsList() {
     const { user, conversations, loading } = useAppContext();
 
     if (loading) {
-        return <p>Loading conversations...</p>;
+        return <ConversationListSkeleton />;
     }
 
     if (!user) {
