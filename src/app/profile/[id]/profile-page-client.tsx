@@ -12,6 +12,58 @@ import { PostCard } from "@/components/post-card";
 import { isVerified } from "@/lib/utils";
 import toast from "react-hot-toast";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
+import { Skeleton } from "@/components/ui/skeleton";
+import { Badge } from "@/components/ui/badge";
+
+function ProfilePageSkeleton() {
+    return (
+        <div className="container mx-auto py-8 max-w-4xl">
+            <Card className="mb-8">
+                <CardHeader className="items-center text-center">
+                    <Skeleton className="h-24 w-24 rounded-full mb-4" />
+                    <Skeleton className="h-8 w-48 mb-2" />
+                    <Skeleton className="h-4 w-64" />
+                </CardHeader>
+                <CardContent>
+                    <div className="flex justify-center gap-8 text-center my-4">
+                        <div>
+                            <Skeleton className="h-7 w-12 mx-auto" />
+                            <Skeleton className="h-4 w-16 mx-auto mt-2" />
+                        </div>
+                        <div>
+                            <Skeleton className="h-7 w-12 mx-auto" />
+                            <Skeleton className="h-4 w-16 mx-auto mt-2" />
+                        </div>
+                    </div>
+                    <div className="flex justify-center gap-4 mt-6">
+                        <Skeleton className="h-10 w-32" />
+                    </div>
+                </CardContent>
+            </Card>
+
+            <div className="space-y-6">
+                <Skeleton className="h-6 w-32" />
+                <Card>
+                    <CardHeader>
+                        <div className="flex items-center gap-4">
+                            <Skeleton className="h-12 w-12 rounded-full" />
+                            <div className="space-y-2">
+                                <Skeleton className="h-4 w-32" />
+                                <Skeleton className="h-3 w-24" />
+                            </div>
+                        </div>
+                    </CardHeader>
+                    <CardContent>
+                        <div className="space-y-2">
+                            <Skeleton className="h-4 w-full" />
+                            <Skeleton className="h-4 w-5/6" />
+                        </div>
+                    </CardContent>
+                </Card>
+            </div>
+        </div>
+    );
+}
 
 export default function ProfilePageClient({ profileUserId }: { profileUserId: string }) {
     const { user: currentUser, allUsers, loading, followUser, unfollowUser, posts, toggleUserBan } = useAppContext();
@@ -67,7 +119,7 @@ export default function ProfilePageClient({ profileUserId }: { profileUserId: st
 
 
     if (loading || !profileUser) {
-        return <div className="container mx-auto py-8"><p>Loading profile...</p></div>;
+        return <ProfilePageSkeleton />;
     }
 
     const isOwnProfile = currentUser?.uid === profileUser.uid;

@@ -11,6 +11,7 @@ import Image from "next/image";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardHeader, CardTitle, CardContent, CardFooter } from "@/components/ui/card";
 import toast from "react-hot-toast";
+import { Skeleton } from "@/components/ui/skeleton";
 
 function CourseRating({ ratings }: { ratings: { [key: string]: number } | undefined }) {
     if (!ratings || Object.keys(ratings).length === 0) {
@@ -32,6 +33,30 @@ function CourseRating({ ratings }: { ratings: { [key: string]: number } | undefi
     );
 }
 
+function CourseMarketplaceSkeleton() {
+  return (
+    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+      {Array.from({ length: 3 }).map((_, i) => (
+        <Card key={i} className="flex flex-col">
+          <Skeleton className="relative aspect-video rounded-t-lg" />
+          <CardHeader>
+            <Skeleton className="h-6 w-3/4 mb-2" />
+            <Skeleton className="h-4 w-1/2" />
+          </CardHeader>
+          <CardContent className="flex-grow space-y-2">
+            <Skeleton className="h-4 w-full" />
+            <Skeleton className="h-4 w-5/6" />
+          </CardContent>
+          <div className="flex justify-between items-center p-6 pt-0">
+            <Skeleton className="h-8 w-20" />
+            <Skeleton className="h-10 w-28" />
+          </div>
+        </Card>
+      ))}
+    </div>
+  );
+}
+
 export default function CoursesMarketplacePage() {
   const { courses, user, purchaseCourse, loading } = useAppContext();
   const [purchasingId, setPurchasingId] = useState<string | null>(null);
@@ -44,10 +69,6 @@ export default function CoursesMarketplacePage() {
     }
     setPurchasingId(null);
   };
-  
-  if (loading) {
-    return <p>Loading courses...</p>
-  }
   
   const approvedCourses = courses.filter(c => c.status === 'approved');
 
@@ -65,7 +86,8 @@ export default function CoursesMarketplacePage() {
             )}
         </div>
 
-      {approvedCourses.length > 0 ? (
+      {loading ? <CourseMarketplaceSkeleton /> :
+       approvedCourses.length > 0 ? (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
           {approvedCourses.map((course) => {
             const isPurchased = user?.purchasedCourses && user.purchasedCourses[course.id];

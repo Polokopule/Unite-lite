@@ -21,6 +21,7 @@ import { User as UserType } from "@/lib/types";
 import { useRouter } from "next/navigation";
 import { Separator } from "@/components/ui/separator";
 import toast from "react-hot-toast";
+import { Skeleton } from "@/components/ui/skeleton";
 
 // --- Reusable Components from page.tsx (Consider moving to a components directory) ---
 
@@ -645,6 +646,37 @@ function PostCard({ post }: { post: PostType }) {
     );
 }
 
+function PostViewerSkeleton() {
+    return (
+        <div className="container mx-auto py-8 max-w-2xl">
+            <Card>
+                <CardHeader>
+                    <div className="flex items-center gap-4">
+                        <Skeleton className="h-12 w-12 rounded-full" />
+                        <div className="space-y-2">
+                             <Skeleton className="h-4 w-32" />
+                             <Skeleton className="h-3 w-24" />
+                        </div>
+                    </div>
+                </CardHeader>
+                <CardContent>
+                    <div className="space-y-2">
+                        <Skeleton className="h-4 w-full" />
+                        <Skeleton className="h-4 w-5/6" />
+                    </div>
+                </CardContent>
+                <CardFooter>
+                    <div className="flex items-center gap-4">
+                        <Skeleton className="h-8 w-20" />
+                        <Skeleton className="h-8 w-20" />
+                        <Skeleton className="h-8 w-20" />
+                    </div>
+                </CardFooter>
+            </Card>
+        </div>
+    );
+}
+
 
 export default function PostViewer({ postId }: { postId: string }) {
     const { posts, loading } = useAppContext();
@@ -657,50 +689,18 @@ export default function PostViewer({ postId }: { postId: string }) {
             const foundPost = posts.find(p => p.id === postId);
             if (foundPost) {
                 setPost(foundPost);
-            } else {
-                // If post is not found in the context after loading, maybe it's a new one.
-                // Or you might want to redirect to a 404 page.
-                // For now, let's just wait for context.
             }
         }
     }, [postId, posts, loading, router]);
 
 
-    if (loading) {
-        return (
-            <div className="container mx-auto py-8 max-w-2xl">
-                <Card>
-                    <CardHeader>
-                        <div className="flex items-center gap-4">
-                            <div className="h-12 w-12 bg-muted rounded-full animate-pulse"></div>
-                            <div className="space-y-2">
-                                 <div className="h-4 w-32 bg-muted rounded-md animate-pulse"></div>
-                                 <div className="h-3 w-24 bg-muted rounded-md animate-pulse"></div>
-                            </div>
-                        </div>
-                    </CardHeader>
-                    <CardContent>
-                        <div className="h-20 bg-muted rounded-md animate-pulse mb-4"></div>
-                    </CardContent>
-                </Card>
-            </div>
-        );
+    if (loading || !post) {
+        return <PostViewerSkeleton />;
     }
     
-    if (!post) {
-        return (
-             <div className="container mx-auto py-8 text-center">
-                <p>Post not found.</p>
-                <Button asChild variant="link"><Link href="/">Return to Home</Link></Button>
-            </div>
-        )
-    }
-
     return (
         <div className="container mx-auto py-8 max-w-2xl">
             <PostCard post={post} />
         </div>
     );
 }
-
-    

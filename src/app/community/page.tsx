@@ -14,12 +14,43 @@ import { useRouter } from "next/navigation";
 import { Input } from "@/components/ui/input";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import toast from "react-hot-toast";
+import { Skeleton } from "@/components/ui/skeleton";
 
 const isVerified = (user: UserType) => {
     return user.email === 'polokopule91@gmail.com' || (user.followers && user.followers.length >= 1000000);
 }
 
 type SortOrder = "name-asc" | "name-desc";
+
+function CommunitySkeleton() {
+    return (
+        <div className="space-y-3">
+            {Array.from({ length: 5 }).map((_, i) => (
+                <Card key={i} className="shadow-sm bg-card">
+                    <CardContent className="p-3 flex items-center justify-between gap-4">
+                       <div className="flex items-center gap-3 flex-1">
+                            <Skeleton className="h-10 w-10 rounded-full" />
+                            <div className="space-y-2">
+                                <Skeleton className="h-4 w-32" />
+                                <Skeleton className="h-3 w-20" />
+                            </div>
+                        </div>
+                        <div className="flex items-center gap-4">
+                            <div className="text-right">
+                                <Skeleton className="h-5 w-8 mb-1" />
+                                <Skeleton className="h-3 w-12" />
+                            </div>
+                            <div className="flex items-center gap-2">
+                                <Skeleton className="h-8 w-8 rounded-md" />
+                                <Skeleton className="h-8 w-8 rounded-md" />
+                            </div>
+                         </div>
+                    </CardContent>
+                </Card>
+            ))}
+        </div>
+    )
+}
 
 export default function CommunityPage() {
     const { allUsers, loading, startConversation, user: currentUser } = useAppContext();
@@ -67,10 +98,6 @@ export default function CommunityPage() {
         });
     }, [allUsers, searchTerm, auth.currentUser, sortOrder]);
     
-    if (loading) {
-        return <div className="container mx-auto py-8"><p>Loading community...</p></div>
-    }
-
     return (
         <div className="container mx-auto py-8">
             <div className="flex items-center gap-4 mb-8">
@@ -101,45 +128,47 @@ export default function CommunityPage() {
                 </DropdownMenu>
             </div>
 
-            <div className="space-y-3">
-                {sortedAndFilteredUsers.map(user => (
-                    <Card key={user.uid} className="shadow-sm hover:shadow-md transition-shadow bg-card">
-                        <CardContent className="p-3 flex items-center justify-between gap-4">
-                           <div className="flex items-center gap-3 flex-1 truncate">
-                                <Avatar className="h-10 w-10">
-                                    {user.photoURL && <AvatarImage src={user.photoURL} alt={user.name} />}
-                                    <AvatarFallback className="bg-muted text-muted-foreground font-bold">
-                                        {getInitials(user.name)}
-                                    </AvatarFallback>
-                                </Avatar>
-                                <div className="truncate">
-                                    <div className="flex items-center gap-1.5 truncate">
-                                        <span className="font-medium text-card-foreground truncate">{user.name}</span>
-                                        {isVerified(user) && <ShieldCheck className="h-4 w-4 text-primary flex-shrink-0" />}
+            {loading ? <CommunitySkeleton /> : (
+                <div className="space-y-3">
+                    {sortedAndFilteredUsers.map(user => (
+                        <Card key={user.uid} className="shadow-sm hover:shadow-md transition-shadow bg-card">
+                            <CardContent className="p-3 flex items-center justify-between gap-4">
+                               <div className="flex items-center gap-3 flex-1 truncate">
+                                    <Avatar className="h-10 w-10">
+                                        {user.photoURL && <AvatarImage src={user.photoURL} alt={user.name} />}
+                                        <AvatarFallback className="bg-muted text-muted-foreground font-bold">
+                                            {getInitials(user.name)}
+                                        </AvatarFallback>
+                                    </Avatar>
+                                    <div className="truncate">
+                                        <div className="flex items-center gap-1.5 truncate">
+                                            <span className="font-medium text-card-foreground truncate">{user.name}</span>
+                                            {isVerified(user) && <ShieldCheck className="h-4 w-4 text-primary flex-shrink-0" />}
+                                        </div>
+                                        <p className="text-sm text-muted-foreground capitalize truncate">{user.type}</p>
                                     </div>
-                                    <p className="text-sm text-muted-foreground capitalize truncate">{user.type}</p>
                                 </div>
-                            </div>
-                            <div className="flex items-center gap-4">
-                                <div className="text-right">
-                                    <p className="font-bold text-lg">{user.followers?.length || 0}</p>
-                                    <p className="text-xs text-muted-foreground">Followers</p>
-                                </div>
-                                <div className="flex items-center gap-2">
-                                    <Button size="icon" variant="ghost" asChild>
-                                    <Link href={`/profile/${user.uid}`}>
-                                        <UserIcon className="h-5 w-5 text-muted-foreground" />
-                                    </Link>
-                                    </Button>
-                                    <Button size="icon" variant="ghost" onClick={() => handleStartConversation(user)}>
-                                        <MessageSquare className="h-5 w-5 text-muted-foreground" />
-                                    </Button>
-                                </div>
-                             </div>
-                        </CardContent>
-                    </Card>
-                ))}
-            </div>
+                                <div className="flex items-center gap-4">
+                                    <div className="text-right">
+                                        <p className="font-bold text-lg">{user.followers?.length || 0}</p>
+                                        <p className="text-xs text-muted-foreground">Followers</p>
+                                    </div>
+                                    <div className="flex items-center gap-2">
+                                        <Button size="icon" variant="ghost" asChild>
+                                        <Link href={`/profile/${user.uid}`}>
+                                            <UserIcon className="h-5 w-5 text-muted-foreground" />
+                                        </Link>
+                                        </Button>
+                                        <Button size="icon" variant="ghost" onClick={() => handleStartConversation(user)}>
+                                            <MessageSquare className="h-5 w-5 text-muted-foreground" />
+                                        </Button>
+                                    </div>
+                                 </div>
+                            </CardContent>
+                        </Card>
+                    ))}
+                </div>
+            )}
         </div>
     );
 }

@@ -17,6 +17,42 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import toast from "react-hot-toast";
+import { Skeleton } from "@/components/ui/skeleton";
+
+function DashboardSkeleton() {
+    return (
+        <div className="space-y-8">
+            <div className="space-y-2">
+                <Skeleton className="h-8 w-64" />
+                <Skeleton className="h-4 w-96" />
+            </div>
+            <Card>
+                <CardHeader>
+                    <Skeleton className="h-6 w-48" />
+                    <Skeleton className="h-4 w-80" />
+                </CardHeader>
+                <CardContent>
+                    <div className="space-y-4">
+                        <div className="flex items-center justify-between p-4">
+                            <div className="space-y-2">
+                                <Skeleton className="h-5 w-40" />
+                                <Skeleton className="h-4 w-24" />
+                            </div>
+                            <Skeleton className="h-10 w-24" />
+                        </div>
+                        <div className="flex items-center justify-between p-4">
+                            <div className="space-y-2">
+                                <Skeleton className="h-5 w-44" />
+                                <Skeleton className="h-4 w-20" />
+                            </div>
+                            <Skeleton className="h-10 w-24" />
+                        </div>
+                    </div>
+                </CardContent>
+            </Card>
+        </div>
+    )
+}
 
 export default function DashboardPage() {
   const { user, loading } = useAppContext();
@@ -31,7 +67,7 @@ export default function DashboardPage() {
   if (loading || !user) {
     return (
       <div className="container mx-auto py-8">
-        <p>Loading dashboard...</p>
+        <DashboardSkeleton />
       </div>
     );
   }

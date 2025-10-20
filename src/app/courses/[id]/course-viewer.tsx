@@ -12,6 +12,7 @@ import Image from "next/image";
 import jsPDF from 'jspdf';
 import html2canvas from 'html2canvas';
 import toast from "react-hot-toast";
+import { Skeleton } from "@/components/ui/skeleton";
 
 function StarRating({ rating, onRatingChange, disabled }: { rating: number, onRatingChange: (rating: number) => void, disabled: boolean }) {
     const [hover, setHover] = useState(0);
@@ -37,6 +38,25 @@ function StarRating({ rating, onRatingChange, disabled }: { rating: number, onRa
     );
 }
 
+function CourseViewerSkeleton() {
+    return (
+        <div className="container mx-auto py-8 max-w-4xl">
+            <Card>
+                <div className="p-6">
+                    <Skeleton className="relative aspect-video mb-6 rounded-lg" />
+                    <Skeleton className="h-8 w-3/4 mb-2" />
+                    <Skeleton className="h-4 w-1/4 mb-6" />
+                    <div className="space-y-4">
+                        <Skeleton className="h-4 w-full" />
+                        <Skeleton className="h-4 w-full" />
+                        <Skeleton className="h-4 w-5/6" />
+                    </div>
+                </div>
+            </Card>
+        </div>
+    )
+}
+
 export default function CourseViewer({ courseId }: { courseId: string }) {
     const { user, courses, purchasedCourses, loading, rateCourse } = useAppContext();
     const router = useRouter();
@@ -48,23 +68,20 @@ export default function CourseViewer({ courseId }: { courseId: string }) {
     const [isDownloading, setIsDownloading] = useState(false);
     const [userRating, setUserRating] = useState(0);
     const [isRating, setIsRating] = useState(false);
+    const [initialLoading, setInitialLoading] = useState(true);
 
     useEffect(() => {
         if (loading) return;
 
         const foundCourse = courses.find(c => c.id === courseId);
-
+        
         if (foundCourse) {
             setCourse(foundCourse);
             
-            // Check for admin access first
             if (user?.email === 'polokopule91@gmail.com') {
                 setIsAuthorized(true);
-                setIsPurchased(true); // Admin is considered to have "purchased" all
-                return;
-            }
-
-            if (user?.type === 'user') {
+                setIsPurchased(true);
+            } else if (user?.type === 'user') {
                 const purchased = purchasedCourses.some(pc => pc.id === courseId);
                 setIsPurchased(purchased);
                 if (purchased || foundCourse.creator === user.uid) {
@@ -73,7 +90,7 @@ export default function CourseViewer({ courseId }: { courseId: string }) {
                     toast.error("This course is not available for viewing.");
                     router.push('/courses');
                 } else {
-                     toast.error("You have not purchased this course.");
+                    toast.error("You have not purchased this course.");
                     router.push('/courses');
                 }
             } else if (user?.type === 'business') {
@@ -84,9 +101,12 @@ export default function CourseViewer({ courseId }: { courseId: string }) {
                 router.push('/login-user');
             }
         } else if (!loading) {
-             toast.error("The course you are looking for does not exist.");
+            toast.error("The course you are looking for does not exist.");
             router.push('/courses');
         }
+
+        setInitialLoading(false);
+
     }, [courseId, courses, purchasedCourses, user, router, loading]);
 
     useEffect(() => {
@@ -152,16 +172,9 @@ export default function CourseViewer({ courseId }: { courseId: string }) {
         setIsRating(false);
     }
 
-    if (loading || !course) {
-        return <div className="container mx-auto py-8"><p>Loading course...</p></div>;
+    if (initialLoading || !course || !isAuthorized) {
+        return <CourseViewerSkeleton />;
     }
-
-    if (!isAuthorized) {
-        // This handles the case where auth check is done but user is not authorized.
-        // It prevents a flash of content.
-         return <div className="container mx-auto py-8"><p>Loading course...</p></div>;
-    }
-
 
     return (
         <div className="container mx-auto py-8 max-w-4xl">
