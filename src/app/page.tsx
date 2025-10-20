@@ -61,12 +61,12 @@ export default function HomePage() {
       <div className="container mx-auto py-4">
         <Tabs defaultValue="home" className="w-full">
             <TabsList className="grid w-full grid-cols-6 mb-8">
-                <TabsTrigger value="home"><Home className="mr-2 h-4 w-4" />Home</TabsTrigger>
-                <TabsTrigger value="courses"><Book className="mr-2 h-4 w-4" />Courses</TabsTrigger>
-                <TabsTrigger value="community"><Users className="mr-2 h-4 w-4" />Community</TabsTrigger>
-                <TabsTrigger value="groups"><Users className="mr-2 h-4 w-4" />Groups</TabsTrigger>
-                <TabsTrigger value="messages"><MessageSquare className="mr-2 h-4 w-4" />Messages</TabsTrigger>
-                <TabsTrigger value="ai_chat" asChild><Link href="/messages/ai"><Bot className="mr-2 h-4 w-4"/>AI Chat</Link></TabsTrigger>
+                <TabsTrigger value="home"><Home className="h-5 w-5" /></TabsTrigger>
+                <TabsTrigger value="courses"><Book className="h-5 w-5" /></TabsTrigger>
+                <TabsTrigger value="community"><Users className="h-5 w-5" /></TabsTrigger>
+                <TabsTrigger value="groups"><Users className="h-5 w-5" /></TabsTrigger>
+                <TabsTrigger value="messages"><MessageSquare className="h-5 w-5" /></TabsTrigger>
+                <TabsTrigger value="ai_chat" asChild><Link href="/messages/ai"><Bot className="h-5 w-5"/></Link></TabsTrigger>
             </TabsList>
             
             <TabsContent value="home">
