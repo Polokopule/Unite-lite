@@ -1,6 +1,7 @@
 
 
 
+
 export type Course = {
   id: string;
   title: string;
@@ -10,6 +11,9 @@ export type Course = {
   price: number;
   imageUrl: string;
   imageHint: string;
+  status: 'pending' | 'approved' | 'rejected';
+  rejectionReason?: string;
+  ratings?: { [userId: string]: number }; // userId: rating (1-5)
 };
 
 export type Ad = {
@@ -86,7 +90,7 @@ export type Notification = {
     actorUid: string;
     actorName: string;
     actorPhotoURL?: string;
-    type: 'new_follower' | 'new_comment' | 'new_reply' | 'post_like' | 'comment_like' | 'new_group_message' | 'new_direct_message' | 'mention' | 'repost' | 'withdrawal_request' | 'withdrawal_approved' | 'withdrawal_rejected';
+    type: 'new_follower' | 'new_comment' | 'new_reply' | 'post_like' | 'comment_like' | 'new_group_message' | 'new_direct_message' | 'mention' | 'repost' | 'withdrawal_request' | 'withdrawal_approved' | 'withdrawal_rejected' | 'course_approved' | 'course_rejected';
     targetUrl: string; // e.g., /posts/post-123#comment-456
     targetId: string; // e.g., post-123
     isRead: boolean;
