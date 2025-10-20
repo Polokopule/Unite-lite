@@ -70,7 +70,7 @@ export default function CoursesMarketplacePage() {
     setPurchasingId(null);
   };
   
-  const approvedCourses = courses.filter(c => c.status === 'approved');
+  const approvedCourses = courses.filter(c => c.status === 'approved' || c.status === undefined);
 
   return (
     <div className="container mx-auto py-8">

@@ -108,7 +108,7 @@ export default function HomePage() {
                         <TabsTrigger value="home"><Home className="h-6 w-6" /></TabsTrigger>
                         <TabsTrigger value="courses"><Book className="h-6 w-6" /></TabsTrigger>
                         <TabsTrigger value="community"><Users className="h-6 w-6" /></TabsTrigger>
-                        <TabsTrigger value="groups"><Users className="h-6 w-6" /></TabsTrigger>
+                        <TabsTrigger value="groups"><MessageSquare className="h-6 w-6" /></TabsTrigger>
                         <TabsTrigger value="messages"><MessageSquare className="h-6 w-6" /></TabsTrigger>
                     </TabsList>
                 </div>

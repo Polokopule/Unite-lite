@@ -64,12 +64,10 @@ function UserSheet() {
     return (
         <Sheet open={open} onOpenChange={setOpen}>
             <SheetTrigger asChild>
-                 <Avatar className="h-9 w-9 cursor-pointer">
-                    {user.photoURL && <AvatarImage src={user.photoURL} alt={user.name} />}
-                    <AvatarFallback className="bg-primary text-primary-foreground font-bold">
-                    {getInitials(user.name)}
-                    </AvatarFallback>
-                </Avatar>
+                 <Button variant="ghost" size="icon">
+                    <Menu className="h-6 w-6"/>
+                    <span className="sr-only">Open Menu</span>
+                </Button>
             </SheetTrigger>
             <SheetContent>
                 <SheetHeader>
@@ -154,14 +152,16 @@ export function Header() {
                 {user ? (
                     <UserSheet />
                 ) : (
-                    <div className="hidden md:flex items-center gap-2">
-                        <Button asChild variant="ghost"><Link href="/login-user">Login</Link></Button>
-                        <Button asChild><Link href="/signup-user">Sign Up</Link></Button>
-                    </div>
+                    <>
+                        <div className="hidden md:flex items-center gap-2">
+                            <Button asChild variant="ghost"><Link href="/login-user">Login</Link></Button>
+                            <Button asChild><Link href="/signup-user">Sign Up</Link></Button>
+                        </div>
+                        <div className="md:hidden">
+                            <AuthSheet />
+                        </div>
+                    </>
                 )}
-                 <div className="md:hidden">
-                    {user ? <UserSheet /> : <AuthSheet />}
-                 </div>
             </div>
         </div>
       </header>
