@@ -1,5 +1,5 @@
 // src/ai/genkit.ts
-import {genkit, Plugin} from 'genkit';
+import {genkit, Plugin, ai} from 'genkit';
 import {googleAI} from '@genkit-ai/google-genai';
 
 const plugins: Plugin[] = [];
@@ -14,4 +14,4 @@ genkit({
   enableTracingAndMetrics: true,
 });
 
-export {ai} from 'genkit';
+export {ai};
