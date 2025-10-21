@@ -119,8 +119,14 @@ export default function CoursesMarketplacePage() {
                 </CardContent>
                 <div className="flex justify-between items-center p-6 pt-0">
                     <div className="font-bold text-lg flex items-center gap-2">
-                        <Wallet className="h-5 w-5 text-accent"/>
-                        <span>{course.price}</span>
+                      {course.price > 0 ? (
+                        <>
+                          <Wallet className="h-5 w-5 text-accent"/>
+                          <span>{course.price}</span>
+                        </>
+                      ) : (
+                        <Badge variant="secondary">Free</Badge>
+                      )}
                     </div>
                   {user?.type === 'user' ? (
                      isPurchased ? (
@@ -132,7 +138,7 @@ export default function CoursesMarketplacePage() {
                      ) : (
                         <Button onClick={() => handlePurchase(course)} disabled={isPurchasing}>
                             {isPurchasing ? <Loader2 className="h-4 w-4 mr-2 animate-spin"/> : <ShoppingBag className="h-4 w-4 mr-2"/>}
-                            {isPurchasing ? 'Purchasing...' : 'Purchase'}
+                            {isPurchasing ? 'Purchasing...' : course.price > 0 ? 'Purchase' : 'Enroll for Free'}
                         </Button>
                      )
                   ) : user ? null : (

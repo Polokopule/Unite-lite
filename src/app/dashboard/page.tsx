@@ -6,7 +6,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter }
 import { Separator } from "@/components/ui/separator";
 import { useAppContext } from "@/contexts/app-context";
 import { Ad, Course, Post as PostType, WithdrawalRequest, User as UserType } from "@/lib/types";
-import { ArrowRight, BookCopy, Eye, PlusCircle, ShoppingBag, Pencil, Trash2, Loader2, Save, Check, X, Banknote, UserX, Shield, UserCheck } from "lucide-react";
+import { ArrowRight, BookCopy, Eye, PlusCircle, ShoppingBag, Pencil, Trash2, Loader2, Save, Check, X, Banknote, UserX, Shield, UserCheck, Megaphone, BookOpen } from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useEffect, useState, useMemo } from "react";
@@ -78,7 +78,7 @@ export default function DashboardPage() {
     if(isAdmin) return "admin_courses";
     if(user.type === 'user') return "my_courses";
     if(user.type === 'business') return "my_ads";
-    return "my_posts";
+    return "my_courses"; // Fallback
   }
   
   const defaultTab = getDefaultTab();
@@ -91,15 +91,15 @@ export default function DashboardPage() {
       <p className="text-muted-foreground mb-8">Manage your content and activity on Unite.</p>
       
       <Tabs defaultValue={defaultTab} className="w-full">
-         <TabsList className={`grid w-full ${isAdmin ? 'grid-cols-4' : 'grid-cols-1'}`}>
+         <TabsList className="grid w-full grid-cols-1 md:grid-cols-2 lg:grid-cols-4">
             {isAdmin && <>
-                <TabsTrigger value="admin_courses">Course Review</TabsTrigger>
-                <TabsTrigger value="admin_withdrawals">Withdrawals</TabsTrigger>
-                <TabsTrigger value="admin_users">Users</TabsTrigger>
-                <TabsTrigger value="admin_all_courses">All Courses</TabsTrigger>
+                <TabsTrigger value="admin_courses"><BookOpen className="h-5 w-5" /></TabsTrigger>
+                <TabsTrigger value="admin_withdrawals"><Banknote className="h-5 w-5" /></TabsTrigger>
+                <TabsTrigger value="admin_users"><Shield className="h-5 w-5" /></TabsTrigger>
+                <TabsTrigger value="admin_all_courses"><BookCopy className="h-5 w-5" /></TabsTrigger>
             </>}
-            {user.type === 'user' && <TabsTrigger value="my_courses">My Courses</TabsTrigger> }
-            {user.type === 'business' && <TabsTrigger value="my_ads">My Ad Campaigns</TabsTrigger>}
+            {user.type === 'user' && <TabsTrigger value="my_courses"><BookOpen className="h-5 w-5" /></TabsTrigger> }
+            {user.type === 'business' && <TabsTrigger value="my_ads"><Megaphone className="h-5 w-5" /></TabsTrigger>}
         </TabsList>
         
         {isAdmin && (
@@ -119,13 +119,17 @@ export default function DashboardPage() {
             </>
         )}
         
-        <TabsContent value="my_courses">
-            {user.type === 'user' && <UserCoursesDashboard />}
-        </TabsContent>
+        {user.type === 'user' && 
+            <TabsContent value="my_courses">
+                <UserCoursesDashboard />
+            </TabsContent>
+        }
 
-        <TabsContent value="my_ads">
-            {user.type === 'business' && <BusinessDashboard />}
-        </TabsContent>
+        {user.type === 'business' &&
+            <TabsContent value="my_ads">
+                <BusinessDashboard />
+            </TabsContent>
+        }
       </Tabs>
     </div>
   );
@@ -540,7 +544,7 @@ function UserCoursesDashboard() {
                 <div className="text-center py-8 border-2 border-dashed rounded-lg">
                     <p className="text-muted-foreground">You haven't purchased any courses yet.</p>
                     <Button asChild variant="link" className="mt-2">
-                        <Link href="/">Browse Courses <ArrowRight className="h-4 w-4 ml-2"/></Link>
+                        <Link href="/courses">Browse Courses <ArrowRight className="h-4 w-4 ml-2"/></Link>
                     </Button>
                 </div>
             )}

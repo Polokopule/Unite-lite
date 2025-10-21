@@ -1,7 +1,4 @@
 
-
-
-
 export type Course = {
   id: string;
   title: string;
@@ -29,15 +26,6 @@ export type UserPresence = {
     state: 'online' | 'offline';
     lastChanged: number;
 }
-
-export type Part = {
-  text: string;
-};
-
-export type AIChatMessage = {
-  role: 'user' | 'model';
-  parts: Part[];
-};
 
 export type WithdrawalRequest = {
     id: string;
@@ -72,7 +60,6 @@ export type User = {
   lockedConversations?: { [id: string]: string }; // id: pin
   blockedUsers?: string[];
   banned?: boolean;
-  aiChatHistory?: AIChatMessage[];
   fcmTokens?: { [token: string]: boolean };
   theme?: 'light' | 'dark';
   lastAdClaim?: number;

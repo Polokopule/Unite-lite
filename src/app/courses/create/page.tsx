@@ -13,6 +13,7 @@ import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, 
 import Image from "next/image";
 import toast from "react-hot-toast";
 import { Editor, EditorProvider } from "react-simple-wysiwyg";
+import { Switch } from "@/components/ui/switch";
 
 function RichTextEditor({ value, onChange }: { value: string, onChange: (value: string) => void }) {
   return (
@@ -41,7 +42,8 @@ export default function CreateCoursePage() {
 
   const [title, setTitle] = useState("");
   const [content, setContent] = useState("");
-  const [price, setPrice] = useState(0);
+  const [price, setPrice] = useState(1);
+  const [isFree, setIsFree] = useState(false);
   const [coverImage, setCoverImage] = useState<File | null>(null);
   const [coverImageUrl, setCoverImageUrl] = useState<string | null>(null);
   const [isPublishing, setIsPublishing] = useState(false);
@@ -62,18 +64,21 @@ export default function CreateCoursePage() {
   };
 
   const handlePublish = async () => {
-    if (!title || !content || price <= 0 || !coverImage) {
+    const finalPrice = isFree ? 0 : price;
+    if (!title || !content || (finalPrice < 0) || !coverImage) {
         toast.error("Please fill out all fields and upload a cover image.");
         return;
     }
     
     setIsPublishing(true);
-    const success = await addCourse({ title, content, price, coverImage });
+    const success = await addCourse({ title, content, price: finalPrice, coverImage });
     setIsPublishing(false);
 
     if(success) {
         toast.success("Your course has been submitted for review.");
         router.push('/dashboard');
+    } else {
+        toast.error("Failed to submit course. Please try again.");
     }
   };
 
@@ -136,23 +141,32 @@ export default function CreateCoursePage() {
               <Label htmlFor="content">Course Content</Label>
               <RichTextEditor value={content} onChange={setContent} />
             </div>
-            <div className="space-y-2">
-              <Label htmlFor="price">Price (in points)</Label>
-              <Input
-                id="price"
-                type="number"
-                min="1"
-                placeholder="e.g., 100"
-                value={price > 0 ? price : ''}
-                onChange={(e) => setPrice(Number(e.target.value))}
-                required
-              />
+            <div className="space-y-4">
+                <div className="flex items-center space-x-2">
+                    <Switch id="is-free" checked={isFree} onCheckedChange={setIsFree} />
+                    <Label htmlFor="is-free">Make this course free</Label>
+                </div>
+                {!isFree && (
+                    <div className="space-y-2">
+                        <Label htmlFor="price">Price (in points)</Label>
+                        <Input
+                            id="price"
+                            type="number"
+                            min="1"
+                            placeholder="e.g., 100"
+                            value={price > 0 ? price : ''}
+                            onChange={(e) => setPrice(Number(e.target.value))}
+                            required
+                            disabled={isFree}
+                        />
+                    </div>
+                )}
             </div>
           </CardContent>
           <CardFooter>
              <AlertDialog>
               <AlertDialogTrigger asChild>
-                <Button type="button" className="w-full sm:w-auto" disabled={!title || !content || !coverImage || price <= 0 || isPublishing}>
+                <Button type="button" className="w-full sm:w-auto" disabled={!title || !content || !coverImage || (!isFree && price <= 0) || isPublishing}>
                   {isPublishing ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <CreditCard className="h-4 w-4 mr-2" />}
                   {isPublishing ? 'Submitting...' : 'Submit for Review'}
                 </Button>

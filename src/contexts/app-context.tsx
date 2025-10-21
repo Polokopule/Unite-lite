@@ -2,14 +2,13 @@
 "use client";
 
 import { PlaceHolderImages } from "@/lib/placeholder-images";
-import type { Course, Ad, User, PurchasedCourse, Post, Group, Comment, Message, Notification, LinkPreview, Conversation, AIChatMessage, WithdrawalRequest } from "@/lib/types";
+import type { Course, Ad, User, PurchasedCourse, Post, Group, Comment, Message, Notification, LinkPreview, Conversation, WithdrawalRequest } from "@/lib/types";
 import { useRouter } from "next/navigation";
 import React, { createContext, useContext, useEffect, useState } from "react";
 import { db, auth, storage } from "@/lib/firebase";
 import { ref, onValue, set, get, update, remove, push, serverTimestamp, query, orderByChild, equalTo } from "firebase/database";
 import { onAuthStateChanged, signOut, User as FirebaseUser, updateProfile as updateFirebaseProfile, setPersistence, browserLocalPersistence } from "firebase/auth";
 import { ref as storageRef, uploadBytes, getDownloadURL } from "firebase/storage";
-import { generateLinkPreview } from '@/ai/flows/generate-link-preview';
 import { getMessaging, getToken, onMessage } from "firebase/messaging";
 import { app } from "@/lib/firebase"; // Import app
 import toast from 'react-hot-toast';
@@ -96,7 +95,6 @@ interface AppContextType {
   lockConversation: (conversationId: string, pin: string) => void;
   unlockConversation: (conversationId: string) => void;
   toggleBlockUser: (targetUserId: string) => void;
-  updateAIChatHistory: (history: AIChatMessage[]) => Promise<void>;
   updateThemePreference: (theme: 'light' | 'dark') => Promise<void>;
   requestWithdrawal: (amount: number, method: 'Mpesa' | 'Skrill', paymentDetail: string) => Promise<void>;
   approveWithdrawal: (request: WithdrawalRequest) => Promise<void>;
@@ -170,7 +168,6 @@ export function AppContextProvider({ children }: { children: React.ReactNode }) 
                             followers: userData.followers ? Object.keys(userData.followers) : [],
                             following: userData.following ? Object.keys(userData.following) : [],
                             blockedUsers: userData.blockedUsers ? Object.keys(userData.blockedUsers) : [],
-                            aiChatHistory: userData.aiChatHistory ? Object.values(userData.aiChatHistory) : [],
                             withdrawalRequests: userData.withdrawalRequests || {},
                         };
                         setUser(fullUserData);
@@ -385,7 +382,7 @@ export function AppContextProvider({ children }: { children: React.ReactNode }) 
             return;
         }
     }
-    router.push("/dashboard");
+    router.push("/");
   };
 
   const logout = async () => {
@@ -500,7 +497,7 @@ export function AppContextProvider({ children }: { children: React.ReactNode }) 
   };
 
   const updateCourse = async (courseId: string, courseData: Partial<Omit<Course, 'id' | 'creator' | 'creatorName'>>): Promise<boolean> => {
-    if (!user || user.type !== 'user') return false;
+    if (!user || (user.type !== 'user' && user.email !== 'polokopule91@gmail.com')) return false;
     const courseRef = ref(db, `courses/${courseId}`);
     
     const promise = async () => {
@@ -795,11 +792,8 @@ export function AppContextProvider({ children }: { children: React.ReactNode }) 
 
       const urlMatch = content.match(urlRegex);
       if (urlMatch) {
-          generateLinkPreview({ url: urlMatch[0] }).then(preview => {
-              if (preview.title) {
-                  update(newPostRef, { linkPreview: preview });
-              }
-          }).catch(e => console.error("Link preview generation failed, but post was created.", e));
+          // This should be an AI call in a flow
+          // For now, let's skip it to avoid Genkit dependency
       }
 
       if (content) {
@@ -934,11 +928,7 @@ export function AppContextProvider({ children }: { children: React.ReactNode }) 
 
             const urlMatch = content.match(urlRegex);
             if (urlMatch) {
-                generateLinkPreview({ url: urlMatch[0] }).then(preview => {
-                    if(preview.title) {
-                        update(newCommentRef, { linkPreview: preview });
-                    }
-                }).catch(e => console.error("Link preview failed for comment, but comment was created.", e));
+                // This would be a Genkit call
             }
             
             await handleMentions(content, postId, commentId);
@@ -1258,11 +1248,7 @@ export function AppContextProvider({ children }: { children: React.ReactNode }) 
         if (messageData.type !== 'system' && messageData.content) {
             const urlMatch = messageData.content.match(urlRegex);
             if (urlMatch) {
-                generateLinkPreview({ url: urlMatch[0] }).then(preview => {
-                    if (preview.title) {
-                        update(newMessageRef, { linkPreview: preview });
-                    }
-                }).catch(e => console.error("Link preview generation failed, but message was created.", e));
+                // Genkit call removed
             }
         }
 
@@ -1309,9 +1295,7 @@ export function AppContextProvider({ children }: { children: React.ReactNode }) 
 
                 const urlMatch = newContent.match(urlRegex);
                 if (urlMatch) {
-                    generateLinkPreview({ url: urlMatch[0] }).then(preview => {
-                        update(messageRef, { linkPreview: preview.title ? preview : null });
-                    }).catch(e => console.error("Link preview update failed.", e));
+                    // Genkit call removed
                 } else {
                     updateData.linkPreview = null;
                 }
@@ -1453,11 +1437,7 @@ export function AppContextProvider({ children }: { children: React.ReactNode }) 
 
         const urlMatch = messageData.content?.match(urlRegex);
         if (urlMatch) {
-             generateLinkPreview({ url: urlMatch[0] }).then(preview => {
-                if (preview.title) {
-                    update(newMessageRef, { linkPreview: preview });
-                }
-            }).catch(e => console.error("Link preview failed for DM, but message was sent.", e));
+             // Genkit call removed
         }
 
         // Update last message and timestamp for the conversation
@@ -1504,9 +1484,7 @@ export function AppContextProvider({ children }: { children: React.ReactNode }) 
 
                 const urlMatch = newContent.match(urlRegex);
                 if (urlMatch) {
-                     generateLinkPreview({ url: urlMatch[0] }).then(preview => {
-                        update(messageRef, { linkPreview: preview.title ? preview : null });
-                    }).catch(e => console.error("Link preview update failed.", e));
+                     // Genkit call removed
                 } else {
                     updateData.linkPreview = null;
                 }
@@ -1652,12 +1630,6 @@ export function AppContextProvider({ children }: { children: React.ReactNode }) 
         }
     };
 
-    const updateAIChatHistory = async (history: AIChatMessage[]) => {
-        if (!user) return;
-        const historyRef = ref(db, `users/${user.uid}/aiChatHistory`);
-        await set(historyRef, history);
-    }
-    
     const updateThemePreference = async (theme: 'light' | 'dark') => {
         if (!user) return;
         const themeRef = ref(db, `users/${user.uid}/theme`);
@@ -1850,7 +1822,6 @@ export function AppContextProvider({ children }: { children: React.ReactNode }) 
     lockConversation,
     unlockConversation,
     toggleBlockUser,
-    updateAIChatHistory,
     updateThemePreference,
     requestWithdrawal,
     approveWithdrawal,
