@@ -12,6 +12,7 @@ import { ref as storageRef, uploadBytes, getDownloadURL } from "firebase/storage
 import { getMessaging, getToken, onMessage } from "firebase/messaging";
 import { app } from "@/lib/firebase"; // Import app
 import toast from 'react-hot-toast';
+import { getLinkPreview } from "@/ai/flows/get-link-preview-flow";
 
 type AddCourseData = {
     title: string;
@@ -788,13 +789,13 @@ export function AppContextProvider({ children }: { children: React.ReactNode }) 
           newPost.fileType = postData.fileType;
       }
       
-      await set(newPostRef, newPost);
-
       const urlMatch = content.match(urlRegex);
       if (urlMatch) {
-          // This should be an AI call in a flow
-          // For now, let's skip it to avoid Genkit dependency
+          const preview = await getLinkPreview(urlMatch[0]);
+          if(preview) newPost.linkPreview = preview;
       }
+
+      await set(newPostRef, newPost);
 
       if (content) {
           await handleMentions(content, postId);
@@ -827,7 +828,12 @@ export function AppContextProvider({ children }: { children: React.ReactNode }) 
       const promise = async () => {
           const postSnapshot = await get(postRef);
           if (postSnapshot.exists() && postSnapshot.val().creatorUid === user.uid) {
-              await update(postRef, { content: postData.content });
+              const urlMatch = postData.content.match(urlRegex);
+              let linkPreview = null;
+              if (urlMatch) {
+                  linkPreview = await getLinkPreview(urlMatch[0]);
+              }
+              await update(postRef, { content: postData.content, linkPreview });
               await handleMentions(postData.content, postId);
           } else {
               throw new Error("Unauthorized or post not found.");
@@ -910,6 +916,12 @@ export function AppContextProvider({ children }: { children: React.ReactNode }) 
             const newCommentRef = push(commentsRef);
             const commentId = newCommentRef.key!;
 
+            const urlMatch = content.match(urlRegex);
+            let linkPreview = null;
+            if (urlMatch) {
+                linkPreview = await getLinkPreview(urlMatch[0]);
+            }
+
             let newComment: Omit<Comment, 'id' | 'likes'> = {
                 id: commentId,
                 creatorUid: user.uid,
@@ -919,17 +931,11 @@ export function AppContextProvider({ children }: { children: React.ReactNode }) 
                 timestamp: serverTimestamp() as any,
                 parentId: parentId,
                 postId: postId,
-                linkPreview: null,
+                linkPreview: linkPreview,
             };
             
-            // Set comment without preview first
             await set(newCommentRef, newComment);
             toast.success("Comment added!");
-
-            const urlMatch = content.match(urlRegex);
-            if (urlMatch) {
-                // This would be a Genkit call
-            }
             
             await handleMentions(content, postId, commentId);
 
@@ -1212,13 +1218,19 @@ export function AppContextProvider({ children }: { children: React.ReactNode }) 
         } else {
             if (!user) return false;
 
+            const urlMatch = messageData.content?.match(urlRegex);
+            let linkPreview = null;
+            if (urlMatch) {
+                linkPreview = await getLinkPreview(urlMatch[0]);
+            }
+
             messagePayload = {
                 id: newMessageRef.key!,
                 creatorUid: user.uid,
                 creatorName: user.name,
                 creatorPhotoURL: user.photoURL || '',
                 timestamp: serverTimestamp() as any,
-                linkPreview: null,
+                linkPreview,
             };
 
             if (messageData.file) {
@@ -1244,13 +1256,6 @@ export function AppContextProvider({ children }: { children: React.ReactNode }) 
         }
         
         await set(newMessageRef, messagePayload);
-
-        if (messageData.type !== 'system' && messageData.content) {
-            const urlMatch = messageData.content.match(urlRegex);
-            if (urlMatch) {
-                // Genkit call removed
-            }
-        }
 
         // Create notifications for all other group members
         if (messageData.type !== 'system' && user) {
@@ -1291,14 +1296,12 @@ export function AppContextProvider({ children }: { children: React.ReactNode }) 
             const messageRef = ref(db, `groups/${groupId}/messages/${messageId}`);
             const msgSnapshot = await get(messageRef);
             if (msgSnapshot.exists() && msgSnapshot.val().creatorUid === user.uid) {
-                const updateData: any = { content: newContent, isEdited: true };
-
                 const urlMatch = newContent.match(urlRegex);
+                let linkPreview = null;
                 if (urlMatch) {
-                    // Genkit call removed
-                } else {
-                    updateData.linkPreview = null;
+                    linkPreview = await getLinkPreview(urlMatch[0]);
                 }
+                const updateData: any = { content: newContent, isEdited: true, linkPreview };
                 
                 await update(messageRef, updateData);
                 toast.success("Message updated.");
@@ -1402,6 +1405,12 @@ export function AppContextProvider({ children }: { children: React.ReactNode }) 
         const messagesRef = ref(db, `conversations/${conversationId}/messages`);
         const newMessageRef = push(messagesRef);
 
+        const urlMatch = messageData.content?.match(urlRegex);
+        let linkPreview = null;
+        if (urlMatch) {
+            linkPreview = await getLinkPreview(urlMatch[0]);
+        }
+
         let messagePayload: Message = {
             id: newMessageRef.key!,
             creatorUid: user.uid,
@@ -1410,7 +1419,7 @@ export function AppContextProvider({ children }: { children: React.ReactNode }) 
             timestamp: serverTimestamp() as any,
             content: '',
             type: 'text', // default
-            linkPreview: null,
+            linkPreview,
         };
 
         if (messageData.file) {
@@ -1434,11 +1443,6 @@ export function AppContextProvider({ children }: { children: React.ReactNode }) 
         }
         
         await set(newMessageRef, messagePayload);
-
-        const urlMatch = messageData.content?.match(urlRegex);
-        if (urlMatch) {
-             // Genkit call removed
-        }
 
         // Update last message and timestamp for the conversation
         await update(ref(db, `conversations/${conversationId}`), {
@@ -1480,14 +1484,12 @@ export function AppContextProvider({ children }: { children: React.ReactNode }) 
             const messageRef = ref(db, `conversations/${conversationId}/messages/${messageId}`);
             const msgSnapshot = await get(messageRef);
             if (msgSnapshot.exists() && msgSnapshot.val().creatorUid === user.uid) {
-                const updateData: any = { content: newContent, isEdited: true };
-
                 const urlMatch = newContent.match(urlRegex);
+                let linkPreview = null;
                 if (urlMatch) {
-                     // Genkit call removed
-                } else {
-                    updateData.linkPreview = null;
+                    linkPreview = await getLinkPreview(urlMatch[0]);
                 }
+                const updateData: any = { content: newContent, isEdited: true, linkPreview };
 
                 await update(messageRef, updateData);
                 toast.success("Message updated.");
@@ -1803,7 +1805,7 @@ export function AppContextProvider({ children }: { children: React.ReactNode }) 
     updateGroup,
     updateGroupPin,
     deleteGroup,
-    joinGroup,
+joinGroup,
     sendMessage,
     editMessage,
     deleteMessage,
