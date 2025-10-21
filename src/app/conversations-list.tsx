@@ -3,12 +3,12 @@
 
 import { useAppContext } from "@/contexts/app-context";
 import { Conversation } from "@/lib/types";
-import { Avatar, AvatarFallback, AvatarImage } from "./ui/avatar";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import Link from "next/link";
 import { formatTimeAgo } from "@/lib/utils";
 import { Bot, Check, CheckCheck, Pin, Shield } from "lucide-react";
-import { Button } from "./ui/button";
-import { Skeleton } from "./ui/skeleton";
+import { Button } from "@/components/ui/button";
+import { Skeleton } from "@/components/ui/skeleton";
 
 function ConversationListSkeleton() {
     return (

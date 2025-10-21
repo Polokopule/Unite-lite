@@ -11,7 +11,7 @@ import { CreatePostForm } from "@/components/create-post-form";
 import { PostCard } from "@/components/post-card";
 import { Home, Book, Users, MessageSquare, BellRing, LayoutDashboard, Building2 } from "lucide-react";
 import Link from "next/link";
-import { ConversationsList } from "@/components/conversations-list";
+import { ConversationsList } from "@/app/conversations-list";
 import { Skeleton } from "@/components/ui/skeleton";
 import NotificationsPage from "./notifications/page";
 import { useRouter } from "next/navigation";
@@ -76,6 +76,41 @@ function HomeFeed() {
     );
 }
 
+function MessagesSkeleton() {
+    return (
+        <div className="space-y-1">
+            {Array.from({ length: 3 }).map((_, i) => (
+                <div key={i} className="flex items-center p-2 gap-3">
+                    <Skeleton className="h-12 w-12 rounded-full" />
+                    <div className="flex-1 space-y-2">
+                        <Skeleton className="h-4 w-3/4" />
+                        <Skeleton className="h-3 w-1/2" />
+                    </div>
+                </div>
+            ))}
+        </div>
+    );
+}
+
+function GroupsSkeleton() {
+    return (
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            {Array.from({ length: 3 }).map((_, i) => (
+                <div key={i} className="border rounded-lg p-4 space-y-3">
+                    <div className="flex items-center gap-4">
+                        <Skeleton className="h-12 w-12 rounded-full" />
+                        <div className="space-y-2">
+                            <Skeleton className="h-5 w-32" />
+                            <Skeleton className="h-4 w-24" />
+                        </div>
+                    </div>
+                    <Skeleton className="h-4 w-20" />
+                    <Skeleton className="h-10 w-full" />
+                </div>
+            ))}
+        </div>
+    );
+}
 
 export default function HomePage() {
     const { user, loading } = useAppContext();
@@ -99,9 +134,9 @@ export default function HomePage() {
     }
 
     return (
-      <div>
+      <div className="w-full">
         <Tabs defaultValue="home" className="w-full">
-            <div className="border-b">
+            <div className="sticky top-16 z-40 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 border-b">
                 <div className="w-full">
                     <TabsList className="grid w-full grid-cols-7 h-16">
                         <TabsTrigger value="home"><Home className="h-6 w-6" /></TabsTrigger>
@@ -115,7 +150,7 @@ export default function HomePage() {
                 </div>
             </div>
             
-            <div className="w-full px-0">
+            <div className="w-full">
                 <TabsContent value="home">
                   <HomeFeed />
                 </TabsContent>
@@ -126,11 +161,13 @@ export default function HomePage() {
                   <CommunityPage />
                 </TabsContent>
                 <TabsContent value="groups">
-                    <GroupsPage />
+                     <div className="container mx-auto py-8">
+                        {loading ? <GroupsSkeleton /> : <GroupsPage />}
+                    </div>
                 </TabsContent>
                 <TabsContent value="messages">
-                    <div className="container mx-auto">
-                        <ConversationsList />
+                    <div className="container mx-auto py-8">
+                        {loading ? <MessagesSkeleton /> : <ConversationsList />}
                     </div>
                 </TabsContent>
                  <TabsContent value="notifications">
