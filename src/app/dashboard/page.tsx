@@ -93,10 +93,10 @@ export default function DashboardPage() {
       <Tabs defaultValue={defaultTab} className="w-full">
          <TabsList>
             {isAdmin && <>
-                <TabsTrigger value="admin_courses"><BookOpen className="h-5 w-5 mr-2" />Approvals</TabsTrigger>
-                <TabsTrigger value="admin_withdrawals"><Banknote className="h-5 w-5 mr-2" />Withdrawals</TabsTrigger>
-                <TabsTrigger value="admin_users"><Shield className="h-5 w-5 mr-2" />Users</TabsTrigger>
-                <TabsTrigger value="admin_all_courses"><BookCopy className="h-5 w-5 mr-2" />All Courses</TabsTrigger>
+                <TabsTrigger value="admin_courses"><BookOpen className="h-5 w-5 mr-2" /></TabsTrigger>
+                <TabsTrigger value="admin_withdrawals"><Banknote className="h-5 w-5 mr-2" /></TabsTrigger>
+                <TabsTrigger value="admin_users"><Shield className="h-5 w-5 mr-2" /></TabsTrigger>
+                <TabsTrigger value="admin_all_courses"><BookCopy className="h-5 w-5 mr-2" /></TabsTrigger>
             </>}
             {user.type === 'user' && <TabsTrigger value="my_courses"><BookOpen className="h-5 w-5 mr-2" />My Courses</TabsTrigger> }
             {user.type === 'business' && <TabsTrigger value="my_ads"><Megaphone className="h-5 w-5 mr-2" />My Ads</TabsTrigger>}

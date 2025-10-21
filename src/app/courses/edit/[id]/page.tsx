@@ -75,7 +75,7 @@ export default function EditCoursePage() {
   
 
   const handleSave = async () => {
-    if (!course || !title || !content || price <= 0) {
+    if (!course || !title || !content || price < 0) {
         toast.error("Please fill out all fields.");
         return;
     }
@@ -152,16 +152,17 @@ export default function EditCoursePage() {
               <Input
                 id="price"
                 type="number"
-                min="1"
+                min="0"
                 placeholder="e.g., 100"
-                value={price > 0 ? price : ''}
+                value={price >= 0 ? price : ''}
                 onChange={(e) => setPrice(Number(e.target.value))}
                 required
               />
+               <p className="text-xs text-muted-foreground">Set to 0 to make the course free.</p>
             </div>
           </CardContent>
           <CardFooter>
-            <Button type="submit" className="w-full sm:w-auto" disabled={!title || !content || price <= 0 || isSaving}>
+            <Button type="submit" className="w-full sm:w-auto" disabled={!title || !content || price < 0 || isSaving}>
                 {isSaving ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <Save className="h-4 w-4 mr-2" />}
                 {isSaving ? 'Resubmitting...' : 'Resubmit for Review'}
             </Button>

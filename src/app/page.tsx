@@ -9,7 +9,7 @@ import CoursesMarketplacePage from "./courses/page";
 import GroupsPage from "./groups/page";
 import { CreatePostForm } from "@/components/create-post-form";
 import { PostCard } from "@/components/post-card";
-import { Home, Book, Users, MessageSquare, BellRing, LayoutDashboard, Building2 } from "lucide-react";
+import { Home, Book, Users, MessageSquare, BellRing, LayoutDashboard, Building2, User } from "lucide-react";
 import Link from "next/link";
 import { ConversationsList } from "@/app/conversations-list";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -19,9 +19,9 @@ import { useRouter } from "next/navigation";
 
 function HomeFeedSkeleton() {
     return (
-        <div className="w-full">
+        <div className="space-y-6">
             <div className="bg-card border-b p-4">
-                 <div className="w-full space-y-2">
+                 <div className="space-y-2">
                     <div className="flex items-center gap-2">
                         <Skeleton className="h-8 w-8 rounded-full" />
                         <Skeleton className="h-10 flex-1 rounded-full" />
@@ -29,25 +29,23 @@ function HomeFeedSkeleton() {
                     </div>
                  </div>
             </div>
-            <div className="py-8 max-w-full space-y-6">
-                {Array.from({ length: 2 }).map((_, i) => (
-                    <div key={i} className="bg-card border rounded-lg">
-                        <div className="p-4">
-                            <div className="flex items-center gap-4">
-                                <Skeleton className="h-10 w-10 rounded-full" />
-                                <div className="space-y-2">
-                                    <Skeleton className="h-4 w-32" />
-                                    <Skeleton className="h-3 w-24" />
-                                </div>
+            {Array.from({ length: 2 }).map((_, i) => (
+                <div key={i} className="bg-card border rounded-lg">
+                    <div className="p-4">
+                        <div className="flex items-center gap-4">
+                            <Skeleton className="h-10 w-10 rounded-full" />
+                            <div className="space-y-2">
+                                <Skeleton className="h-4 w-32" />
+                                <Skeleton className="h-3 w-24" />
                             </div>
                         </div>
-                        <div className="p-4 pt-0 space-y-2">
-                            <Skeleton className="h-4 w-full" />
-                            <Skeleton className="h-4 w-5/6" />
-                        </div>
                     </div>
-                ))}
-            </div>
+                    <div className="p-4 pt-0 space-y-2">
+                        <Skeleton className="h-4 w-full" />
+                        <Skeleton className="h-4 w-5/6" />
+                    </div>
+                </div>
+            ))}
         </div>
     )
 }
@@ -62,7 +60,7 @@ function HomeFeed() {
     return (
         <div className="w-full">
             <CreatePostForm />
-            <div className="py-8 max-w-full space-y-6">
+            <div className="py-8 space-y-6">
                 {posts.length > 0 ? (
                     posts.map(post => <PostCard key={post.id} post={post} />)
                 ) : (
@@ -119,12 +117,12 @@ export default function HomePage() {
     if (loading) {
         return (
             <div>
-                <div className="border-b">
+                <div className="sticky top-16 z-40 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 border-b">
                     <div className="w-full">
-                        <Skeleton className="h-12 w-full" />
+                        <Skeleton className="h-16 w-full" />
                     </div>
                 </div>
-                 <HomeFeedSkeleton />
+                 <div className="p-4"><HomeFeedSkeleton /></div>
             </div>
         );
     }
@@ -151,7 +149,7 @@ export default function HomePage() {
             </div>
             
             <div className="w-full">
-                <TabsContent value="home">
+                <TabsContent value="home" className="p-0 m-0">
                   <HomeFeed />
                 </TabsContent>
                 <TabsContent value="courses">
