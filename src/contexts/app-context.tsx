@@ -1,4 +1,5 @@
 
+
 "use client";
 
 import { PlaceHolderImages } from "@/lib/placeholder-images";
@@ -685,6 +686,7 @@ export function AppContextProvider({ children }: { children: React.ReactNode }) 
         type: 'new_follower' as const,
         targetUrl: `/profile/${user.uid}`,
         targetId: user.uid,
+        message: 'started following you.'
     };
     await createNotification(notificationPayload);
 
@@ -739,12 +741,12 @@ export function AppContextProvider({ children }: { children: React.ReactNode }) 
                 type: 'mention' as const,
                 targetUrl: `/posts/${postId}${commentId ? `#comment-${commentId}` : ''}`,
                 targetId: commentId || postId,
-                message: commentId ? 'a comment' : 'a post',
+                message: `mentioned you in ${commentId ? 'a comment' : 'a post'}.`,
             };
             await createNotification(notificationPayload);
              postToWebView({
                 title: user.name,
-                body: `mentioned you in ${notificationPayload.message}.`,
+                body: notificationPayload.message,
                 url: notificationPayload.targetUrl,
             });
         }
@@ -890,6 +892,7 @@ export function AppContextProvider({ children }: { children: React.ReactNode }) 
                     type: 'post_like' as const,
                     targetUrl: `/posts/${post.id}`,
                     targetId: postId,
+                    message: "liked your post."
                 };
                 await createNotification(notificationPayload);
                 postToWebView({
@@ -949,6 +952,7 @@ export function AppContextProvider({ children }: { children: React.ReactNode }) 
                     type: (parentId ? 'new_reply' : 'new_comment') as 'new_reply' | 'new_comment',
                     targetUrl: `/posts/${postId}#comment-${commentId}`,
                     targetId: postId,
+                    message: `commented on your post.`
                 };
                 await createNotification(notificationPayload);
                 postToWebView({
@@ -969,6 +973,7 @@ export function AppContextProvider({ children }: { children: React.ReactNode }) 
                         type: 'new_reply' as const,
                         targetUrl: `/posts/${postId}#comment-${commentId}`,
                         targetId: postId,
+                        message: `replied to your comment.`
                     };
                     await createNotification(replyNotificationPayload);
                     postToWebView({
@@ -1006,6 +1011,7 @@ export function AppContextProvider({ children }: { children: React.ReactNode }) 
                         type: 'comment_like' as const,
                         targetUrl: `/posts/${postId}#comment-${commentId}`,
                         targetId: postId,
+                        message: 'liked your comment.'
                     };
                     await createNotification(notificationPayload);
                     postToWebView({
