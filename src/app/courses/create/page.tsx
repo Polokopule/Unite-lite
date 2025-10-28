@@ -124,75 +124,77 @@ export default function CreateCoursePage() {
   return (
     <div className="flex flex-col h-[calc(100vh-4rem)] bg-background">
       <form onSubmit={handleSubmit} className="flex flex-col h-full">
-        {/* Header */}
-        <div className="flex-shrink-0 p-4 border-b">
-            <div className="container mx-auto flex items-center justify-between">
-                <div className="flex items-center gap-4">
-                     <BookOpen className="h-6 w-6 text-primary" />
-                     <h1 className="text-xl font-headline font-bold">Create Course</h1>
-                </div>
-                <div className="flex items-center gap-2">
-                    {isMobile && (
-                        <CollapsibleTrigger asChild>
-                            <Button variant="outline" size="sm" onClick={() => setIsSettingsOpen(!isSettingsOpen)}>
-                                <Settings className="h-4 w-4 mr-2"/>
-                                Settings
-                                <ChevronsUpDown className="h-4 w-4 ml-2" />
+        <Collapsible open={isSettingsOpen} onOpenChange={setIsSettingsOpen} className="flex flex-col h-full">
+            {/* Header */}
+            <div className="flex-shrink-0 p-4 border-b">
+                <div className="container mx-auto flex items-center justify-between">
+                    <div className="flex items-center gap-4">
+                        <BookOpen className="h-6 w-6 text-primary" />
+                        <h1 className="text-xl font-headline font-bold">Create Course</h1>
+                    </div>
+                    <div className="flex items-center gap-2">
+                        {isMobile && (
+                            <CollapsibleTrigger asChild>
+                                <Button variant="outline" size="sm">
+                                    <Settings className="h-4 w-4 mr-2"/>
+                                    Settings
+                                    <ChevronsUpDown className="h-4 w-4 ml-2" />
+                                </Button>
+                            </CollapsibleTrigger>
+                        )}
+                        <AlertDialog>
+                        <AlertDialogTrigger asChild>
+                            <Button type="button" size="sm" disabled={!title || !content || !coverImage || (!isFree && price <= 0) || isPublishing}>
+                            {isPublishing ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <CreditCard className="h-4 w-4 mr-2" />}
+                            {isPublishing ? 'Submitting...' : 'Submit for Review'}
                             </Button>
-                        </CollapsibleTrigger>
-                    )}
-                    <AlertDialog>
-                      <AlertDialogTrigger asChild>
-                        <Button type="button" size="sm" disabled={!title || !content || !coverImage || (!isFree && price <= 0) || isPublishing}>
-                          {isPublishing ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <CreditCard className="h-4 w-4 mr-2" />}
-                          {isPublishing ? 'Submitting...' : 'Submit for Review'}
-                        </Button>
-                      </AlertDialogTrigger>
-                      <AlertDialogContent>
-                        <AlertDialogHeader>
-                          <AlertDialogTitle>Submit for Review</AlertDialogTitle>
-                          <AlertDialogDescription>
-                            You are about to submit the course "{title}" for review. An admin will check it before it's published. Are you sure you want to proceed?
-                          </AlertDialogDescription>
-                        </AlertDialogHeader>
-                        <AlertDialogFooter>
-                          <AlertDialogCancel>Cancel</AlertDialogCancel>
-                          <AlertDialogAction onClick={handlePublish}>Yes, Submit</AlertDialogAction>
-                        </AlertDialogFooter>
-                      </AlertDialogContent>
-                    </AlertDialog>
+                        </AlertDialogTrigger>
+                        <AlertDialogContent>
+                            <AlertDialogHeader>
+                            <AlertDialogTitle>Submit for Review</AlertDialogTitle>
+                            <AlertDialogDescription>
+                                You are about to submit the course "{title}" for review. An admin will check it before it's published. Are you sure you want to proceed?
+                            </AlertDialogDescription>
+                            </AlertDialogHeader>
+                            <AlertDialogFooter>
+                            <AlertDialogCancel>Cancel</AlertDialogCancel>
+                            <AlertDialogAction onClick={handlePublish}>Yes, Submit</AlertDialogAction>
+                            </AlertDialogFooter>
+                        </AlertDialogContent>
+                        </AlertDialog>
+                    </div>
                 </div>
             </div>
-        </div>
 
-        <div className="flex-grow flex flex-col md:flex-row container mx-auto overflow-hidden">
-            {/* Main Content & Editor */}
-            <div className="flex-grow flex flex-col overflow-y-auto p-4 md:p-6">
-                <Input
-                    id="title"
-                    placeholder="Course Title"
-                    className="text-2xl md:text-3xl font-bold font-headline border-0 shadow-none focus-visible:ring-0 h-auto p-0 mb-6"
-                    value={title}
-                    onChange={(e) => setTitle(e.target.value)}
-                    required
-                />
-                 {isMobile && (
-                     <CollapsibleContent className="mb-4">
-                        <SettingsContent />
-                     </CollapsibleContent>
-                 )}
-                 <div className="flex-grow min-h-[300px]">
-                    <QuillEditor value={content} onChange={setContent} />
-                 </div>
+            <div className="flex-grow flex flex-col md:flex-row container mx-auto overflow-hidden">
+                {/* Main Content & Editor */}
+                <div className="flex-grow flex flex-col overflow-y-auto p-4 md:p-6">
+                    <Input
+                        id="title"
+                        placeholder="Course Title"
+                        className="text-2xl md:text-3xl font-bold font-headline border-0 shadow-none focus-visible:ring-0 h-auto p-0 mb-6"
+                        value={title}
+                        onChange={(e) => setTitle(e.target.value)}
+                        required
+                    />
+                    {isMobile && (
+                        <CollapsibleContent className="mb-4">
+                            <SettingsContent />
+                        </CollapsibleContent>
+                    )}
+                    <div className="flex-grow min-h-[300px]">
+                        <QuillEditor value={content} onChange={setContent} />
+                    </div>
+                </div>
+                
+                {/* Right Sidebar - Desktop only */}
+                {!isMobile && (
+                    <aside className="w-80 flex-shrink-0 border-l p-6 space-y-6 overflow-y-auto">
+                    <SettingsContent />
+                    </aside>
+                )}
             </div>
-            
-            {/* Right Sidebar - Desktop only */}
-            {!isMobile && (
-                <aside className="w-80 flex-shrink-0 border-l p-6 space-y-6 overflow-y-auto">
-                   <SettingsContent />
-                </aside>
-            )}
-        </div>
+        </Collapsible>
       </form>
     </div>
   );
