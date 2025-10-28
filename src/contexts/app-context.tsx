@@ -19,7 +19,8 @@ type AddCourseData = {
     title: string;
     content: string;
     price: number;
-    coverImage: File;
+    coverImageFile: File | null;
+    coverImageUrl: string;
 };
 
 type AddPostData = {
@@ -58,7 +59,7 @@ interface AppContextType {
   updateUserProfile: (name: string, photoFile: File | null) => Promise<boolean>;
   enableNotifications: () => Promise<void>;
   addCourse: (courseData: AddCourseData) => Promise<boolean>;
-  updateCourse: (courseId: string, courseData: Partial<Omit<Course, 'id' | 'creator' | 'creatorName'>>) => Promise<boolean>;
+  updateCourse: (courseId: string, courseData: Partial<Omit<Course, 'id' | 'creator' | 'creatorName'>>, coverImageFile: File | null) => Promise<boolean>;
   deleteCourse: (courseId: string, isAdmin?: boolean) => Promise<boolean>;
   purchaseCourse: (course: Course) => Promise<boolean>;
   claimAdPoints: () => Promise<void>;
@@ -462,29 +463,33 @@ export function AppContextProvider({ children }: { children: React.ReactNode }) 
   const addCourse = async (courseData: AddCourseData): Promise<boolean> => {
     if (!user || user.type !== 'user') return false;
     
-    const { title, content, price, coverImage } = courseData;
+    const { title, content, price, coverImageFile, coverImageUrl } = courseData;
     
     const promise = async () => {
-        // 1. Upload image to Firebase Storage
-        const courseId = `course-${Date.now()}`;
-        const imageStorageRef = storageRef(storage, `course-images/${courseId}/${coverImage.name}`);
-        const uploadResult = await uploadBytes(imageStorageRef, coverImage);
-        const imageUrl = await getDownloadURL(uploadResult.ref);
+        let finalImageUrl = coverImageUrl;
+        
+        if (coverImageFile) {
+            const imageStorageRef = storageRef(storage, `course-images/${user.uid}/${Date.now()}_${coverImageFile.name}`);
+            const uploadResult = await uploadBytes(imageStorageRef, coverImageFile);
+            finalImageUrl = await getDownloadURL(uploadResult.ref);
+        }
 
-        // 2. Create course object with the storage URL
+        if (!finalImageUrl) {
+            throw new Error("Cover image is required.");
+        }
+
+        const courseId = push(ref(db, 'courses')).key!;
         const newCourse: Omit<Course, 'id'> = {
             title,
             content,
             price,
-            imageUrl,
+            imageUrl: finalImageUrl,
             creator: user.uid,
             creatorName: user.name,
             imageHint: "new course",
             status: 'pending',
             ratings: {}
         };
-
-        // 3. Save course to Realtime Database
         await set(ref(db, `courses/${courseId}`), newCourse);
         return true;
     }
@@ -492,20 +497,26 @@ export function AppContextProvider({ children }: { children: React.ReactNode }) 
     toast.promise(promise(), {
         loading: 'Submitting course for review...',
         success: 'Course submitted successfully!',
-        error: 'Failed to create course.',
+        error: (err) => err.message || 'Failed to create course.',
     });
 
     return promise().catch(() => false);
   };
 
-  const updateCourse = async (courseId: string, courseData: Partial<Omit<Course, 'id' | 'creator' | 'creatorName'>>): Promise<boolean> => {
+  const updateCourse = async (courseId: string, courseData: Partial<Omit<Course, 'id' | 'creator' | 'creatorName'>>, coverImageFile: File | null): Promise<boolean> => {
     if (!user || (user.type !== 'user' && user.email !== 'polokopule91@gmail.com')) return false;
     const courseRef = ref(db, `courses/${courseId}`);
     
     const promise = async () => {
         const courseSnapshot = await get(courseRef);
         if (courseSnapshot.exists() && (courseSnapshot.val().creator === user.uid || user.email === 'polokopule91@gmail.com')) {
-            await update(courseRef, courseData);
+            const updates = { ...courseData };
+            if (coverImageFile) {
+                const imageStorageRef = storageRef(storage, `course-images/${courseId}/${coverImageFile.name}`);
+                const uploadResult = await uploadBytes(imageStorageRef, coverImageFile);
+                updates.imageUrl = await getDownloadURL(uploadResult.ref);
+            }
+            await update(courseRef, updates);
         } else {
             throw new Error("Unauthorized or course not found.");
         }

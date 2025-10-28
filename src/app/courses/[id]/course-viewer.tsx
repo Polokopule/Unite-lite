@@ -7,7 +7,7 @@ import { useEffect, useState, useRef } from "react";
 import { Course } from "@/lib/types";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Download, Loader2, Share2, Star, ThumbsUp } from "lucide-react";
+import { Download, Loader2, Share2, Star, ThumbsUp, Copy } from "lucide-react";
 import Image from "next/image";
 import jsPDF from 'jspdf';
 import html2canvas from 'html2canvas';
@@ -55,6 +55,41 @@ function CourseViewerSkeleton() {
             </Card>
         </div>
     )
+}
+
+function CourseContentViewer({ htmlContent }: { htmlContent: string }) {
+    const contentRef = useRef<HTMLDivElement>(null);
+
+    useEffect(() => {
+        if (contentRef.current) {
+            const codeBlocks = contentRef.current.querySelectorAll('pre');
+            codeBlocks.forEach(block => {
+                const wrapper = document.createElement('div');
+                wrapper.className = 'relative group';
+
+                const copyButton = document.createElement('button');
+                copyButton.innerHTML = `<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="h-4 w-4"><rect width="14" height="14" x="8" y="8" rx="2" ry="2"></rect><path d="M4 16c-1.1 0-2-.9-2-2V4c0-1.1.9-2 2-2h10c1.1 0 2 .9 2 2"></path></svg>`;
+                copyButton.className = 'absolute top-2 right-2 p-1.5 rounded-md bg-gray-700 text-gray-200 opacity-0 group-hover:opacity-100 transition-opacity';
+                
+                copyButton.onclick = () => {
+                    navigator.clipboard.writeText(block.innerText);
+                    toast.success("Code copied to clipboard!");
+                };
+                
+                block.parentNode?.insertBefore(wrapper, block);
+                wrapper.appendChild(block);
+                wrapper.appendChild(copyButton);
+            });
+        }
+    }, [htmlContent]);
+
+    return (
+        <div 
+            ref={contentRef}
+            className="prose dark:prose-invert max-w-none prose-lg prose-p:text-foreground prose-a:text-primary prose-strong:text-foreground prose-headings:text-foreground" 
+            dangerouslySetInnerHTML={{ __html: htmlContent }} 
+        />
+    );
 }
 
 export default function CourseViewer({ courseId }: { courseId: string }) {
@@ -198,7 +233,7 @@ export default function CourseViewer({ courseId }: { courseId: string }) {
                         </div>
                     </CardHeader>
                     <CardContent className="p-0 mt-6">
-                        <div className="prose dark:prose-invert max-w-none prose-lg prose-p:text-foreground prose-a:text-primary prose-strong:text-foreground prose-headings:text-foreground" dangerouslySetInnerHTML={{ __html: course.content }} />
+                       <CourseContentViewer htmlContent={course.content} />
                     </CardContent>
                  </div>
                  {isPurchased && (

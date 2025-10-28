@@ -8,11 +8,12 @@ import { Label } from "@/components/ui/label";
 import { useAppContext } from "@/contexts/app-context";
 import { useRouter, useParams } from "next/navigation";
 import { useEffect, useState } from "react";
-import { BookOpen, CreditCard, Image as ImageIcon, Upload, Loader2, Save } from "lucide-react";
+import { BookOpen, CreditCard, Image as ImageIcon, Upload, Loader2, Save, Link as LinkIcon } from "lucide-react";
 import Image from "next/image";
 import { Course } from "@/lib/types";
 import toast from "react-hot-toast";
 import QuillEditor from "@/components/quill-editor";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 
 export default function EditCoursePage() {
   const { user, courses, updateCourse, loading } = useAppContext();
@@ -23,7 +24,8 @@ export default function EditCoursePage() {
   const [title, setTitle] = useState("");
   const [content, setContent] = useState("");
   const [price, setPrice] = useState(0);
-  const [coverImageUrl, setCoverImageUrl] = useState<string | null>(null);
+  const [coverImageUrl, setCoverImageUrl] = useState("");
+  const [coverImageFile, setCoverImageFile] = useState<File | null>(null);
   const [isSaving, setIsSaving] = useState(false);
   const [isAuthorized, setIsAuthorized] = useState(false);
 
@@ -52,9 +54,17 @@ export default function EditCoursePage() {
 
   }, [user, loading, courses, params.id, router]);
   
+  const handleCoverImageFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      setCoverImageFile(file);
+      setCoverImageUrl(URL.createObjectURL(file));
+    }
+  };
+
 
   const handleSave = async () => {
-    if (!course || !title || !content || price < 0) {
+    if (!course || !title || !content || price < 0 || !coverImageUrl) {
         toast.error("Please fill out all fields.");
         return;
     }
@@ -64,9 +74,9 @@ export default function EditCoursePage() {
       title, 
       content, 
       price, 
-      imageUrl: coverImageUrl || '',
+      imageUrl: coverImageUrl,
       status: 'pending' // Resubmit for review
-    });
+    }, coverImageFile);
     setIsSaving(false);
 
     if(success) {
@@ -110,16 +120,35 @@ export default function EditCoursePage() {
 
              <div className="space-y-2">
                 <Label>Cover Image</Label>
-                <div className="flex items-center gap-4">
-                    <div className="w-48 h-27 border rounded-md flex items-center justify-center bg-muted">
-                       {coverImageUrl ? (
-                         <Image src={coverImageUrl} alt="Cover preview" width={192} height={108} className="object-cover rounded-md" />
-                       ) : (
-                         <ImageIcon className="h-10 w-10 text-muted-foreground" />
-                       )}
+                <Tabs defaultValue="upload" className="w-full">
+                  <TabsList className="grid w-full grid-cols-2">
+                      <TabsTrigger value="upload">Upload New</TabsTrigger>
+                      <TabsTrigger value="url">From URL</TabsTrigger>
+                  </TabsList>
+                  <TabsContent value="upload" className="pt-4">
+                      <Input id="cover-image" type="file" accept="image/*" onChange={handleCoverImageFileChange} />
+                  </TabsContent>
+                  <TabsContent value="url" className="pt-4">
+                      <div className="flex items-center gap-2">
+                          <LinkIcon className="h-4 w-4 text-muted-foreground"/>
+                          <Input 
+                              id="cover-image-url" 
+                              type="url" 
+                              placeholder="https://example.com/image.png"
+                              value={coverImageUrl}
+                              onChange={(e) => {
+                                  setCoverImageUrl(e.target.value);
+                                  setCoverImageFile(null);
+                              }}
+                          />
+                      </div>
+                  </TabsContent>
+              </Tabs>
+                {coverImageUrl && (
+                    <div className="mt-4 w-full aspect-video border-2 border-dashed rounded-md flex items-center justify-center bg-muted">
+                        <Image src={coverImageUrl} alt="Cover preview" width={192} height={108} className="object-cover w-full h-full rounded-md" />
                     </div>
-                    <p className="text-xs text-muted-foreground">Cover image cannot be changed after creation.</p>
-                </div>
+                )}
             </div>
 
             <div className="space-y-2">

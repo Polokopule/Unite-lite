@@ -7,7 +7,7 @@ import { Label } from "@/components/ui/label";
 import { useAppContext } from "@/contexts/app-context";
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
-import { BookOpen, CreditCard, Image as ImageIcon, Upload, Loader2, Settings, ChevronsUpDown } from "lucide-react";
+import { BookOpen, CreditCard, Image as ImageIcon, Upload, Loader2, Settings, Link as LinkIcon } from "lucide-react";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
 import Image from "next/image";
 import toast from "react-hot-toast";
@@ -16,6 +16,7 @@ import QuillEditor from "@/components/quill-editor";
 import { Separator } from "@/components/ui/separator";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { useIsMobile } from "@/hooks/use-mobile";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 
 export default function CreateCoursePage() {
   const { user, addCourse, loading } = useAppContext();
@@ -25,11 +26,13 @@ export default function CreateCoursePage() {
   const [content, setContent] = useState("");
   const [price, setPrice] = useState(1);
   const [isFree, setIsFree] = useState(false);
-  const [coverImage, setCoverImage] = useState<File | null>(null);
-  const [coverImageUrl, setCoverImageUrl] = useState<string | null>(null);
+  const [coverImageFile, setCoverImageFile] = useState<File | null>(null);
+  const [coverImageUrl, setCoverImageUrl] = useState<string>("");
   const [isPublishing, setIsPublishing] = useState(false);
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
   const isMobile = useIsMobile();
+  
+  const isReadyToPublish = title && content && (coverImageFile || coverImageUrl) && (isFree || price > 0);
 
   useEffect(() => {
     if (!loading && (!user || user.type !== 'user')) {
@@ -38,23 +41,28 @@ export default function CreateCoursePage() {
     }
   }, [user, loading, router]);
   
-  const handleCoverImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleCoverImageFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (file) {
-      setCoverImage(file);
+      setCoverImageFile(file);
       setCoverImageUrl(URL.createObjectURL(file));
     }
   };
 
   const handlePublish = async () => {
-    const finalPrice = isFree ? 0 : price;
-    if (!title || !content || (finalPrice < 0) || !coverImage) {
-        toast.error("Please fill out all fields and upload a cover image.");
+    if (!isReadyToPublish) {
+        toast.error("Please fill out all fields and provide a cover image.");
         return;
     }
     
     setIsPublishing(true);
-    const success = await addCourse({ title, content, price: finalPrice, coverImage });
+    const success = await addCourse({ 
+        title, 
+        content, 
+        price: isFree ? 0 : price, 
+        coverImageFile: coverImageFile,
+        coverImageUrl: coverImageUrl,
+    });
     setIsPublishing(false);
 
     if(success) {
@@ -80,21 +88,37 @@ export default function CreateCoursePage() {
         <Separator />
          <div className="space-y-2">
             <Label>Cover Image</Label>
-            <div className="w-full aspect-video border-2 border-dashed rounded-md flex items-center justify-center bg-muted">
-               {coverImageUrl ? (
-                 <Image src={coverImageUrl} alt="Cover preview" width={192} height={108} className="object-cover w-full h-full rounded-md" />
-               ) : (
-                 <ImageIcon className="h-10 w-10 text-muted-foreground" />
-               )}
-            </div>
-            <Input id="cover-image" type="file" accept="image/*" onChange={handleCoverImageChange} className="hidden" />
-            <Button type="button" variant="outline" asChild className="w-full">
-              <Label htmlFor="cover-image" className="cursor-pointer">
-                  <Upload className="h-4 w-4 mr-2" />
-                  Upload Image
-              </Label>
-            </Button>
-            <p className="text-xs text-muted-foreground">Recommended ratio: 16:9</p>
+             <Tabs defaultValue="upload" className="w-full">
+                <TabsList className="grid w-full grid-cols-2">
+                    <TabsTrigger value="upload">Upload</TabsTrigger>
+                    <TabsTrigger value="url">From URL</TabsTrigger>
+                </TabsList>
+                <TabsContent value="upload" className="pt-4">
+                    <Input id="cover-image" type="file" accept="image/*" onChange={handleCoverImageFileChange} />
+                </TabsContent>
+                <TabsContent value="url" className="pt-4">
+                     <div className="flex items-center gap-2">
+                        <LinkIcon className="h-4 w-4 text-muted-foreground"/>
+                        <Input 
+                            id="cover-image-url" 
+                            type="url" 
+                            placeholder="https://example.com/image.png"
+                            value={coverImageUrl}
+                            onChange={(e) => {
+                                setCoverImageUrl(e.target.value);
+                                setCoverImageFile(null);
+                            }}
+                        />
+                    </div>
+                </TabsContent>
+            </Tabs>
+            
+            {coverImageUrl && (
+                <div className="mt-4 w-full aspect-video border-2 border-dashed rounded-md flex items-center justify-center bg-muted">
+                    <Image src={coverImageUrl} alt="Cover preview" width={192} height={108} className="object-cover w-full h-full rounded-md" />
+                </div>
+            )}
+            <p className="text-xs text-muted-foreground mt-2">Recommended ratio: 16:9</p>
         </div>
          <Separator />
         <div className="space-y-4">
@@ -143,7 +167,7 @@ export default function CreateCoursePage() {
                         )}
                         <AlertDialog>
                         <AlertDialogTrigger asChild>
-                            <Button type="button" size="sm" disabled={!title || !content || !coverImage || (!isFree && price <= 0) || isPublishing}>
+                            <Button type="button" size="sm" disabled={!isReadyToPublish || isPublishing}>
                             {isPublishing ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <CreditCard className="h-4 w-4 mr-2" />}
                             {isPublishing ? 'Submitting...' : isMobile ? 'Publish' : 'Submit for Review' }
                             </Button>
