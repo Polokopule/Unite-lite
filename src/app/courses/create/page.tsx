@@ -2,19 +2,20 @@
 "use client";
 
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useAppContext } from "@/contexts/app-context";
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
-import { BookOpen, CreditCard, Image as ImageIcon, Upload, Loader2 } from "lucide-react";
+import { BookOpen, CreditCard, Image as ImageIcon, Upload, Loader2, Settings, ChevronsUpDown } from "lucide-react";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
 import Image from "next/image";
 import toast from "react-hot-toast";
 import { Switch } from "@/components/ui/switch";
 import QuillEditor from "@/components/quill-editor";
 import { Separator } from "@/components/ui/separator";
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
+import { useIsMobile } from "@/hooks/use-mobile";
 
 export default function CreateCoursePage() {
   const { user, addCourse, loading } = useAppContext();
@@ -27,6 +28,8 @@ export default function CreateCoursePage() {
   const [coverImage, setCoverImage] = useState<File | null>(null);
   const [coverImageUrl, setCoverImageUrl] = useState<string | null>(null);
   const [isPublishing, setIsPublishing] = useState(false);
+  const [isSettingsOpen, setIsSettingsOpen] = useState(false);
+  const isMobile = useIsMobile();
 
   useEffect(() => {
     if (!loading && (!user || user.type !== 'user')) {
@@ -71,6 +74,53 @@ export default function CreateCoursePage() {
       return <div className="container mx-auto py-8"><p>Redirecting...</p></div>
   }
 
+  const SettingsContent = () => (
+     <div className="space-y-6">
+        <h2 className="text-lg font-semibold">Course Settings</h2>
+        <Separator />
+         <div className="space-y-2">
+            <Label>Cover Image</Label>
+            <div className="w-full aspect-video border-2 border-dashed rounded-md flex items-center justify-center bg-muted">
+               {coverImageUrl ? (
+                 <Image src={coverImageUrl} alt="Cover preview" width={192} height={108} className="object-cover w-full h-full rounded-md" />
+               ) : (
+                 <ImageIcon className="h-10 w-10 text-muted-foreground" />
+               )}
+            </div>
+            <Input id="cover-image" type="file" accept="image/*" onChange={handleCoverImageChange} className="hidden" />
+            <Button type="button" variant="outline" asChild className="w-full">
+              <Label htmlFor="cover-image" className="cursor-pointer">
+                  <Upload className="h-4 w-4 mr-2" />
+                  Upload Image
+              </Label>
+            </Button>
+            <p className="text-xs text-muted-foreground">Recommended ratio: 16:9</p>
+        </div>
+         <Separator />
+        <div className="space-y-4">
+            <div className="flex items-center justify-between">
+                <Label htmlFor="is-free" className="font-medium">Free Course</Label>
+                <Switch id="is-free" checked={isFree} onCheckedChange={setIsFree} />
+            </div>
+            {!isFree && (
+                <div className="space-y-2">
+                    <Label htmlFor="price">Price (in points)</Label>
+                    <Input
+                        id="price"
+                        type="number"
+                        min="1"
+                        placeholder="e.g., 100"
+                        value={price > 0 ? price : ''}
+                        onChange={(e) => setPrice(Number(e.target.value))}
+                        required
+                        disabled={isFree}
+                    />
+                </div>
+            )}
+        </div>
+    </div>
+  );
+
   return (
     <div className="flex flex-col h-[calc(100vh-4rem)] bg-background">
       <form onSubmit={handleSubmit} className="flex flex-col h-full">
@@ -81,90 +131,67 @@ export default function CreateCoursePage() {
                      <BookOpen className="h-6 w-6 text-primary" />
                      <h1 className="text-xl font-headline font-bold">Create Course</h1>
                 </div>
-                <AlertDialog>
-                  <AlertDialogTrigger asChild>
-                    <Button type="button" size="sm" disabled={!title || !content || !coverImage || (!isFree && price <= 0) || isPublishing}>
-                      {isPublishing ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <CreditCard className="h-4 w-4 mr-2" />}
-                      {isPublishing ? 'Submitting...' : 'Submit for Review'}
-                    </Button>
-                  </AlertDialogTrigger>
-                  <AlertDialogContent>
-                    <AlertDialogHeader>
-                      <AlertDialogTitle>Submit for Review</AlertDialogTitle>
-                      <AlertDialogDescription>
-                        You are about to submit the course "{title}" for review. An admin will check it before it's published. Are you sure you want to proceed?
-                      </AlertDialogDescription>
-                    </AlertDialogHeader>
-                    <AlertDialogFooter>
-                      <AlertDialogCancel>Cancel</AlertDialogCancel>
-                      <AlertDialogAction onClick={handlePublish}>Yes, Submit</AlertDialogAction>
-                    </AlertDialogFooter>
-                  </AlertDialogContent>
-                </AlertDialog>
+                <div className="flex items-center gap-2">
+                    {isMobile && (
+                        <CollapsibleTrigger asChild>
+                            <Button variant="outline" size="sm" onClick={() => setIsSettingsOpen(!isSettingsOpen)}>
+                                <Settings className="h-4 w-4 mr-2"/>
+                                Settings
+                                <ChevronsUpDown className="h-4 w-4 ml-2" />
+                            </Button>
+                        </CollapsibleTrigger>
+                    )}
+                    <AlertDialog>
+                      <AlertDialogTrigger asChild>
+                        <Button type="button" size="sm" disabled={!title || !content || !coverImage || (!isFree && price <= 0) || isPublishing}>
+                          {isPublishing ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <CreditCard className="h-4 w-4 mr-2" />}
+                          {isPublishing ? 'Submitting...' : 'Submit for Review'}
+                        </Button>
+                      </AlertDialogTrigger>
+                      <AlertDialogContent>
+                        <AlertDialogHeader>
+                          <AlertDialogTitle>Submit for Review</AlertDialogTitle>
+                          <AlertDialogDescription>
+                            You are about to submit the course "{title}" for review. An admin will check it before it's published. Are you sure you want to proceed?
+                          </AlertDialogDescription>
+                        </AlertDialogHeader>
+                        <AlertDialogFooter>
+                          <AlertDialogCancel>Cancel</AlertDialogCancel>
+                          <AlertDialogAction onClick={handlePublish}>Yes, Submit</AlertDialogAction>
+                        </AlertDialogFooter>
+                      </AlertDialogContent>
+                    </AlertDialog>
+                </div>
             </div>
         </div>
 
-        <div className="flex-grow flex container mx-auto overflow-hidden">
+        <div className="flex-grow flex flex-col md:flex-row container mx-auto overflow-hidden">
             {/* Main Content & Editor */}
-            <div className="flex-grow flex flex-col overflow-y-auto p-6">
+            <div className="flex-grow flex flex-col overflow-y-auto p-4 md:p-6">
                 <Input
                     id="title"
                     placeholder="Course Title"
-                    className="text-3xl font-bold font-headline border-0 shadow-none focus-visible:ring-0 h-auto p-0 mb-6"
+                    className="text-2xl md:text-3xl font-bold font-headline border-0 shadow-none focus-visible:ring-0 h-auto p-0 mb-6"
                     value={title}
                     onChange={(e) => setTitle(e.target.value)}
                     required
                 />
-                 <div className="flex-grow">
+                 {isMobile && (
+                     <CollapsibleContent className="mb-4">
+                        <SettingsContent />
+                     </CollapsibleContent>
+                 )}
+                 <div className="flex-grow min-h-[300px]">
                     <QuillEditor value={content} onChange={setContent} />
                  </div>
             </div>
             
-            {/* Right Sidebar */}
-            <aside className="w-80 flex-shrink-0 border-l p-6 space-y-6 overflow-y-auto">
-                <h2 className="text-lg font-semibold">Course Settings</h2>
-                <Separator />
-                 <div className="space-y-2">
-                    <Label>Cover Image</Label>
-                    <div className="w-full aspect-video border-2 border-dashed rounded-md flex items-center justify-center bg-muted">
-                       {coverImageUrl ? (
-                         <Image src={coverImageUrl} alt="Cover preview" width={192} height={108} className="object-cover w-full h-full rounded-md" />
-                       ) : (
-                         <ImageIcon className="h-10 w-10 text-muted-foreground" />
-                       )}
-                    </div>
-                    <Input id="cover-image" type="file" accept="image/*" onChange={handleCoverImageChange} className="hidden" />
-                    <Button type="button" variant="outline" asChild className="w-full">
-                      <Label htmlFor="cover-image" className="cursor-pointer">
-                          <Upload className="h-4 w-4 mr-2" />
-                          Upload Image
-                      </Label>
-                    </Button>
-                    <p className="text-xs text-muted-foreground">Recommended ratio: 16:9</p>
-                </div>
-                 <Separator />
-                <div className="space-y-4">
-                    <div className="flex items-center justify-between">
-                        <Label htmlFor="is-free" className="font-medium">Free Course</Label>
-                        <Switch id="is-free" checked={isFree} onCheckedChange={setIsFree} />
-                    </div>
-                    {!isFree && (
-                        <div className="space-y-2">
-                            <Label htmlFor="price">Price (in points)</Label>
-                            <Input
-                                id="price"
-                                type="number"
-                                min="1"
-                                placeholder="e.g., 100"
-                                value={price > 0 ? price : ''}
-                                onChange={(e) => setPrice(Number(e.target.value))}
-                                required
-                                disabled={isFree}
-                            />
-                        </div>
-                    )}
-                </div>
-            </aside>
+            {/* Right Sidebar - Desktop only */}
+            {!isMobile && (
+                <aside className="w-80 flex-shrink-0 border-l p-6 space-y-6 overflow-y-auto">
+                   <SettingsContent />
+                </aside>
+            )}
         </div>
       </form>
     </div>
