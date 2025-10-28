@@ -13,7 +13,6 @@ import Image from "next/image";
 import { Course } from "@/lib/types";
 import toast from "react-hot-toast";
 import QuillEditor from "@/components/quill-editor";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 
 export default function EditCoursePage() {
   const { user, courses, updateCourse, loading } = useAppContext();
@@ -118,37 +117,40 @@ export default function EditCoursePage() {
               />
             </div>
 
-             <div className="space-y-2">
-                <Label>Cover Image</Label>
-                <Tabs defaultValue="upload" className="w-full">
-                  <TabsList className="grid w-full grid-cols-2">
-                      <TabsTrigger value="upload">Upload New</TabsTrigger>
-                      <TabsTrigger value="url">From URL</TabsTrigger>
-                  </TabsList>
-                  <TabsContent value="upload" className="pt-4">
-                      <Input id="cover-image" type="file" accept="image/*" onChange={handleCoverImageFileChange} />
-                  </TabsContent>
-                  <TabsContent value="url" className="pt-4">
-                      <div className="flex items-center gap-2">
-                          <LinkIcon className="h-4 w-4 text-muted-foreground"/>
-                          <Input 
-                              id="cover-image-url" 
-                              type="url" 
-                              placeholder="https://example.com/image.png"
-                              value={coverImageUrl}
-                              onChange={(e) => {
-                                  setCoverImageUrl(e.target.value);
-                                  setCoverImageFile(null);
-                              }}
-                          />
-                      </div>
-                  </TabsContent>
-              </Tabs>
-                {coverImageUrl && (
-                    <div className="mt-4 w-full aspect-video border-2 border-dashed rounded-md flex items-center justify-center bg-muted">
-                        <Image src={coverImageUrl} alt="Cover preview" width={192} height={108} className="object-cover w-full h-full rounded-md" />
-                    </div>
-                )}
+            <div className="space-y-4">
+              <Label>Cover Image</Label>
+              <div>
+                <Label htmlFor="cover-image-upload" className="text-sm font-normal">Upload new image</Label>
+                <Input id="cover-image-upload" type="file" accept="image/*" onChange={handleCoverImageFileChange} />
+              </div>
+              <div className="relative">
+                  <div className="absolute inset-0 flex items-center">
+                      <span className="w-full border-t" />
+                  </div>
+                  <div className="relative flex justify-center text-xs uppercase">
+                      <span className="bg-card px-2 text-muted-foreground">
+                      Or use existing URL
+                      </span>
+                  </div>
+              </div>
+               <div className="flex items-center gap-2">
+                  <LinkIcon className="h-4 w-4 text-muted-foreground"/>
+                  <Input 
+                      id="cover-image-url" 
+                      type="url" 
+                      placeholder="https://example.com/image.png"
+                      value={coverImageUrl}
+                      onChange={(e) => {
+                          setCoverImageUrl(e.target.value);
+                          setCoverImageFile(null);
+                      }}
+                  />
+              </div>
+              {coverImageUrl && (
+                  <div className="mt-4 w-full aspect-video border-2 border-dashed rounded-md flex items-center justify-center bg-muted">
+                      <Image src={coverImageUrl} alt="Cover preview" width={192} height={108} className="object-cover w-full h-full rounded-md" />
+                  </div>
+              )}
             </div>
 
             <div className="space-y-2">

@@ -16,7 +16,6 @@ import QuillEditor from "@/components/quill-editor";
 import { Separator } from "@/components/ui/separator";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { useIsMobile } from "@/hooks/use-mobile";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 
 export default function CreateCoursePage() {
   const { user, addCourse, loading } = useAppContext();
@@ -32,7 +31,7 @@ export default function CreateCoursePage() {
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
   const isMobile = useIsMobile();
   
-  const isReadyToPublish = title && content && (coverImageFile || coverImageUrl) && (isFree || price > 0);
+  const isReadyToPublish = title && content && coverImageUrl && (isFree || price > 0);
 
   useEffect(() => {
     if (!loading && (!user || user.type !== 'user')) {
@@ -86,32 +85,41 @@ export default function CreateCoursePage() {
      <div className="space-y-6">
         <h2 className="text-lg font-semibold">Course Settings</h2>
         <Separator />
-         <div className="space-y-2">
+         <div className="space-y-4">
             <Label>Cover Image</Label>
-             <Tabs defaultValue="upload" className="w-full">
-                <TabsList className="grid w-full grid-cols-2">
-                    <TabsTrigger value="upload">Upload</TabsTrigger>
-                    <TabsTrigger value="url">From URL</TabsTrigger>
-                </TabsList>
-                <TabsContent value="upload" className="pt-4">
-                    <Input id="cover-image" type="file" accept="image/*" onChange={handleCoverImageFileChange} />
-                </TabsContent>
-                <TabsContent value="url" className="pt-4">
-                     <div className="flex items-center gap-2">
-                        <LinkIcon className="h-4 w-4 text-muted-foreground"/>
-                        <Input 
-                            id="cover-image-url" 
-                            type="url" 
-                            placeholder="https://example.com/image.png"
-                            value={coverImageUrl}
-                            onChange={(e) => {
-                                setCoverImageUrl(e.target.value);
-                                setCoverImageFile(null);
-                            }}
-                        />
-                    </div>
-                </TabsContent>
-            </Tabs>
+            
+            <div>
+              <Label htmlFor="cover-image-upload" className="text-sm font-normal">Upload from device</Label>
+              <Input id="cover-image-upload" type="file" accept="image/*" onChange={handleCoverImageFileChange} />
+            </div>
+
+            <div className="relative">
+              <div className="absolute inset-0 flex items-center">
+                  <span className="w-full border-t" />
+              </div>
+              <div className="relative flex justify-center text-xs uppercase">
+                  <span className="bg-card px-2 text-muted-foreground">
+                  Or
+                  </span>
+              </div>
+            </div>
+
+            <div>
+              <Label htmlFor="cover-image-url" className="text-sm font-normal">Paste image URL</Label>
+               <div className="flex items-center gap-2">
+                  <LinkIcon className="h-4 w-4 text-muted-foreground"/>
+                  <Input 
+                      id="cover-image-url" 
+                      type="url" 
+                      placeholder="https://example.com/image.png"
+                      value={coverImageUrl}
+                      onChange={(e) => {
+                          setCoverImageUrl(e.target.value);
+                          setCoverImageFile(null);
+                      }}
+                  />
+              </div>
+            </div>
             
             {coverImageUrl && (
                 <div className="mt-4 w-full aspect-video border-2 border-dashed rounded-md flex items-center justify-center bg-muted">
