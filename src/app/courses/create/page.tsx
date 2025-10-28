@@ -127,10 +127,10 @@ export default function CreateCoursePage() {
         <Collapsible open={isSettingsOpen} onOpenChange={setIsSettingsOpen} className="flex flex-col h-full">
             {/* Header */}
             <div className="flex-shrink-0 p-4 border-b">
-                <div className="container mx-auto flex items-center justify-between">
-                    <div className="flex items-center gap-4">
+                <div className="container mx-auto flex items-center justify-between gap-2">
+                    <div className="flex items-center gap-2 md:gap-4 flex-shrink-0">
                         <BookOpen className="h-6 w-6 text-primary" />
-                        <h1 className="text-xl font-headline font-bold">Create Course</h1>
+                        <h1 className="text-lg md:text-xl font-headline font-bold truncate">Create Course</h1>
                     </div>
                     <div className="flex items-center gap-2">
                         {isMobile && (
@@ -138,7 +138,6 @@ export default function CreateCoursePage() {
                                 <Button variant="outline" size="sm">
                                     <Settings className="h-4 w-4 mr-2"/>
                                     Settings
-                                    <ChevronsUpDown className="h-4 w-4 ml-2" />
                                 </Button>
                             </CollapsibleTrigger>
                         )}
@@ -146,7 +145,7 @@ export default function CreateCoursePage() {
                         <AlertDialogTrigger asChild>
                             <Button type="button" size="sm" disabled={!title || !content || !coverImage || (!isFree && price <= 0) || isPublishing}>
                             {isPublishing ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <CreditCard className="h-4 w-4 mr-2" />}
-                            {isPublishing ? 'Submitting...' : 'Submit for Review'}
+                            {isPublishing ? 'Submitting...' : isMobile ? 'Publish' : 'Submit for Review' }
                             </Button>
                         </AlertDialogTrigger>
                         <AlertDialogContent>
