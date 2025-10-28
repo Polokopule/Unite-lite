@@ -14,6 +14,7 @@ import Image from "next/image";
 import toast from "react-hot-toast";
 import { Switch } from "@/components/ui/switch";
 import QuillEditor from "@/components/quill-editor";
+import { Separator } from "@/components/ui/separator";
 
 export default function CreateCoursePage() {
   const { user, addCourse, loading } = useAppContext();
@@ -71,101 +72,101 @@ export default function CreateCoursePage() {
   }
 
   return (
-    <div className="container mx-auto flex items-center justify-center min-h-[calc(100vh-4rem)] py-12">
-      <Card className="w-full max-w-4xl">
-        <form onSubmit={handleSubmit}>
-          <CardHeader>
-             <div className="flex items-center gap-4">
-                <BookOpen className="h-8 w-8 text-primary" />
-                <div>
-                    <CardTitle className="text-2xl font-headline">Create a New Course</CardTitle>
-                    <CardDescription>Share your knowledge with the Unite community. Your course will be reviewed before publishing.</CardDescription>
-                </div>
-            </div>
-          </CardHeader>
-          <CardContent className="space-y-6">
-            <div className="space-y-2">
-              <Label htmlFor="title">Course Title</Label>
-              <Input
-                id="title"
-                placeholder="e.g., Introduction to Python"
-                value={title}
-                onChange={(e) => setTitle(e.target.value)}
-                required
-              />
-            </div>
-
-            <div className="space-y-2">
-                <Label>Cover Image</Label>
+    <div className="flex flex-col h-[calc(100vh-4rem)] bg-background">
+      <form onSubmit={handleSubmit} className="flex flex-col h-full">
+        {/* Header */}
+        <div className="flex-shrink-0 p-4 border-b">
+            <div className="container mx-auto flex items-center justify-between">
                 <div className="flex items-center gap-4">
-                    <div className="w-48 h-27 border-2 border-dashed rounded-md flex items-center justify-center bg-muted">
+                     <BookOpen className="h-6 w-6 text-primary" />
+                     <h1 className="text-xl font-headline font-bold">Create Course</h1>
+                </div>
+                <AlertDialog>
+                  <AlertDialogTrigger asChild>
+                    <Button type="button" size="sm" disabled={!title || !content || !coverImage || (!isFree && price <= 0) || isPublishing}>
+                      {isPublishing ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <CreditCard className="h-4 w-4 mr-2" />}
+                      {isPublishing ? 'Submitting...' : 'Submit for Review'}
+                    </Button>
+                  </AlertDialogTrigger>
+                  <AlertDialogContent>
+                    <AlertDialogHeader>
+                      <AlertDialogTitle>Submit for Review</AlertDialogTitle>
+                      <AlertDialogDescription>
+                        You are about to submit the course "{title}" for review. An admin will check it before it's published. Are you sure you want to proceed?
+                      </AlertDialogDescription>
+                    </AlertDialogHeader>
+                    <AlertDialogFooter>
+                      <AlertDialogCancel>Cancel</AlertDialogCancel>
+                      <AlertDialogAction onClick={handlePublish}>Yes, Submit</AlertDialogAction>
+                    </AlertDialogFooter>
+                  </AlertDialogContent>
+                </AlertDialog>
+            </div>
+        </div>
+
+        <div className="flex-grow flex container mx-auto overflow-hidden">
+            {/* Main Content & Editor */}
+            <div className="flex-grow flex flex-col overflow-y-auto p-6">
+                <Input
+                    id="title"
+                    placeholder="Course Title"
+                    className="text-3xl font-bold font-headline border-0 shadow-none focus-visible:ring-0 h-auto p-0 mb-6"
+                    value={title}
+                    onChange={(e) => setTitle(e.target.value)}
+                    required
+                />
+                 <div className="flex-grow">
+                    <QuillEditor value={content} onChange={setContent} />
+                 </div>
+            </div>
+            
+            {/* Right Sidebar */}
+            <aside className="w-80 flex-shrink-0 border-l p-6 space-y-6 overflow-y-auto">
+                <h2 className="text-lg font-semibold">Course Settings</h2>
+                <Separator />
+                 <div className="space-y-2">
+                    <Label>Cover Image</Label>
+                    <div className="w-full aspect-video border-2 border-dashed rounded-md flex items-center justify-center bg-muted">
                        {coverImageUrl ? (
-                         <Image src={coverImageUrl} alt="Cover preview" width={192} height={108} className="object-cover rounded-md" />
+                         <Image src={coverImageUrl} alt="Cover preview" width={192} height={108} className="object-cover w-full h-full rounded-md" />
                        ) : (
                          <ImageIcon className="h-10 w-10 text-muted-foreground" />
                        )}
                     </div>
                     <Input id="cover-image" type="file" accept="image/*" onChange={handleCoverImageChange} className="hidden" />
-                    <Button type="button" variant="outline" asChild>
+                    <Button type="button" variant="outline" asChild className="w-full">
                       <Label htmlFor="cover-image" className="cursor-pointer">
                           <Upload className="h-4 w-4 mr-2" />
                           Upload Image
                       </Label>
                     </Button>
+                    <p className="text-xs text-muted-foreground">Recommended ratio: 16:9</p>
                 </div>
-                <p className="text-xs text-muted-foreground">Recommended aspect ratio: 16:9</p>
-            </div>
-
-            <div className="space-y-2">
-              <Label htmlFor="content">Course Content</Label>
-              <QuillEditor value={content} onChange={setContent} />
-            </div>
-            <div className="space-y-4">
-                <div className="flex items-center space-x-2">
-                    <Switch id="is-free" checked={isFree} onCheckedChange={setIsFree} />
-                    <Label htmlFor="is-free">Make this course free</Label>
-                </div>
-                {!isFree && (
-                    <div className="space-y-2">
-                        <Label htmlFor="price">Price (in points)</Label>
-                        <Input
-                            id="price"
-                            type="number"
-                            min="1"
-                            placeholder="e.g., 100"
-                            value={price > 0 ? price : ''}
-                            onChange={(e) => setPrice(Number(e.target.value))}
-                            required
-                            disabled={isFree}
-                        />
+                 <Separator />
+                <div className="space-y-4">
+                    <div className="flex items-center justify-between">
+                        <Label htmlFor="is-free" className="font-medium">Free Course</Label>
+                        <Switch id="is-free" checked={isFree} onCheckedChange={setIsFree} />
                     </div>
-                )}
-            </div>
-          </CardContent>
-          <CardFooter>
-             <AlertDialog>
-              <AlertDialogTrigger asChild>
-                <Button type="button" className="w-full sm:w-auto" disabled={!title || !content || !coverImage || (!isFree && price <= 0) || isPublishing}>
-                  {isPublishing ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <CreditCard className="h-4 w-4 mr-2" />}
-                  {isPublishing ? 'Submitting...' : 'Submit for Review'}
-                </Button>
-              </AlertDialogTrigger>
-              <AlertDialogContent>
-                <AlertDialogHeader>
-                  <AlertDialogTitle>Submit for Review</AlertDialogTitle>
-                  <AlertDialogDescription>
-                    You are about to submit the course "{title}" for review. An admin will check it before it's published. Are you sure you want to proceed?
-                  </AlertDialogDescription>
-                </AlertDialogHeader>
-                <AlertDialogFooter>
-                  <AlertDialogCancel>Cancel</AlertDialogCancel>
-                  <AlertDialogAction onClick={handlePublish}>Yes, Submit</AlertDialogAction>
-                </AlertDialogFooter>
-              </AlertDialogContent>
-            </AlertDialog>
-          </CardFooter>
-        </form>
-      </Card>
+                    {!isFree && (
+                        <div className="space-y-2">
+                            <Label htmlFor="price">Price (in points)</Label>
+                            <Input
+                                id="price"
+                                type="number"
+                                min="1"
+                                placeholder="e.g., 100"
+                                value={price > 0 ? price : ''}
+                                onChange={(e) => setPrice(Number(e.target.value))}
+                                required
+                                disabled={isFree}
+                            />
+                        </div>
+                    )}
+                </div>
+            </aside>
+        </div>
+      </form>
     </div>
   );
 }
