@@ -66,3 +66,14 @@
     @apply bg-background text-foreground;
   }
 }
+
+/* Make quill editor toolbar background match theme */
+.ql-toolbar {
+  background-color: hsl(var(--card));
+  border-bottom: 1px solid hsl(var(--border)) !important;
+}
+
+/* Make quill editor content background match theme */
+.ql-container {
+    background-color: hsl(var(--card));
+}

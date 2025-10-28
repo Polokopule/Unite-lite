@@ -12,29 +12,8 @@ import { BookOpen, CreditCard, Image as ImageIcon, Upload, Loader2 } from "lucid
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
 import Image from "next/image";
 import toast from "react-hot-toast";
-import { Editor, EditorProvider } from "react-simple-wysiwyg";
 import { Switch } from "@/components/ui/switch";
-
-function RichTextEditor({ value, onChange }: { value: string, onChange: (value: string) => void }) {
-  return (
-    <EditorProvider>
-        <Editor
-            value={value}
-            onChange={(e) => onChange(e.target.value)}
-            containerProps={{ 
-                style: { 
-                    resize: 'vertical', 
-                    minHeight: '400px',
-                    border: '1px solid hsl(var(--border))',
-                    borderRadius: 'var(--radius)',
-                    fontSize: '16px'
-                } 
-            }}
-        />
-    </EditorProvider>
-  );
-}
-
+import QuillEditor from "@/components/quill-editor";
 
 export default function CreateCoursePage() {
   const { user, addCourse, loading } = useAppContext();
@@ -139,7 +118,7 @@ export default function CreateCoursePage() {
 
             <div className="space-y-2">
               <Label htmlFor="content">Course Content</Label>
-              <RichTextEditor value={content} onChange={setContent} />
+              <QuillEditor value={content} onChange={setContent} />
             </div>
             <div className="space-y-4">
                 <div className="flex items-center space-x-2">
