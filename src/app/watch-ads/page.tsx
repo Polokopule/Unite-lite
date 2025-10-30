@@ -1,3 +1,4 @@
+
 "use client";
 
 import { Button } from "@/components/ui/button";
@@ -55,7 +56,8 @@ export default function WatchAdsPage() {
   // --- Claim points ---
   const handleClaimPoints = async () => {
     setIsClaiming(true);
-    await claimAdPoints(adType === "adult" ? REWARD_ADULT : REWARD_NORMAL);
+    const reward = adType === "adult" ? REWARD_ADULT : REWARD_NORMAL;
+    await claimAdPoints(reward);
     setIsClaiming(false);
     setIsWatching(false);
     setTimeLeft(0);

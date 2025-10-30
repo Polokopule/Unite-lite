@@ -14,6 +14,9 @@ import { getMessaging, getToken, onMessage } from "firebase/messaging";
 import { app } from "@/lib/firebase"; // Import app
 import toast from 'react-hot-toast';
 import { getLinkPreview } from "@/ai/flows/get-link-preview-flow";
+import { Button } from "@/components/ui/button";
+import Link from "next/link";
+import { Wallet, X } from "lucide-react";
 
 type AddCourseData = {
     title: string;
@@ -62,7 +65,7 @@ interface AppContextType {
   updateCourse: (courseId: string, courseData: Partial<Omit<Course, 'id' | 'creator' | 'creatorName'>>, coverImageFile: File | null) => Promise<boolean>;
   deleteCourse: (courseId: string, isAdmin?: boolean) => Promise<boolean>;
   purchaseCourse: (course: Course) => Promise<boolean>;
-  claimAdPoints: () => Promise<void>;
+  claimAdPoints: (reward: number) => Promise<void>;
   createAd: (ad: Omit<Ad, 'id' | 'creator' | 'views'>) => Promise<boolean>;
   updateAd: (adId: string, adData: Partial<Omit<Ad, 'id' | 'creator'>>) => Promise<boolean>;
   deleteAd: (adId: string) => Promise<boolean>;
@@ -259,6 +262,53 @@ export function AppContextProvider({ children }: { children: React.ReactNode }) 
       groupsListener();
     };
   }, []);
+  
+    useEffect(() => {
+        if (user && user.type === 'user' && user.points < 10) {
+            // Show toast randomly (e.g., 20% chance) to avoid being annoying
+            if (Math.random() < 0.2) {
+                toast.custom(
+                    (t) => (
+                        <div
+                            className={`${
+                                t.visible ? 'animate-in' : 'animate-out'
+                            } max-w-md w-full bg-background shadow-lg rounded-lg pointer-events-auto flex ring-1 ring-black ring-opacity-5`}
+                        >
+                            <div className="flex-1 w-0 p-4">
+                                <div className="flex items-start">
+                                    <div className="flex-shrink-0 pt-0.5">
+                                        <Wallet className="h-10 w-10 text-primary" />
+                                    </div>
+                                    <div className="ml-3 flex-1">
+                                        <p className="text-sm font-medium text-foreground">
+                                            Low on Points?
+                                        </p>
+                                        <p className="mt-1 text-sm text-muted-foreground">
+                                            Watch ads to earn more Unite Points and unlock amazing courses!
+                                        </p>
+                                        <div className="mt-2">
+                                           <Button asChild onClick={() => toast.dismiss(t.id)}>
+                                               <Link href="/watch-ads">Watch Ads</Link>
+                                           </Button>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                            <div className="flex border-l border-border">
+                                <button
+                                    onClick={() => toast.dismiss(t.id)}
+                                    className="w-full border border-transparent rounded-none rounded-r-lg p-4 flex items-center justify-center text-sm font-medium text-primary hover:text-primary/80 focus:outline-none focus:ring-2 focus:ring-primary"
+                                >
+                                    <X className="h-5 w-5" />
+                                </button>
+                            </div>
+                        </div>
+                    ),
+                    { duration: 10000 } // Stays for 10 seconds
+                );
+            }
+        }
+    }, [user]);
 
   useEffect(() => {
     let purchasedListener: () => void;
@@ -582,24 +632,15 @@ export function AppContextProvider({ children }: { children: React.ReactNode }) 
     return promise().then(() => true).catch(() => false);
   };
   
-  const claimAdPoints = async () => {
+  const claimAdPoints = async (reward: number) => {
     if (!user || user.type !== 'user') return;
-    const now = Date.now();
-    const COOLDOWN_TIME = 5 * 60 * 1000; // 5 minutes
-    const lastClaim = user.lastAdClaim || 0;
 
-    if (now - lastClaim < COOLDOWN_TIME) {
-        toast.error(`Please wait ${Math.ceil((COOLDOWN_TIME - (now - lastClaim)) / 1000)}s`);
-        return;
-    }
-
-    const pointsToEarn = 0.005;
     const userRef = ref(db, `users/${user.uid}`);
     
     try {
-        const updatedPoints = (user.points || 0) + pointsToEarn;
-        await update(userRef, { points: updatedPoints, lastAdClaim: now });
-        toast.success(`You earned ${pointsToEarn} UPs!`);
+        const updatedPoints = (user.points || 0) + reward;
+        await update(userRef, { points: updatedPoints });
+        toast.success(`You earned ${reward} UPs!`);
     } catch(e) {
         toast.error("Failed to claim points.");
     }
