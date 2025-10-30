@@ -59,8 +59,6 @@ export default function RootLayout({
               />
             </AppContextProvider>
         </ThemeProvider>
-        <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-6024568817887379"
-     crossorigin="anonymous"></script> 
       </body>
     </html>
   );
