@@ -2,14 +2,14 @@
 "use client";
 
 import { useAppContext } from "@/contexts/app-context";
-import { Button } from "./ui/button";
-import { Logo } from "./logo";
+import { Button } from "@/components/ui/button";
+import { Logo } from "@/components/logo";
 import Link from "next/link";
-import { Avatar, AvatarFallback, AvatarImage } from "./ui/avatar";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Briefcase, LogOut, User as UserIcon, Wallet, Users, Home, MessageSquare, Edit, Menu, ShoppingBag, BookOpen, BellRing, Settings, DollarSign, LayoutDashboard, Bot } from "lucide-react";
-import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from "./ui/sheet";
+import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from "@/components/ui/sheet";
 import { useState } from "react";
-import { Separator } from "./ui/separator";
+import { Separator } from "@/components/ui/separator";
 
 function AuthSheet() {
     const [open, setOpen] = useState(false);

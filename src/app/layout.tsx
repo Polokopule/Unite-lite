@@ -2,7 +2,7 @@
 import type { Metadata } from 'next';
 import './globals.css';
 import { AppContextProvider } from '@/contexts/app-context';
-import { Header } from '@/components/header';
+import { Header } from './header';
 import { Toaster } from 'react-hot-toast';
 import { ThemeProvider } from '@/components/theme-provider';
 
@@ -35,6 +35,7 @@ export default function RootLayout({
           rel="stylesheet"
         />
         <meta name="google-adsense-account" content="ca-pub-6024568817887379" />
+        <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-6024568817887379" crossOrigin="anonymous"></script>
       </head>
       <body className="font-body antialiased">
         <ThemeProvider
