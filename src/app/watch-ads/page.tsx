@@ -1,126 +1,139 @@
-
 "use client";
 
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { useAppContext } from "@/contexts/app-context";
-import { Loader2, Wallet } from "lucide-react";
+import { Loader2, Wallet, Lock } from "lucide-react";
 import { useRouter } from "next/navigation";
-import { useEffect, useState, useRef } from "react";
-import Script from "next/script";
+import { useEffect, useState } from "react";
 
 export default function WatchAdsPage() {
   const { user, loading, claimAdPoints } = useAppContext();
   const router = useRouter();
-  const [isClaiming, setIsClaiming] = useState(false);
-  const [adLoaded, setAdLoaded] = useState(false);
-  const adRef = useRef<HTMLDivElement>(null);
 
-  // 5 minute cooldown
-  const COOLDOWN_TIME = 5 * 60 * 1000;
+  const [adType, setAdType] = useState<"normal" | "adult">("normal");
+  const [isWatching, setIsWatching] = useState(false);
   const [timeLeft, setTimeLeft] = useState(0);
+  const [isClaiming, setIsClaiming] = useState(false);
 
+  // --- CONFIG ---
+  const AD_DURATION = 60; // 1 minute
+  const NORMAL_AD_URL =
+    "https://consumeairlinercalligraphy.com/u1c6psiym1?key=243807878f61d15ee4a2a3ea0a674ed2";
+  const ADULT_AD_URL =
+    "https://consumeairlinercalligraphy.com/b6iwu8pm?key=a2c4d468351cd225d98f30a245e9f467";
+  const REWARD_NORMAL = 0.005;
+  const REWARD_ADULT = 0.05;
+
+  // --- Verify login ---
   useEffect(() => {
-    if (!loading && (!user || user.type !== 'user')) {
-      router.push('/login-user');
+    if (!loading && (!user || user.type !== "user")) {
+      router.push("/login-user");
     }
   }, [user, loading, router]);
-  
-   useEffect(() => {
-    if (user?.lastAdClaim) {
-      const now = Date.now();
-      const timeSinceLastClaim = now - user.lastAdClaim;
-      if (timeSinceLastClaim < COOLDOWN_TIME) {
-        setTimeLeft(COOLDOWN_TIME - timeSinceLastClaim);
-      }
-    }
 
-    const timer = setInterval(() => {
-      setTimeLeft(prev => (prev > 1000 ? prev - 1000 : 0));
-    }, 1000);
-
-    return () => clearInterval(timer);
-  }, [user?.lastAdClaim]);
-
+  // --- Countdown timer ---
   useEffect(() => {
-    try {
-      (window.adsbygoogle = window.adsbygoogle || []).push({});
-      // We can check if the ad container has been populated.
-      // This is a heuristic and might need adjustment.
-      const observer = new MutationObserver((mutations) => {
-        if (adRef.current && adRef.current.querySelector('iframe')) {
-            setAdLoaded(true);
-            observer.disconnect();
-        }
-      });
-      if(adRef.current){
-          observer.observe(adRef.current, { childList: true, subtree: true });
-      }
-      return () => observer.disconnect();
-    } catch (e) {
-      console.error("AdSense error:", e);
-    }
-  }, []);
+    if (!isWatching) return;
+    const timer = setInterval(() => {
+      setTimeLeft((prev) => (prev > 0 ? prev - 1 : 0));
+    }, 1000);
+    return () => clearInterval(timer);
+  }, [isWatching]);
 
+  // --- Start watching ---
+  const startWatching = (type: "normal" | "adult") => {
+    setAdType(type);
+    setIsWatching(true);
+    setTimeLeft(AD_DURATION);
+
+    // Fullscreen
+    const el = document.documentElement;
+    if (el.requestFullscreen) el.requestFullscreen();
+    else if ((el as any).webkitRequestFullscreen) (el as any).webkitRequestFullscreen();
+  };
+
+  // --- Claim points ---
   const handleClaimPoints = async () => {
     setIsClaiming(true);
-    await claimAdPoints();
+    await claimAdPoints(adType === "adult" ? REWARD_ADULT : REWARD_NORMAL);
     setIsClaiming(false);
+    setIsWatching(false);
+    setTimeLeft(0);
+
+    if (document.fullscreenElement) document.exitFullscreen();
+    router.push("/");
   };
-  
-  if (loading || !user || user.type !== 'user') {
-    return <div className="container mx-auto py-8"><p>Redirecting...</p></div>;
+
+  const canClaim = timeLeft === 0 && isWatching;
+  const adUrl = adType === "adult" ? ADULT_AD_URL : NORMAL_AD_URL;
+  const reward = adType === "adult" ? REWARD_ADULT : REWARD_NORMAL;
+
+  // --- Redirect if not logged in ---
+  if (loading || !user || user.type !== "user") {
+    return (
+      <div className="container mx-auto py-8 text-center">
+        <p>Redirecting...</p>
+      </div>
+    );
   }
 
-  const canClaim = timeLeft === 0;
+  // --- Fullscreen watching mode with overlay ---
+  if (isWatching) {
+    return (
+      <div className="fixed inset-0 z-50">
+        <iframe
+          src={adUrl}
+          title="Ad"
+          className="w-full h-full border-none"
+          allow="autoplay"
+        />
 
-  return (
-    <>
-      <Script
-        async
-        src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-6024568817887379"
-        crossOrigin="anonymous"
-        strategy="lazyOnload"
-      />
-      <div className="container mx-auto py-8">
-        <h1 className="text-3xl font-bold font-headline">Watch Ads & Earn Unite Points (UPs)</h1>
-        <p className="text-muted-foreground mb-8">View ads from our partners and claim points for your engagement.</p>
+        {/* Overlay */}
+        <div className="absolute inset-0 flex items-center justify-center">
+          <div className="bg-black/50 backdrop-blur-sm p-8 rounded-lg flex flex-col items-center">
+            {timeLeft > 0 ? (
+              <p className="text-6xl font-bold text-yellow-400 mb-4">
+                {Math.floor(timeLeft / 60)}:{String(timeLeft % 60).padStart(2, "0")}
+              </p>
+            ) : (
+              <p className="text-green-400 mb-4 text-2xl font-semibold">✅ Finished watching!</p>
+            )}
 
-        <Card className="max-w-4xl mx-auto">
-          <CardHeader>
-            <CardTitle>Ad Unit</CardTitle>
-            <CardDescription>An ad from the Google Display Network.</CardDescription>
-          </CardHeader>
-          <CardContent ref={adRef}>
-            {/* AdSense Unit */}
-            <ins
-              className="adsbygoogle"
-              style={{ display: "block" }}
-              data-ad-client="ca-pub-6024568817887379"
-              data-ad-slot="8243111277"
-              data-ad-format="auto"
-              data-full-width-responsive="true"
-            ></ins>
-            {!adLoaded && <div className="h-64 flex items-center justify-center bg-muted rounded-md"><Loader2 className="animate-spin"/></div>}
-          </CardContent>
-           <CardContent>
             <Button
-              className="w-full"
               onClick={handleClaimPoints}
-              disabled={!canClaim || isClaiming || !adLoaded}
+              disabled={!canClaim || isClaiming}
               size="lg"
+              className="mt-2 bg-green-600 hover:bg-green-700 text-white px-6 py-3 rounded-full"
             >
               {isClaiming ? (
-                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                <Loader2 className="mr-2 h-5 w-5 animate-spin" />
               ) : (
-                <Wallet className="h-4 w-4 mr-2" />
+                <Wallet className="h-5 w-5 mr-2" />
               )}
-              {!adLoaded ? 'Waiting for ad...' : canClaim ? 'Claim 0.005 UPs' : `Claim again in ${Math.ceil(timeLeft / 1000)}s`}
+              {canClaim ? `Claim ${reward} UPs` : <><Lock className="mr-2 h-5 w-5" /> Locked</>}
             </Button>
-             <p className="text-xs text-muted-foreground text-center mt-2">You can claim points once every 5 minutes.</p>
-           </CardContent>
-        </Card>
+          </div>
+        </div>
       </div>
-    </>
+    );
+  }
+
+  // --- Selection screen ---
+  return (
+    <div className="container mx-auto py-16 text-center">
+      <h1 className="text-3xl font-bold mb-4">Watch Ads & Earn Unite Points</h1>
+      <p className="text-muted-foreground mb-8">
+        Choose your ad type below. The app will go fullscreen while you watch.
+      </p>
+
+      <div className="flex flex-col gap-4 max-w-md mx-auto">
+        <Button className="w-full" onClick={() => startWatching("normal")} size="lg">
+          Watch Normal Ads (Earn {REWARD_NORMAL} UPs)
+        </Button>
+        <Button variant="destructive" className="w-full" onClick={() => startWatching("adult")} size="lg">
+          Watch Adult Ads (Earn {REWARD_ADULT} UPs)
+        </Button>
+      </div>
+    </div>
   );
 }
