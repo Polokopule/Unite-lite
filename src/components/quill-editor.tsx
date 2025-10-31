@@ -1,63 +1,58 @@
-
 "use client";
 
-import React, { useEffect, useRef } from 'react';
-import Quill from 'quill';
-import 'quill/dist/quill.snow.css'; // import styles
+import dynamic from "next/dynamic";
+import "react-quill/dist/quill.snow.css";
+import { useEffect, useState } from "react";
 
-interface QuillEditorProps {
+const ReactQuill = dynamic(() => import("react-quill"), { ssr: false });
+
+export default function QuillEditor({
+  value,
+  onChange,
+  placeholder = "Start typing your magic here..."
+}: {
   value: string;
-  onChange: (value: string) => void;
-}
+  onChange: (val: string) => void;
+  placeholder?: string;
+}) {
+  const [mounted, setMounted] = useState(false);
 
-const QuillEditor: React.FC<QuillEditorProps> = ({ value, onChange }) => {
-  const editorRef = useRef<HTMLDivElement>(null);
-  const quillRef = useRef<Quill | null>(null);
-
+  // Ensure the component only renders after client hydration
   useEffect(() => {
-    if (editorRef.current && !quillRef.current) {
-      quillRef.current = new Quill(editorRef.current, {
-        theme: 'snow',
-        modules: {
-          toolbar: [
-            [{ 'header': [1, 2, 3, 4, 5, 6, false] }],
-            ['bold', 'italic', 'underline', 'strike'],
-            ['blockquote', 'code-block'],
-            [{ 'list': 'ordered'}, { 'list': 'bullet' }],
-            [{ 'script': 'sub'}, { 'script': 'super' }],
-            [{ 'indent': '-1'}, { 'indent': '+1' }],
-            [{ 'direction': 'rtl' }],
-            [{ 'color': [] }, { 'background': [] }],
-            [{ 'font': [] }],
-            [{ 'align': [] }],
-            ['link', 'image', 'video'],
-            ['clean']
-          ],
-        },
-      });
+    setMounted(true);
+  }, []);
 
-      quillRef.current.on('text-change', () => {
-        onChange(quillRef.current?.root.innerHTML || '');
-      });
-    }
+  if (!mounted) return <div className="text-gray-400">Loading editor...</div>;
 
-    // Set initial content if it's different from the current editor content
-    const editor = quillRef.current;
-    if (editor && editor.root.innerHTML !== value) {
-        // Find the delta difference
-        const delta = editor.clipboard.convert(value);
-        editor.setContents(delta, 'silent');
-    }
+  const modules = {
+    toolbar: [
+      [{ header: [1, 2, 3, false] }],
+      ["bold", "italic", "underline", "strike"],
+      [{ list: "ordered" }, { list: "bullet" }],
+      ["blockquote", "code-block"],
+      ["link", "image"],
+      ["clean"]
+    ],
+  };
 
-    // Cleanup function
-    return () => {
-      if (quillRef.current) {
-        quillRef.current.off('text-change');
-      }
-    };
-  }, [value, onChange]);
+  const formats = [
+    "header",
+    "bold", "italic", "underline", "strike",
+    "blockquote", "code-block",
+    "list", "bullet",
+    "link", "image"
+  ];
 
-  return <div ref={editorRef} style={{ minHeight: '400px', backgroundColor: 'var(--card)' }} />;
-};
-
-export default QuillEditor;
+  return (
+    <div className="border border-gray-300 rounded-md">
+      <ReactQuill
+        theme="snow"
+        value={value}
+        onChange={onChange}
+        modules={modules}
+        formats={formats}
+        placeholder={placeholder}
+      />
+    </div>
+  );
+}
