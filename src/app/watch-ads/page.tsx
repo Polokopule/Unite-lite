@@ -17,7 +17,7 @@ export default function WatchAdsPage() {
   const [isClaiming, setIsClaiming] = useState(false);
 
   // --- CONFIG ---
-  const AD_DURATION = 60; // 1 minute
+  const AD_DURATION = 15; // 1 minute
   const NORMAL_AD_URL =
     "https://consumeairlinercalligraphy.com/u1c6psiym1?key=243807878f61d15ee4a2a3ea0a674ed2";
   const ADULT_AD_URL =
